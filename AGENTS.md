@@ -1,0 +1,1 @@
+- Use `uv` package manager

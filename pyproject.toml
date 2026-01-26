@@ -1,0 +1,23 @@
+[project]
+name = "havachat-library-server"
+version = "0.1.0"
+description = "Havachat Library Server"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=24.8.0",
+]
+langgraph = [
+    "langgraph>=1.0.7",
+]
+pdf = [
+    "docling>=2.70.0",
+    "pandas>=2.0.0",
+]
+test = [
+    "pytest>=8.0.0",
+]
