@@ -26,8 +26,9 @@ Content ops imports an official HSK1 vocabulary list (TSV with Word and Part of 
 
 1. **Given** an official HSK1 vocab TSV with columns "Word, Part of Speech", **When** the MandarinVocabEnricher runs, **Then** each word is enriched with explanation_en, 3-5 examples, pinyin romanization, sense_gloss_en, and written to `Mandarin/HSK1/vocab/item-{uuid}.json`
 2. **Given** a Japanese JLPT N1 vocab JSON with fields `{word, meaning, furigana, romaji, level}`, **When** the JapaneseVocabEnricher runs, **Then** existing meaning/furigana/romaji are preserved, and only missing fields (examples, sense_gloss_en for polysemy, aliases) are LLM-generated
-3. **Given** an enriched vocab item fails schema validation (missing required field), **When** the LLM retry loop executes, **Then** the system retries up to 3 times before flagging the item for manual review with error context
-4. **Given** an enriched vocab list, **When** the validation script runs, **Then** all items pass presence checks (romanization for zh/ja, explanation_en for all) and duplicate detection (no items with identical lemma+sense_gloss)
+3. **Given** a French CEFR A1 vocab file with existing definitions, **When** the FrenchVocabEnricher runs, **Then** existing definitions are preserved as explanation_en base, and only missing fields (contextual examples, sense_gloss_en for polysemy, aliases, pos) are LLM-generated and written to `French/A1/vocab/item-{uuid}.json`
+4. **Given** an enriched vocab item fails schema validation (missing required field), **When** the LLM retry loop executes, **Then** the system retries up to 3 times before flagging the item for manual review with error context
+5. **Given** an enriched vocab list, **When** the validation script runs, **Then** all items pass presence checks (romanization for zh/ja, explanation_en for all) and duplicate detection (no items with identical lemma+sense_gloss)
 
 ---
 
@@ -51,7 +52,7 @@ Content ops imports an official grammar list and runs the language-specific gram
 
 ### User Story 3 - Generate Content Units with Learning Item Links (Priority: P2)
 
-Content ops provides a topic/scenario description ("ordering food at a restaurant, A2 level Spanish") and runs the content generation script. The system searches for similar existing scenarios, reuses if match >85% similarity, otherwise selects appropriate A2 vocab+grammar, generates a conversation with 6-8 turns, links each segment to used learning items, and writes the content unit to `havachat-knowledge/generated content/Spanish/A2/conversations/`.
+Content ops provides a topic/scenario description ("ordering food at a restaurant, HSK2 level Mandarin" or "greeting someone, A1 level French") and runs the content generation script. The system searches for similar existing scenarios, reuses if match >85% similarity, otherwise selects appropriate level vocab+grammar, generates a conversation with 6-8 turns, links each segment to used learning items, and writes the content unit to `havachat-knowledge/generated content/{language}/{level}/conversations/`.
 
 **Why this priority**: Content generation depends on enriched learning items (P1 dependencies). This is the first "synthesis" stage that creates learner-facing materials. Delivers value by producing ready-to-use conversations.
 
@@ -59,10 +60,11 @@ Content ops provides a topic/scenario description ("ordering food at a restauran
 
 **Acceptance Scenarios**:
 
-1. **Given** enriched Spanish A2 vocab+grammar, **When** the content generation script runs with topic="ordering food", scenario="casual restaurant", **Then** a conversation is generated with 6-8 turns, each turn references 2-4 learning items, and the conversation is saved with explicit topic_ids and scenario_ids
-2. **Given** an existing scenario "ordering food / casual restaurant" with >85% similarity to the input prompt, **When** the content generation script runs, **Then** the system returns the existing content unit ID without generating new content
-3. **Given** a generated conversation with segments, **When** the linking validation runs, **Then** every learning_item_id referenced in segments exists in the vocab/grammar directories and appears in the conversation text (language-aware tokenization)
-4. **Given** content generation completes, **When** the usage tracking script updates, **Then** each linked learning item's usage_count increments in a metadata file (for future frequency balancing in v2)
+1. **Given** enriched Mandarin HSK2 vocab+grammar, **When** the content generation script runs with topic="ordering food", scenario="casual restaurant", **Then** a conversation is generated with 6-8 turns in Chinese with pinyin annotations, each turn references 2-4 learning items, and the conversation is saved to `Mandarin/HSK2/conversations/` with explicit topic_ids and scenario_ids
+2. **Given** enriched French A1 vocab+grammar, **When** the content generation script runs with topic="greetings", scenario="meeting someone new", **Then** a conversation is generated with 6-8 turns in French, each turn references 2-4 learning items, and the conversation is saved to `French/A1/conversations/` with explicit topic_ids and scenario_ids
+3. **Given** an existing scenario "ordering food / casual restaurant" with >85% similarity to the input prompt, **When** the content generation script runs, **Then** the system returns the existing content unit ID without generating new content
+4. **Given** a generated conversation with segments, **When** the linking validation runs, **Then** every learning_item_id referenced in segments exists in the vocab/grammar directories and appears in the conversation text (language-aware tokenization for Chinese/French)
+5. **Given** content generation completes, **When** the usage tracking script updates, **Then** each linked learning item's usage_count increments in a metadata file (for future frequency balancing in v2)
 
 ---
 
