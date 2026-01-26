@@ -5,6 +5,12 @@
 **Status**: Draft  
 **Input**: User description: "Build Pre-generation Pipeline for learning content using Python scripts and LangGraph agents. The pipeline processes official vocab/grammar lists, generates learning items with LLM enrichment, creates content units (conversations/stories), links content to learning items, generates comprehension questions, TTS audio with timestamps, and runs QA gates before publishing."
 
+## Clarifications
+
+### Session 2026-01-26
+
+- Q: Should the enrichment script use a flexible column-mapping configuration to handle different source formats (CSV/TSV/JSON) across languages? → A: **No**. Use language-specific subclasses (e.g., `JapaneseVocabEnricher`, `MandarinVocabEnricher`, `FrenchVocabEnricher`) where each implements its own file parsing logic, field mapping, and LLM prompts. This is cleaner than generic configuration because each language has fundamentally different source structures (Japanese has furigana+romaji already, French has definitions, Chinese needs Pinyin generation) and requires domain-specific prompts.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Import and Enrich Official Vocabulary Lists (Priority: P1)
@@ -17,9 +23,9 @@ Content ops imports an official HSK1 vocabulary list (TSV with Word and Part of 
 
 **Acceptance Scenarios**:
 
-1. **Given** an official HSK1 vocab TSV with columns "Word, Part of Speech", **When** the enrichment script runs, **Then** each word is enriched with explanation_en, 3-5 examples, pinyin romanization, sense_gloss_en, and written to `Mandarin/HSK1/vocab/item-{uuid}.json`
-2. **Given** a French CEFR A1 vocab CSV with columns "Mot, Classe grammaticale, Définition", **When** the enrichment script runs with column mapping configuration, **Then** existing definitions are preserved and only missing fields (examples, aliases) are generated
-3. **Given** an enriched vocab item fails schema validation (missing required field), **When** the LLM retry loop executes, **Then** the system retries up to 3 times before flagging the item for manual review
+1. **Given** an official HSK1 vocab TSV with columns "Word, Part of Speech", **When** the MandarinVocabEnricher runs, **Then** each word is enriched with explanation_en, 3-5 examples, pinyin romanization, sense_gloss_en, and written to `Mandarin/HSK1/vocab/item-{uuid}.json`
+2. **Given** a Japanese JLPT N1 vocab JSON with fields `{word, meaning, furigana, romaji, level}`, **When** the JapaneseVocabEnricher runs, **Then** existing meaning/furigana/romaji are preserved, and only missing fields (examples, sense_gloss_en for polysemy, aliases) are LLM-generated
+3. **Given** an enriched vocab item fails schema validation (missing required field), **When** the LLM retry loop executes, **Then** the system retries up to 3 times before flagging the item for manual review with error context
 4. **Given** an enriched vocab list, **When** the validation script runs, **Then** all items pass presence checks (romanization for zh/ja, explanation_en for all) and duplicate detection (no items with identical lemma+sense_gloss)
 
 ---
@@ -94,10 +100,11 @@ Content ops runs the QA gate script on a batch of content (e.g., all Spanish A2 
 
 ### Edge Cases
 
-- **Multi-column CSV formats**: Spanish CEFR lists may have "Mot, Traduction, Exemple" while Japanese JLPT has "Kanji, Hiragana, Romaji, English". The enrichment script must accept column mapping configurations.
-- **Missing romanization**: For Chinese/Japanese, if the source list lacks romanization (pinyin/romaji), the LLM must generate it; validation must enforce presence.
-- **Polysemous words**: "banco" (bank/bench), "bat" (animal/sports equipment) must result in separate learning items with distinct sense_gloss_en to avoid quiz ambiguity.
-- **LLM generation failures**: If LLM fails to generate required fields after 3 retries, the item must be flagged for manual review (not silently dropped).
+- **Language-specific source formats**: Japanese JSON has `{word, meaning, furigana, romaji, level}` while French might be CSV `{Mot, Définition, Exemple}` and Chinese TSV `{Word, Part of Speech}`. Each language subclass handles its own source format without requiring generic column mapping configuration.
+- **Pre-existing fields**: Japanese vocab already includes romanization (furigana/romaji) and English meanings, so the enrichment subclass must preserve these and only generate missing fields (examples, sense_gloss_en if polysemy detected).
+- **Missing romanization**: For Chinese, if source TSV lacks Pinyin, the MandarinVocabEnricher LLM must generate it; validation must enforce presence before writing output.
+- **Polysemous words**: "banco" (bank/bench), "bat" (animal/sports equipment), Japanese "bank" (financial vs riverbank) must result in separate learning items with distinct sense_gloss_en to avoid quiz ambiguity.
+- **LLM generation failures**: If LLM fails to generate required fields after 3 retries, the item must be flagged for manual review with error context (not silently dropped).
 - **Content similarity edge cases**: If similarity score is 75-85% (borderline), the system should present both options to ops: reuse existing or generate new variant.
 - **Broken learning item references**: If a content unit references a learning item ID that doesn't exist (e.g., item was deleted), the link validation must catch and report it.
 - **Question difficulty misalignment**: If an A1-level conversation has a generated question requiring B1-level inference, the difficulty validation must flag it.
@@ -115,13 +122,13 @@ Content ops runs the QA gate script on a batch of content (e.g., all Spanish A2 
 
 **Input Handling:**
 
-- **FR-004**: Enrichment scripts MUST accept configuration files specifying input format (csv/tsv), delimiter, column mappings (e.g., "Word" → target_item, "Part of Speech" → pos), and required/optional field lists
-- **FR-005**: Scripts MUST detect which fields are present in input data and only generate missing required fields via LLM
-- **FR-006**: System MUST support at minimum: Chinese (Pinyin romanization), Japanese (Romaji romanization), English/French/Spanish (no romanization), and validate romanization presence for zh/ja
+- **FR-004**: Enrichment scripts MUST use language-specific subclasses (e.g., `JapaneseVocabEnricher`, `MandarinVocabEnricher`, `FrenchVocabEnricher`) where each subclass implements its own file parsing logic, field mapping, and validation rules specific to that language's source format
+- **FR-005**: Each language subclass MUST detect which required fields are already present in the source data (e.g., Japanese already has furigana+romaji, French may have definitions) and only invoke LLM to generate missing required fields
+- **FR-006**: Language subclasses MUST enforce language-specific validation: Chinese/Japanese subclasses MUST validate romanization presence (Pinyin/Romaji); English/French/Spanish subclasses MUST NOT require romanization
 
 **LLM Integration:**
 
-- **FR-007**: All LLM interactions MUST use placeholder prompt templates (ops will provide production prompts) located in `src/pipeline/prompts/{stage_name}_prompts.py`
+- **FR-007**: Each language subclass MUST have its own prompt templates in `src/pipeline/prompts/{language}/{stage_name}_prompts.py` (e.g., `prompts/japanese/vocab_enrichment_prompts.py`, `prompts/mandarin/vocab_enrichment_prompts.py`) with language-specific instructions and examples
 - **FR-008**: LLM enrichment MUST implement retry logic: attempt generation → validate against schema → retry up to 3 times on failure → flag for manual review if still failing
 - **FR-009**: System MUST log all LLM requests (prompt hash, model, token counts, latency) and responses (success/failure, validation errors) for cost tracking and quality monitoring
 
