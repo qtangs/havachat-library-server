@@ -68,6 +68,9 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] T007 Create base models/entities that all stories depend on
 - [ ] T008 Configure error handling and logging infrastructure
 - [ ] T009 Setup environment configuration management
+- [ ] T010 [P] Configure QA gate framework (schema validation, duplication detection, link validation)
+- [ ] T011 [P] Setup search index infrastructure (language + proficiency filters, hybrid search)
+- [ ] T012 Setup performance monitoring (API latency tracking, batch metrics)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -156,6 +159,10 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
 - [ ] TXXX Security hardening
 - [ ] TXXX Run quickstart.md validation
+- [ ] TXXX Verify all QA gates pass at >98% rate
+- [ ] TXXX Benchmark API endpoints (<200ms p95 requirement)
+- [ ] TXXX Validate audio-text alignment accuracy
+- [ ] TXXX Test language + proficiency filtering (no cross-contamination)
 
 ---
 

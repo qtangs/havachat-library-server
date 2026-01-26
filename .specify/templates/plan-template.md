@@ -31,7 +31,30 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+### I. Code Quality & Maintainability
+- [ ] Batch generation logic separated from online serving (no mixed concerns)
+- [ ] Using `uv` package manager, Python >=3.14
+- [ ] Type hints on all public functions/methods
+- [ ] Modular, reusable components with clear documentation
+
+### II. Testing Standards & Quality Gates
+- [ ] QA gates identified (schema validation, duplication checks, link correctness, question answerability, audio-text alignment)
+- [ ] Test categories planned: unit (pipeline stages), contract (API), integration (end-to-end), quality gates
+- [ ] Automated quality gate tests prevent bad content promotion
+
+### III. User Experience Consistency
+- [ ] API schema consistency verified (JSON structure, error codes)
+- [ ] Language + proficiency filtering strictly enforced
+- [ ] Session packs deliver complete learning units (content + questions + quiz + audio)
+- [ ] Audio-text alignment validation planned
+
+### IV. Performance Requirements
+- [ ] Online API: <200ms p95 target documented
+- [ ] Batch: Quality over speed (iterative LLM loops acceptable)
+- [ ] Search index: <5min update window, denormalized for speed
+- [ ] Memory: API <500MB, batch workers horizontally scalable
+
+**Justification Required**: If any gate fails, document why violation is necessary and what simpler alternative was rejected.
 
 ## Project Structure
 

@@ -70,6 +70,12 @@
 <!--
   ACTION REQUIRED: The content in this section represents placeholders.
   Fill them out with the right edge cases.
+  
+  For Havachat Library Server, consider:
+  - Language/proficiency filtering edge cases (invalid levels, unsupported languages)
+  - Search edge cases (empty results, query parsing failures)
+  - Audio alignment failures (word-level → segment-level fallback)
+  - Batch QA gate failures (retry limits, manual review triggers)
 -->
 
 - What happens when [boundary condition]?
@@ -109,7 +115,15 @@
 
 ### Measurable Outcomes
 
+<!--
+  Constitution alignment: Include performance targets (<200ms API p95),
+  UX consistency metrics (error rate, alignment accuracy),
+  and quality gate pass rates (batch validation success).
+-->
+
 - **SC-001**: [Measurable metric, e.g., "Users can complete account creation in under 2 minutes"]
 - **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
 - **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
 - **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
+- **SC-005**: [Performance metric, e.g., "API responses <200ms at p95 under normal load"]
+- **SC-006**: [Quality metric, e.g., "Batch QA gates achieve >98% pass rate before manual review"]
