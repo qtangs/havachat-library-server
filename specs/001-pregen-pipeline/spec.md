@@ -10,6 +10,7 @@
 ### Session 2026-01-26
 
 - Q: Should the enrichment script use a flexible column-mapping configuration to handle different source formats (CSV/TSV/JSON) across languages? → A: **No**. Use language-specific subclasses (e.g., `JapaneseVocabEnricher`, `MandarinVocabEnricher`, `FrenchVocabEnricher`) where each implements its own file parsing logic, field mapping, and LLM prompts. This is cleaner than generic configuration because each language has fundamentally different source structures (Japanese has furigana+romaji already, French has definitions, Chinese needs Pinyin generation) and requires domain-specific prompts.
+- Q: Do grammar lists follow the same format across languages? → A: **No**. Chinese uses CSV with hierarchical categories (类别,类别名称,细目,语法内容), Japanese uses TSV with Type/Rule/Example columns, French uses markdown with category headers and descriptive title lists. Grammar enrichment also requires language-specific subclasses (e.g., `JapaneseGrammarEnricher`, `MandarinGrammarEnricher`, `FrenchGrammarEnricher`) to parse these different formats and apply appropriate enrichment strategies.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -32,18 +33,19 @@ Content ops imports an official HSK1 vocabulary list (TSV with Word and Part of 
 
 ### User Story 2 - Import and Enrich Grammar Lists (Priority: P1)
 
-Content ops imports an official HSK1 grammar list (CSV with 类别, 类别名称, 细目, 语法内容 columns) and runs the grammar enrichment script. The system parses structured grammar categories, generates learner-friendly explanations, creates usage examples, breaks down broad patterns into teachable sub-items, and writes enriched grammar learning items to `havachat-knowledge/generated content/Mandarin/HSK1/grammar/`.
+Content ops imports an official grammar list and runs the language-specific grammar enrichment script. The system parses the source format (Chinese CSV with hierarchical categories, Japanese TSV with Type/Rule/Example columns, French markdown with category headers and title lists), generates learner-friendly explanations, creates usage examples, breaks down broad patterns into teachable sub-items, and writes enriched grammar learning items to `havachat-knowledge/generated content/{language}/{level}/grammar/`.
 
-**Why this priority**: Grammar items are equally critical for content generation. Without them, conversations and stories lack structural targets. Grammar enrichment must handle category hierarchies and avoid over-broad items (as specified in PRD).
+**Why this priority**: Grammar items are equally critical for content generation. Without them, conversations and stories lack structural targets. Grammar enrichment must handle language-specific source formats and category structures, and avoid over-broad items (as specified in PRD).
 
-**Independent Test**: Can be fully tested by providing an official grammar CSV, running the enrichment script, and verifying that output contains narrow-scope grammar items (each with form, meaning/use, common errors) and passes granularity checks (no "mega-items" like "past tense" without sub-items).
+**Independent Test**: Can be fully tested by providing an official grammar source file for any language, running the appropriate language enricher subclass, and verifying that output contains narrow-scope grammar items (each with form, meaning/use, examples) and passes granularity checks (no "mega-items" like "past tense" without sub-items).
 
 **Acceptance Scenarios**:
 
-1. **Given** an official HSK1 grammar CSV with 类别="句型", 细目="是...的", **When** the enrichment script runs, **Then** a grammar learning item is created with target_item="是...的", explanation_en describing form and use, 3-5 contextual examples, and category="grammar"
-2. **Given** a broad grammar pattern like "past tense", **When** the LLM generates the item, **Then** the system prompts for sub-item breakdown (e.g., "regular past -ed", "irregular past forms", "past continuous") and creates linked learning items
-3. **Given** an enriched grammar list, **When** the validation script runs, **Then** each item has explanation_en, examples, and narrow scope (detectable by explanation length <500 chars or explicit sub-item structure)
-4. **Given** grammar items from multiple languages (English CEFR, Chinese HSK, Japanese JLPT), **When** stored in respective directories, **Then** each item includes correct level_system (cefr|hsk|jlpt) and level_min/max values
+1. **Given** an official HSK1 grammar CSV with columns "类别,类别名称,细目,语法内容" where 类别="句型", 细目="是...的", **When** the MandarinGrammarEnricher runs, **Then** a grammar learning item is created with target_item="是...的", explanation_en describing form and use, 3-5 contextual examples, and category="grammar"
+2. **Given** a Japanese JLPT N5 grammar TSV with columns "Type, Rule, Example" where Type="Basic Particles", Rule="は (wa) - Topic Marker", Example="私は学生です。", **When** the JapaneseGrammarEnricher runs, **Then** the existing example is preserved and enriched with explanation_en, additional usage examples, common learner errors, and the particle "は" is stored as target_item
+3. **Given** a French A1 grammar markdown with category "## A1: Pronouns" and item "Il/elle/ils/elles = it/he/she/they (French Subject Pronouns)", **When** the FrenchGrammarEnricher runs, **Then** a grammar learning item is created parsing the title into target_item="Il/elle/ils/elles", generating explanation_en for form/usage, 3-5 contextual examples, and category="grammar"
+4. **Given** a broad grammar pattern like "past tense" in any language, **When** the LLM generates the item, **Then** the enricher prompts for sub-item breakdown (e.g., "regular past -ed", "irregular past forms", "past continuous") and creates linked learning items with narrower scope
+5. **Given** enriched grammar lists from multiple languages (English CEFR, Chinese HSK, Japanese JLPT), **When** stored in respective directories, **Then** each item includes correct level_system (cefr|hsk|jlpt) and level_min/max values
 
 ---
 
@@ -100,8 +102,11 @@ Content ops runs the QA gate script on a batch of content (e.g., all Spanish A2 
 
 ### Edge Cases
 
-- **Language-specific source formats**: Japanese JSON has `{word, meaning, furigana, romaji, level}` while French might be CSV `{Mot, Définition, Exemple}` and Chinese TSV `{Word, Part of Speech}`. Each language subclass handles its own source format without requiring generic column mapping configuration.
-- **Pre-existing fields**: Japanese vocab already includes romanization (furigana/romaji) and English meanings, so the enrichment subclass must preserve these and only generate missing fields (examples, sense_gloss_en if polysemy detected).
+- **Language-specific source formats**: 
+  - **Vocab**: Japanese JSON has `{word, meaning, furigana, romaji, level}` while French might be CSV `{Mot, Définition, Exemple}` and Chinese TSV `{Word, Part of Speech}`. 
+  - **Grammar**: Chinese CSV has hierarchical categories `{类别,类别名称,细目,语法内容}`, Japanese TSV has `{Type, Rule, Example}`, French markdown has category headers (`## A1: Pronouns`) followed by descriptive title lists. Each language subclass handles its own source format without requiring generic configuration.
+- **Pre-existing fields**: Japanese vocab already includes romanization (furigana/romaji) and English meanings; Japanese grammar includes examples with romaji and translations. Enrichment subclasses must preserve these and only generate missing fields (additional examples, sense_gloss_en if polysemy detected, explanation_en for grammar).
+- **Grammar hierarchical parsing**: French grammar titles contain the pattern itself plus explanation (e.g., "Il/elle/ils/elles = it/he/she/they (French Subject Pronouns)"). The FrenchGrammarEnricher must parse title to extract target_item ("Il/elle/ils/elles") and category hint ("Subject Pronouns").
 - **Missing romanization**: For Chinese, if source TSV lacks Pinyin, the MandarinVocabEnricher LLM must generate it; validation must enforce presence before writing output.
 - **Polysemous words**: "banco" (bank/bench), "bat" (animal/sports equipment), Japanese "bank" (financial vs riverbank) must result in separate learning items with distinct sense_gloss_en to avoid quiz ambiguity.
 - **LLM generation failures**: If LLM fails to generate required fields after 3 retries, the item must be flagged for manual review with error context (not silently dropped).
