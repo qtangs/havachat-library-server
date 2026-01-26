@@ -1,0 +1,167 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://havachat.com/schemas/question_set.json",
+  "title": "Question Set",
+  "description": "Comprehension questions for a content unit",
+  "type": "object",
+  "required": [
+    "id",
+    "content_id",
+    "question_type",
+    "question_text",
+    "answer_key",
+    "rationale",
+    "difficulty",
+    "tags",
+    "created_at",
+    "version"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "content_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Parent content unit UUID"
+    },
+    "segment_range": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Segment IDs this question covers, null for full content"
+    },
+    "question_type": {
+      "type": "string",
+      "enum": ["mcq", "true_false", "short_answer", "summary"]
+    },
+    "question_text": {
+      "type": "string",
+      "minLength": 5
+    },
+    "options": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["option_id", "text"],
+        "properties": {
+          "option_id": {
+            "type": "string",
+            "enum": ["A", "B", "C", "D"]
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 4,
+      "maxItems": 4,
+      "description": "For MCQ only, exactly 4 options"
+    },
+    "answer_key": {
+      "type": "string",
+      "description": "For MCQ: A/B/C/D, for true_false: true/false, for short_answer: expected text"
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 20,
+      "description": "Explanation of why answer is correct and learning value"
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": ["easy", "medium", "hard"]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["inference", "detail", "main-idea", "vocab-focus", "grammar-focus", "cultural-context"]
+      },
+      "minItems": 1
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "question_type": {
+            "const": "mcq"
+          }
+        }
+      },
+      "then": {
+        "required": ["options"],
+        "properties": {
+          "answer_key": {
+            "enum": ["A", "B", "C", "D"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "question_type": {
+            "const": "true_false"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "answer_key": {
+            "enum": ["true", "false"]
+          },
+          "options": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ],
+  "examples": [
+    {
+      "id": "750e8400-e29b-41d4-a716-446655440000",
+      "content_id": "650e8400-e29b-41d4-a716-446655440000",
+      "segment_range": ["seg-1"],
+      "question_type": "mcq",
+      "question_text": "What is Alice's name?",
+      "options": [
+        {
+          "option_id": "A",
+          "text": "Alice"
+        },
+        {
+          "option_id": "B",
+          "text": "Bob"
+        },
+        {
+          "option_id": "C",
+          "text": "Claire"
+        },
+        {
+          "option_id": "D",
+          "text": "Not mentioned"
+        }
+      ],
+      "answer_key": "A",
+      "rationale": "Alice explicitly states 'Je m'appelle Alice' (My name is Alice). This tests basic comprehension of self-introduction patterns.",
+      "difficulty": "easy",
+      "tags": ["detail", "vocab-focus"],
+      "created_at": "2026-01-26T12:00:00Z",
+      "version": "1.0.0"
+    }
+  ]
+}

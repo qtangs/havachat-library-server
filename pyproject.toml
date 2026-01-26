@@ -12,6 +12,7 @@ dev = [
     "black>=24.8.0",
 ]
 langgraph = [
+    "instructor>=1.14.4",
     "langgraph>=1.0.7",
 ]
 pdf = [

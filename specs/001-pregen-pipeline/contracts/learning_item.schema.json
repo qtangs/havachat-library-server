@@ -1,0 +1,135 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://havachat.com/schemas/learning_item.json",
+  "title": "Learning Item",
+  "description": "Atomic pedagogical unit (vocabulary, grammar, pronunciation, culture)",
+  "type": "object",
+  "required": [
+    "id",
+    "language",
+    "category",
+    "target_item",
+    "explanation_en",
+    "examples",
+    "level_system",
+    "level_min",
+    "level_max",
+    "created_at",
+    "version"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID v4"
+    },
+    "language": {
+      "type": "string",
+      "enum": ["zh", "ja", "fr", "en", "es"],
+      "description": "ISO 639-1 language code"
+    },
+    "category": {
+      "type": "string",
+      "enum": ["vocab", "grammar", "pronunciation", "idiom", "functional", "cultural", "writing_system", "sociolinguistic", "pragmatic", "literacy", "pattern", "other"],
+      "description": "Type of learning content"
+    },
+    "target_item": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The word, phrase, or grammar pattern being taught"
+    },
+    "explanation_en": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 500,
+      "description": "Learner-friendly explanation in English"
+    },
+    "examples": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 5
+      },
+      "minItems": 3,
+      "maxItems": 5,
+      "description": "Contextual usage examples"
+    },
+    "romanization": {
+      "type": "string",
+      "description": "Pinyin for Chinese, Romaji for Japanese (required for zh/ja)"
+    },
+    "sense_gloss_en": {
+      "type": "string",
+      "description": "Disambiguation for polysemous words: 'bank (financial)' vs 'bank (river)'"
+    },
+    "lemma": {
+      "type": "string",
+      "description": "Base form for inflected words"
+    },
+    "pos": {
+      "type": "string",
+      "enum": ["noun", "verb", "adjective", "adverb", "pronoun", "preposition", "conjunction", "particle", "phrase", "other"],
+      "description": "Part of speech"
+    },
+    "aliases": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Alternative forms or spellings"
+    },
+    "level_system": {
+      "type": "string",
+      "enum": ["cefr", "hsk", "jlpt"],
+      "description": "Proficiency level system"
+    },
+    "level_min": {
+      "type": "string",
+      "description": "Minimum proficiency level (e.g., A1, HSK1, N5)"
+    },
+    "level_max": {
+      "type": "string",
+      "description": "Maximum proficiency level (e.g., C1, HSK6, N1)"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Schema version (semver)"
+    },
+    "source_file": {
+      "type": "string",
+      "description": "Original source file path"
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "language": "zh",
+      "category": "vocab",
+      "target_item": "银行",
+      "explanation_en": "A financial institution where people deposit money and obtain loans",
+      "examples": [
+        "我去银行取钱。(Wǒ qù yínháng qǔ qián.) - I go to the bank to withdraw money.",
+        "这家银行提供低利率贷款。(Zhè jiā yínháng tígōng dī lìlǜ dàikuǎn.) - This bank offers low-interest loans.",
+        "银行在街角。(Yínháng zài jiē jiǎo.) - The bank is at the corner."
+      ],
+      "romanization": "yínháng",
+      "sense_gloss_en": "bank (financial institution)",
+      "lemma": "银行",
+      "pos": "noun",
+      "aliases": [],
+      "level_system": "hsk",
+      "level_min": "HSK1",
+      "level_max": "HSK1",
+      "created_at": "2026-01-26T12:00:00Z",
+      "version": "1.0.0",
+      "source_file": "hsk1_vocab.tsv"
+    }
+  ]
+}

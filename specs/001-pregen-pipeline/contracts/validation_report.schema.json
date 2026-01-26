@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://havachat.com/schemas/validation_report.json",
+  "title": "Validation Report",
+  "description": "Output of QA gates for a batch",
+  "type": "object",
+  "required": [
+    "batch_id",
+    "language",
+    "level",
+    "timestamp",
+    "total_items",
+    "passed_count",
+    "failed_count",
+    "flagged_items",
+    "summary_stats"
+  ],
+  "properties": {
+    "batch_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "language": {
+      "type": "string",
+      "enum": ["zh", "ja", "fr", "en", "es"]
+    },
+    "level": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "total_items": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "passed_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "failed_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "flagged_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["item_id", "item_type", "failure_type", "failure_reason"],
+        "properties": {
+          "item_id": {
+            "type": "string"
+          },
+          "item_type": {
+            "type": "string",
+            "enum": ["learning_item", "content_unit", "question"]
+          },
+          "failure_type": {
+            "type": "string",
+            "enum": [
+              "schema_validation",
+              "presence_check",
+              "duplication",
+              "link_correctness",
+              "answerability",
+              "difficulty_misalignment",
+              "language_contamination"
+            ]
+          },
+          "failure_reason": {
+            "type": "string",
+            "minLength": 10
+          },
+          "line_reference": {
+            "type": "string"
+          },
+          "suggested_fix": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "summary_stats": {
+      "type": "object",
+      "required": ["pass_rate_percent", "most_common_failures"],
+      "properties": {
+        "pass_rate_percent": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "most_common_failures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "batch_id": "850e8400-e29b-41d4-a716-446655440000",
+      "language": "fr",
+      "level": "A1",
+      "timestamp": "2026-01-26T12:00:00Z",
+      "total_items": 100,
+      "passed_count": 95,
+      "failed_count": 5,
+      "flagged_items": [
+        {
+          "item_id": "550e8400-e29b-41d4-a716-446655440003",
+          "item_type": "learning_item",
+          "failure_type": "duplication",
+          "failure_reason": "Duplicate target_item 'banco' with same sense_gloss_en 'bank (financial)'",
+          "line_reference": "French/A1/vocab/item-550e8400-e29b-41d4-a716-446655440003.json",
+          "suggested_fix": "Add sense_gloss_en disambiguation or merge items"
+        }
+      ],
+      "summary_stats": {
+        "pass_rate_percent": 95,
+        "most_common_failures": ["duplication", "presence_check"]
+      }
+    }
+  ]
+}

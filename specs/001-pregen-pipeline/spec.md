@@ -78,7 +78,7 @@ Content ops runs the question generation script on a completed conversation. The
 
 **Acceptance Scenarios**:
 
-1. **Given** a Spanish A2 conversation, **When** the question generation script runs, **Then** 5-8 questions are generated with types distributed: 3-4 MCQ, 1-2 true/false, 1-2 short answer, covering detail recall (40%), inference (30%), main idea (30%)
+1. **Given** a French A1 conversation, **When** the question generation script runs, **Then** 5-8 questions are generated with types distributed: 3-4 MCQ, 1-2 true/false, 1-2 short answer, covering detail recall (40%), inference (30%), main idea (30%)
 2. **Given** generated questions, **When** the answerability validation runs, **Then** each question's answer can be derived from the text (verified by LLM re-reading the text and answering the question)
 3. **Given** MCQ questions, **When** generated, **Then** each includes 4 options with 1 correct answer, 3 plausible distractors, and a rationale explaining why the answer is correct and the learning value
 4. **Given** questions with difficulty tags, **When** stored, **Then** each question includes difficulty level (easy/medium/hard within the content's level range) and tags (inference, detail, main-idea, vocabulary-focus, grammar-focus)
@@ -87,7 +87,7 @@ Content ops runs the question generation script on a completed conversation. The
 
 ### User Story 5 - Run QA Gates and Generate Validation Report (Priority: P2)
 
-Content ops runs the QA gate script on a batch of content (e.g., all Spanish A2 conversations). The system executes presence checks (learning items appear in text), duplication checks (no near-duplicate items), link correctness (all references valid), question answerability (answers derivable), and generates a validation report with pass/fail status and flagged items for manual review.
+Content ops runs the QA gate script on a batch of content (e.g., all French A1 conversations). The system executes presence checks (learning items appear in text), duplication checks (no near-duplicate items), link correctness (all references valid), question answerability (answers derivable), and generates a validation report with pass/fail status and flagged items for manual review.
 
 **Why this priority**: QA gates are constitutional requirements (Principle II). They must run before any content is published. Higher priority than question generation because gates validate all content types (vocab, grammar, conversations), not just questions.
 
@@ -95,7 +95,7 @@ Content ops runs the QA gate script on a batch of content (e.g., all Spanish A2 
 
 **Acceptance Scenarios**:
 
-1. **Given** a batch of Spanish A2 content, **When** the presence check runs, **Then** every learning_item_id referenced in content segments exists in the vocab/grammar directories and the target_item appears in the segment text (using Spanish tokenization)
+1. **Given** a batch of French A1 content, **When** the presence check runs, **Then** every learning_item_id referenced in content segments exists in the vocab/grammar directories and the target_item appears in the segment text (using French tokenization)
 2. **Given** two learning items with identical lemma "banco" but different sense_gloss_en ("bank financial" vs "bench seat"), **When** the duplication check runs, **Then** both items pass (sense disambiguation prevents collision)
 3. **Given** a question with answer "tomorrow morning", **When** the answerability check runs, **Then** the system verifies the phrase appears in or is clearly inferrable from the conversation text
 4. **Given** a validation report with 95% pass rate (5% flagged for review), **When** reviewed by ops, **Then** the report includes specific line references, failure reasons, and suggested fixes for each flagged item
@@ -115,7 +115,7 @@ Content ops runs the QA gate script on a batch of content (e.g., all Spanish A2 
 - **Content similarity edge cases**: If similarity score is 75-85% (borderline), the system should present both options to ops: reuse existing or generate new variant.
 - **Broken learning item references**: If a content unit references a learning item ID that doesn't exist (e.g., item was deleted), the link validation must catch and report it.
 - **Question difficulty misalignment**: If an A1-level conversation has a generated question requiring B1-level inference, the difficulty validation must flag it.
-- **Cross-language contamination**: French vocab must not appear in Spanish content directories; validation must check language field matches directory structure.
+- **Cross-language contamination**: Japanese vocab must not appear in French content directories; validation must check language field matches directory structure.
 
 ## Requirements *(mandatory)*
 
@@ -131,7 +131,7 @@ Content ops runs the QA gate script on a batch of content (e.g., all Spanish A2 
 
 - **FR-004**: Enrichment scripts MUST use language-specific subclasses (e.g., `JapaneseVocabEnricher`, `MandarinVocabEnricher`, `FrenchVocabEnricher`) where each subclass implements its own file parsing logic, field mapping, and validation rules specific to that language's source format
 - **FR-005**: Each language subclass MUST detect which required fields are already present in the source data (e.g., Japanese already has furigana+romaji, French may have definitions) and only invoke LLM to generate missing required fields
-- **FR-006**: Language subclasses MUST enforce language-specific validation: Chinese/Japanese subclasses MUST validate romanization presence (Pinyin/Romaji); English/French/Spanish subclasses MUST NOT require romanization
+- **FR-006**: Language subclasses MUST enforce language-specific validation: Chinese/Japanese subclasses MUST validate romanization presence (Pinyin/Romaji); English/French/French subclasses MUST NOT require romanization
 
 **LLM Integration:**
 
@@ -200,11 +200,11 @@ Content ops runs the QA gate script on a batch of content (e.g., all Spanish A2 
 
 - **SC-001**: Vocab enrichment script processes 500 HSK1 words from TSV input and generates complete learning items (all required fields) with >95% schema validation pass rate within 30 minutes
 - **SC-002**: Grammar enrichment script processes 100 grammar patterns and produces narrow-scope items (explanation <500 chars, no mega-items flagged) with >90% granularity validation pass rate
-- **SC-003**: Content generation script produces A2 Spanish conversations with 100% link correctness (all referenced learning_item_ids exist) and >95% presence validation (items appear in text)
+- **SC-003**: Content generation script produces A1 French conversations with 100% link correctness (all referenced learning_item_ids exist) and >95% presence validation (items appear in text)
 - **SC-004**: Question generation produces 5-8 questions per conversation with >98% answerability pass rate (LLM can answer from text alone) and correct type distribution (50-60% MCQ, 20-30% T/F, 20% short answer)
 - **SC-005**: QA gate validation runs on 100-item batch and completes within 10 minutes, generating a validation report with <5% flagged items requiring manual review
 - **SC-006**: LLM retry loop reduces generation failures from 15% (first attempt) to <2% (after 3 retries), with remaining failures correctly flagged for manual review
 - **SC-007**: Content reuse detection identifies >85% similarity matches with 100% accuracy on test corpus (no false positives recommending reuse for dissimilar content)
 - **SC-008**: All pipeline stages log structured metrics (items processed, success rate, tokens used, processing time) enabling ops to track cost and quality trends over batches
-- **SC-009**: Cross-language validation prevents contamination: 0% of generated content has language field mismatching directory structure (e.g., French vocab in Spanish directories)
+- **SC-009**: Cross-language validation prevents contamination: 0% of generated content has language field mismatching directory structure (e.g., Japanese vocab in French directories)
 - **SC-010**: Manual review queue contains only legitimate failures (schema violations, ambiguous polysemy, unanswerable questions), not false positives from validation bugs
