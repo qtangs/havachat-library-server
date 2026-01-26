@@ -125,17 +125,17 @@ Content ops runs the QA gate script on a batch of content (e.g., all French A1 c
 
 - **FR-001**: Each pipeline stage (vocab enrichment, grammar enrichment, content generation, question generation, QA gates) MUST be executable independently via CLI with `python src/pipeline/{stage_name}.py --config {config.json}`
 - **FR-002**: All scripts MUST use `uv` package manager and Python >=3.14 with type hints on all public functions
-- **FR-003**: Pipeline stages MUST read input from configurable paths and write output to `havachat-knowledge/generated content/{language}/{level}/{content_type}/` following the directory structure convention
+- **FR-003**: Pipeline stages MUST read input from configurable paths and write output to `havachat-knowledge/generated content/{language}/{level}/{content_type}/` following the directory structure convention (e.g., `vocab/`, `grammar/`, `conversations/`, `questions/`)
 
 **Input Handling:**
 
 - **FR-004**: Enrichment scripts MUST use language-specific subclasses (e.g., `JapaneseVocabEnricher`, `MandarinVocabEnricher`, `FrenchVocabEnricher`) where each subclass implements its own file parsing logic, field mapping, and validation rules specific to that language's source format
 - **FR-005**: Each language subclass MUST detect which required fields are already present in the source data (e.g., Japanese already has furigana+romaji, French may have definitions) and only invoke LLM to generate missing required fields
-- **FR-006**: Language subclasses MUST enforce language-specific validation: Chinese/Japanese subclasses MUST validate romanization presence (Pinyin/Romaji); English/French/French subclasses MUST NOT require romanization
+- **FR-006**: Language subclasses MUST enforce language-specific validation: Chinese/Japanese subclasses MUST validate romanization presence (Pinyin/Romaji); English/French/French subclasses MUST NOT require romanization. All subclasses MUST use shared validation utilities for common rules (level_system validation, level_min <= level_max ordinal comparison).
 
 **LLM Integration:**
 
-- **FR-007**: Each language subclass MUST have its own prompt templates in `src/pipeline/prompts/{language}/{stage_name}_prompts.py` (e.g., `prompts/japanese/vocab_enrichment_prompts.py`, `prompts/mandarin/vocab_enrichment_prompts.py`) with language-specific instructions and examples
+- **FR-007**: Each language subclass MUST have its own prompt templates in `src/pipeline/prompts/{language}/{stage_name}_enrichment_prompts.py` (e.g., `prompts/japanese/vocab_enrichment_prompts.py`, `prompts/mandarin/vocab_enrichment_prompts.py`, `prompts/japanese/grammar_enrichment_prompts.py`) with language-specific instructions and examples. Template structure will be provided as part of implementation.
 - **FR-008**: LLM enrichment MUST implement retry logic: attempt generation → validate against schema → retry up to 3 times on failure → flag for manual review if still failing
 - **FR-009**: System MUST log all LLM requests (prompt hash, model, token counts, latency) and responses (success/failure, validation errors) for cost tracking and quality monitoring
 
@@ -155,14 +155,14 @@ Content ops runs the QA gate script on a batch of content (e.g., all French A1 c
 
 **Content Generation:**
 
-- **FR-018**: Content generation script MUST search existing scenarios using semantic similarity (embeddings) before generating new content; if similarity >85%, reuse existing; if 75-85%, prompt ops for decision
-- **FR-019**: Content generation MUST select learning items based on (language, level, topic/scenario relevance) and include 60% vocabulary + 30% grammar + 10% other categories
-- **FR-020**: Generated conversations MUST have 6-10 turns with speaker labels; stories MUST have 3-8 paragraphs; each segment MUST reference 2-4 learning items explicitly in learning_item_ids[]
-- **FR-021**: System MUST track learning item usage counts (appearances in published content segments) in a separate metadata file `{language}/{level}/usage_stats.json` for future frequency balancing
+- **FR-018**: Content generation script MUST search existing scenarios using semantic similarity (embeddings via Qdrant or Meilisearch) before generating new content; if similarity >85%, reuse existing; if 75-85% (borderline), proceed to generate new content AND record scenario pair in manual review queue for ops decision. Scenario similarity search MUST be unit-testable with mock embedding services.
+- **FR-019**: Content generation MUST select learning items based on (language, level, topic/scenario relevance)
+- **FR-020**: Generated conversations MUST have 6-10 turns with speaker labels; stories MUST have 3-8 paragraphs; each segment MUST reference 2-4 learning items explicitly in learning_item_ids[]. Note: A "segment" is a logical grouping of turns (typically 2 turns for 2-speaker dialogues, 2-3 turns for multi-speaker), designed such that each segment can have its own comprehension question.
+- **FR-021**: System MUST implement usage tracking: after each content unit is generated, update `{language}/{level}/usage_stats.json` to increment appearances_count for each learning item referenced in the content. This requires a dedicated usage tracking module with write operations to the metadata file.
 
 **Question Generation:**
 
-- **FR-022**: Question generation MUST produce 5-8 questions per content unit with type distribution: 50-60% MCQ, 20-30% true/false, 20% short answer
+- **FR-022**: Question generation MUST produce 5-8 questions per content unit with type distribution targets: 50-60% MCQ, 20-30% true/false, 20% short answer. These are target ranges, not strict requirements; small question sets (5 questions) may not satisfy all ranges exactly.
 - **FR-023**: Questions MUST cover cognitive levels: 40% detail recall, 30% inference, 30% main idea/summary
 - **FR-024**: MCQ questions MUST include 4 options (1 correct, 3 plausible distractors) and a rationale field explaining the learning value
 
@@ -171,6 +171,10 @@ Content ops runs the QA gate script on a batch of content (e.g., all French A1 c
 - **FR-025**: All scripts MUST log to structured JSON format (timestamp, stage, action, status, error_details, item_id) for debugging and quality monitoring
 - **FR-026**: LLM generation failures MUST create a manual review queue file `{language}/{level}/manual_review/{stage_name}_failures.jsonl` with failed items and error context
 - **FR-027**: System MUST track and report batch processing metrics: items processed, success rate, average LLM tokens per item, total processing time
+
+**Database & Search Infrastructure:**
+
+- **FR-028**: System MUST implement database partitioning by language for both Meilisearch (separate indexes per language: `learning_items_zh`, `scenarios_ja`, etc.) and Postgres (table partitioning or separate schemas per language). Implementation includes index creation scripts, schema setup, and partition configuration validation.
 
 ### Key Entities
 
@@ -198,7 +202,7 @@ Content ops runs the QA gate script on a batch of content (e.g., all French A1 c
   and quality gate pass rates (batch validation success).
 -->
 
-- **SC-001**: Vocab enrichment script processes 500 HSK1 words from TSV input and generates complete learning items (all required fields) with >95% schema validation pass rate within 30 minutes
+- **SC-001**: Vocab enrichment script processes 500 HSK1 words from TSV input and generates complete learning items (all required fields) with >95% schema validation pass rate
 - **SC-002**: Grammar enrichment script processes 100 grammar patterns and produces narrow-scope items (explanation <500 chars, no mega-items flagged) with >90% granularity validation pass rate
 - **SC-003**: Content generation script produces A1 French conversations with 100% link correctness (all referenced learning_item_ids exist) and >95% presence validation (items appear in text)
 - **SC-004**: Question generation produces 5-8 questions per conversation with >98% answerability pass rate (LLM can answer from text alone) and correct type distribution (50-60% MCQ, 20-30% T/F, 20% short answer)

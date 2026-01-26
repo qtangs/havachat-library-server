@@ -258,7 +258,6 @@
 - [ ] T130 [US3] Implement scenario similarity search using embeddings in content.py
 - [ ] T131 [US3] Implement reuse decision logic (>85% = reuse, 75-85% = prompt ops) in content.py
 - [ ] T132 [US3] Implement learning item selection (language, level, topic/scenario relevance) in content.py
-- [ ] T133 [US3] Implement item distribution (60% vocab, 30% grammar, 10% other) in content.py
 - [ ] T134 [US3] Implement conversation generation with 6-10 turns in content.py
 - [ ] T135 [US3] Implement story generation with 3-8 paragraphs in content.py
 - [ ] T136 [US3] Implement segment creation with learning_item_ids in content.py
