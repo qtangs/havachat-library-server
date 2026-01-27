@@ -5,20 +5,17 @@ description = "Havachat Library Server"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "langgraph>=1.0.7",
+    "instructor>=1.0.0",
+    "pydantic>=2.0.0",
+    "pandas>=2.0.0",
+    "docling>=2.70.0",
+    "sentence-transformers>=2.0.0",
+    "openai>=1.0.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "black>=24.8.0",
-]
-langgraph = [
-    "instructor>=1.14.4",
-    "langgraph>=1.0.7",
-]
-pdf = [
-    "docling>=2.70.0",
-    "pandas>=2.0.0",
-]
-test = [
     "pytest>=8.0.0",
 ]

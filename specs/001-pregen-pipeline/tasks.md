@@ -28,18 +28,18 @@
 
 **Goal**: Bootstrap project structure, install dependencies, configure development environment
 
-- [ ] T001 Initialize Python 3.14 project with uv package manager in project root
-- [ ] T002 Install core dependencies via uv: langgraph>=1.0.7, instructor>=1.0.0, pydantic>=2.0.0
-- [ ] T003 Install data processing dependencies: pandas>=2.0.0, docling>=2.70.0
-- [ ] T004 Install testing dependencies: pytest>=8.0.0, black>=24.8.0
-- [ ] T005 Install ML dependencies: sentence-transformers, openai (or anthropic)
-- [ ] T006 Create src/pipeline/__init__.py with version metadata
-- [ ] T007 Create src/pipeline/utils/__init__.py for shared utilities
-- [ ] T008 Create tests/ directory structure: unit/, contract/, integration/, fixtures/
-- [ ] T009 Configure pytest.ini with test discovery patterns and markers
-- [ ] T010 Create .env.template with required environment variables (OPENAI_API_KEY, HAVACHAT_KNOWLEDGE_PATH)
-- [ ] T011 Create README.md with project overview and setup instructions
-- [ ] T012 Verify havachat-knowledge repository access and directory structure
+- [X] T001 Initialize Python 3.14 project with uv package manager in project root
+- [X] T002 Install core dependencies via uv: langgraph>=1.0.7, instructor>=1.0.0, pydantic>=2.0.0
+- [X] T003 Install data processing dependencies: pandas>=2.0.0, docling>=2.70.0
+- [X] T004 Install testing dependencies: pytest>=8.0.0, black>=24.8.0
+- [X] T005 Install ML dependencies: sentence-transformers, openai (or anthropic)
+- [X] T006 Create src/pipeline/__init__.py with version metadata
+- [X] T007 Create src/pipeline/utils/__init__.py for shared utilities
+- [X] T008 Create tests/ directory structure: unit/, contract/, integration/, fixtures/
+- [X] T009 Configure pytest.ini with test discovery patterns and markers
+- [X] T010 Create .env.template with required environment variables (OPENAI_API_KEY, HAVACHAT_KNOWLEDGE_PATH)
+- [X] T011 Create README.md with project overview and setup instructions
+- [X] T012 Verify havachat-knowledge repository access and directory structure
 
 ---
 
