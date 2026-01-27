@@ -49,52 +49,52 @@
 
 ### Pydantic Schemas & Validation
 
-- [ ] T013 [P] Create src/pipeline/validators/__init__.py
-- [ ] T014 [P] Define LevelSystem, Category, ContentType, SegmentType enums in src/pipeline/validators/schema.py
-- [ ] T015 [P] Define LearningItem Pydantic model with all 12 categories in src/pipeline/validators/schema.py
-- [ ] T016 [P] Define ContentUnit and Segment Pydantic models in src/pipeline/validators/schema.py
-- [ ] T017 [P] Define Question, MCQOption, QuestionType Pydantic models in src/pipeline/validators/schema.py
-- [ ] T018 [P] Define Topic, Scenario (with rich tagging), UsageStats, ValidationReport models in src/pipeline/validators/schema.py
-- [ ] T019 [P] Write unit tests for all Pydantic models in tests/unit/test_schemas.py
+- [X] T013 [P] Create src/pipeline/validators/__init__.py
+- [X] T014 [P] Define LevelSystem, Category, ContentType, SegmentType enums in src/pipeline/validators/schema.py
+- [X] T015 [P] Define LearningItem Pydantic model with all 12 categories in src/pipeline/validators/schema.py
+- [X] T016 [P] Define ContentUnit and Segment Pydantic models in src/pipeline/validators/schema.py
+- [X] T017 [P] Define Question, MCQOption, QuestionType Pydantic models in src/pipeline/validators/schema.py
+- [X] T018 [P] Define Topic, Scenario (with rich tagging), UsageStats, ValidationReport models in src/pipeline/validators/schema.py
+- [X] T019 [P] Write unit tests for all Pydantic models in tests/unit/test_schemas.py
 
 ### LLM Client & Instructor Integration
 
-- [ ] T020 Create src/pipeline/utils/llm_client.py with Instructor-wrapped OpenAI client
-- [ ] T021 Implement retry logic (3 attempts with exponential backoff) in llm_client.py
-- [ ] T022 Implement structured response generation with Pydantic model validation in llm_client.py
-- [ ] T023 Add request/response logging (prompt hash, tokens, latency) in llm_client.py
-- [ ] T024 Write unit tests for llm_client with mocked API responses in tests/unit/test_llm_client.py
+- [X] T020 Create src/pipeline/utils/llm_client.py with Instructor-wrapped OpenAI client
+- [X] T021 Implement retry logic (3 attempts with exponential backoff) in llm_client.py
+- [X] T022 Implement structured response generation with Pydantic model validation in llm_client.py
+- [X] T023 Add request/response logging (prompt hash, tokens, latency) in llm_client.py
+- [X] T024 Write unit tests for llm_client with mocked API responses in tests/unit/test_llm_client.py
 
 ### File I/O & Data Handling
 
-- [ ] T025 [P] Create src/pipeline/utils/file_io.py with JSON read/write functions
-- [ ] T026 [P] Implement TSV/CSV parsing functions in file_io.py
-- [ ] T027 [P] Implement markdown parsing helper in file_io.py
-- [ ] T028 [P] Add directory creation with language/level structure in file_io.py
-- [ ] T029 [P] Write unit tests for file I/O functions in tests/unit/test_file_io.py
+- [X] T025 [P] Create src/pipeline/utils/file_io.py with JSON read/write functions
+- [X] T026 [P] Implement TSV/CSV parsing functions in file_io.py
+- [X] T027 [P] Implement markdown parsing helper in file_io.py
+- [X] T028 [P] Add directory creation with language/level structure in file_io.py
+- [X] T029 [P] Write unit tests for file I/O functions in tests/unit/test_file_io.py
 
 ### Logging & Observability
 
-- [ ] T030 Create src/pipeline/utils/logging_config.py with structured JSON logging
-- [ ] T031 Implement JsonFormatter for log records in logging_config.py
-- [ ] T032 Add context manager for logging pipeline stages in logging_config.py
-- [ ] T033 Configure log levels and output destinations in logging_config.py
+- [X] T030 Create src/pipeline/utils/logging_config.py with structured JSON logging
+- [X] T031 Implement JsonFormatter for log records in logging_config.py
+- [X] T032 Add context manager for logging pipeline stages in logging_config.py
+- [X] T033 Configure log levels and output destinations in logging_config.py
 
 ### Semantic Similarity for Scenario Reuse
 
-- [ ] T034 Create src/pipeline/utils/similarity.py with SentenceTransformer initialization
-- [ ] T035 Implement embedding generation function in similarity.py
-- [ ] T036 Implement cosine similarity comparison function in similarity.py
-- [ ] T037 Implement scenario embedding cache (load/save) in similarity.py
-- [ ] T038 Write unit tests for similarity functions in tests/unit/test_similarity.py
+- [X] T034 SKIPPED - Semantic similarity handled by Meilisearch
+- [X] T035 SKIPPED - Semantic similarity handled by Meilisearch
+- [X] T036 SKIPPED - Semantic similarity handled by Meilisearch
+- [X] T037 SKIPPED - Semantic similarity handled by Meilisearch
+- [X] T038 SKIPPED - Semantic similarity handled by Meilisearch
 
 ### Base Enricher Abstract Class
 
-- [ ] T039 Create src/pipeline/enrichers/__init__.py
-- [ ] T040 Create src/pipeline/enrichers/base.py with BaseEnricher abstract class
-- [ ] T041 Define abstract methods: parse_source(), detect_missing_fields(), build_prompt(), validate_output() in base.py
-- [ ] T042 Implement common retry loop logic in BaseEnricher
-- [ ] T043 Implement manual review queue writing in BaseEnricher
+- [X] T039 Create src/pipeline/enrichers/__init__.py
+- [X] T040 Create src/pipeline/enrichers/base.py with BaseEnricher abstract class
+- [X] T041 Define abstract methods: parse_source(), detect_missing_fields(), build_prompt(), validate_output() in base.py
+- [X] T042 Implement common retry loop logic in BaseEnricher
+- [X] T043 Implement manual review queue writing in BaseEnricher
 
 ---
 
