@@ -174,15 +174,15 @@
 
 ### Mandarin Grammar Enricher
 
-- [ ] T077 [P] [US2] Create src/pipeline/enrichers/grammar/__init__.py
-- [ ] T078 [P] [US2] Create src/pipeline/enrichers/grammar/mandarin.py with MandarinGrammarEnricher class
-- [ ] T079 [US2] Implement parse_source() for CSV with "类别,类别名称,细目,语法内容" columns in mandarin.py
-- [ ] T080 [US2] Implement detect_missing_fields() checking for definition, examples in mandarin.py
-- [ ] T081 [US2] Create src/pipeline/prompts/mandarin/grammar_prompts.py with grammar-specific prompts
-- [ ] T082 [US2] Implement build_prompt() with granularity instructions (avoid mega-items) in mandarin.py
-- [ ] T083 [US2] Implement validate_output() with granularity checks in mandarin.py
-- [ ] T084 [US2] Add sub-item breakdown logic for broad patterns in mandarin.py
-- [ ] T085 [US2] Write unit tests for MandarinGrammarEnricher in tests/unit/test_mandarin_grammar_enricher.py
+- [X] T077 [P] [US2] Create src/pipeline/enrichers/grammar/__init__.py
+- [X] T078 [P] [US2] Create src/pipeline/enrichers/grammar/mandarin.py with MandarinGrammarEnricher class
+- [X] T079 [US2] Implement parse_source() for CSV with "类别,类别名称,细目,语法内容" columns in mandarin.py
+- [X] T080 [US2] Implement detect_missing_fields() checking for definition, examples in mandarin.py
+- [X] T081 [US2] Create src/pipeline/prompts/mandarin/grammar_prompts.py with grammar-specific prompts (implemented inline in mandarin.py)
+- [X] T082 [US2] Implement build_prompt() with granularity instructions (avoid mega-items) in mandarin.py
+- [X] T083 [US2] Implement validate_output() with granularity checks in mandarin.py
+- [X] T084 [US2] Add sub-item breakdown logic for broad patterns in mandarin.py
+- [X] T085 [US2] Write unit tests for MandarinGrammarEnricher in tests/unit/test_mandarin_grammar_enricher.py
 
 ### Japanese Grammar Enricher
 
@@ -206,17 +206,17 @@
 
 ### Grammar Enrichment CLI
 
-- [ ] T100 [US2] Create src/pipeline/cli/enrich_grammar.py with CLI interface
-- [ ] T101 [US2] Implement argument parsing: --language, --level, --input, --enricher, --output in enrich_grammar.py
-- [ ] T102 [US2] Implement batch processing with granularity warnings in enrich_grammar.py
-- [ ] T103 [US2] Implement summary statistics reporting in enrich_grammar.py
-- [ ] T104 [US2] Write integration test for end-to-end grammar enrichment in tests/integration/test_end_to_end_grammar.py
+- [X] T100 [US2] Create src/pipeline/cli/enrich_grammar.py with CLI interface
+- [X] T101 [US2] Implement argument parsing: --language, --level, --input, --enricher, --output in enrich_grammar.py
+- [X] T102 [US2] Implement batch processing with granularity warnings in enrich_grammar.py
+- [X] T103 [US2] Implement summary statistics reporting in enrich_grammar.py
+- [X] T104 [US2] Write integration test for end-to-end grammar enrichment in tests/integration/test_end_to_end_grammar.py
 
 ### Test Fixtures
 
-- [ ] T105 [P] [US2] Create tests/fixtures/mandarin_grammar_sample.csv with 10 sample patterns
-- [ ] T106 [P] [US2] Create tests/fixtures/japanese_grammar_sample.tsv with 10 sample patterns
-- [ ] T107 [P] [US2] Create tests/fixtures/french_grammar_sample.md with 10 sample patterns
+- [X] T105 [P] [US2] Create tests/fixtures/mandarin_grammar_sample.csv with 10 sample patterns
+- [ ] T106 [P] [US2] Create tests/fixtures/japanese_grammar_sample.tsv with 10 sample patterns (SKIPPED - future work)
+- [ ] T107 [P] [US2] Create tests/fixtures/french_grammar_sample.md with 10 sample patterns (SKIPPED - future work)
 
 ---
 
