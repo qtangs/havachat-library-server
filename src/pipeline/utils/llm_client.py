@@ -6,6 +6,7 @@ structured output generation, retry logic, and request/response logging.
 
 import hashlib
 import logging
+import os
 import time
 from typing import Any, Optional, Type, TypeVar
 
@@ -18,12 +19,23 @@ T = TypeVar("T", bound=BaseModel)
 logger = logging.getLogger(__name__)
 
 
+class TokenUsage(BaseModel):
+    """Token usage statistics."""
+    
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    cached_tokens: int = 0  # Prompt cache hits
+
+
 class LLMClient:
     """LLM client with Instructor-wrapped OpenAI for structured responses.
 
     Features:
     - Structured response generation with Pydantic model validation
     - Automatic retry logic (3 attempts with exponential backoff)
+    - Prompt caching support (OpenAI automatic caching)
+    - Token usage tracking and cost estimation
     - Request/response logging (prompt hash, tokens, latency)
     - Support for different OpenAI models
     """
@@ -31,7 +43,7 @@ class LLMClient:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "gpt-4o-mini",
+        model: Optional[str] = None,
         max_retries: int = 3,
         base_delay: float = 1.0,
         max_delay: float = 60.0,
@@ -40,15 +52,18 @@ class LLMClient:
 
         Args:
             api_key: OpenAI API key (if None, uses OPENAI_API_KEY env var)
-            model: OpenAI model to use (default: gpt-4o-mini)
+            model: OpenAI model to use (if None, uses LLM_MODEL env var or defaults to gpt-4o-mini)
             max_retries: Maximum number of retry attempts (default: 3)
             base_delay: Base delay for exponential backoff in seconds (default: 1.0)
             max_delay: Maximum delay between retries in seconds (default: 60.0)
         """
-        self.model = model
+        self.model = model or os.getenv("LLM_MODEL", "gpt-4o-mini")
         self.max_retries = max_retries
         self.base_delay = base_delay
         self.max_delay = max_delay
+        
+        # Token tracking
+        self.total_usage = TokenUsage()
 
         # Initialize OpenAI client
         client = OpenAI(api_key=api_key)
@@ -56,26 +71,29 @@ class LLMClient:
         # Wrap with Instructor for structured outputs
         self.client = instructor.from_openai(client)
 
-        logger.info(f"LLMClient initialized with model={model}, max_retries={max_retries}")
+        logger.info(f"LLMClient initialized with model={self.model}, max_retries={max_retries}")
 
     def generate(
         self,
         prompt: str,
         response_model: Type[T],
         temperature: float = 0.7,
-        max_tokens: Optional[int] = None,
+        max_tokens: int = 2048,
         system_prompt: Optional[str] = None,
+        use_cache: bool = True,
     ) -> T:
         """Generate structured response using Pydantic model validation.
 
         This method automatically retries on failures with exponential backoff.
+        Supports OpenAI prompt caching for repeated system prompts.
 
         Args:
             prompt: User prompt/instruction
             response_model: Pydantic model class for structured output
             temperature: Sampling temperature (0.0 - 2.0, default: 0.7)
-            max_tokens: Maximum tokens to generate (default: None = model max)
-            system_prompt: Optional system prompt for context
+            max_tokens: Maximum tokens to generate (default: 2048)
+            system_prompt: Optional system prompt for context (cached if use_cache=True)
+            use_cache: Enable prompt caching for system_prompt (default: True)
 
         Returns:
             Validated Pydantic model instance
@@ -93,6 +111,10 @@ class LLMClient:
 
         messages = []
         if system_prompt:
+            # OpenAI automatically caches system messages that are:
+            # - Longer than 1024 tokens
+            # - Reused within a short time window
+            # See: https://platform.openai.com/docs/guides/prompt-caching
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
 
@@ -101,16 +123,30 @@ class LLMClient:
             try:
                 start_time = time.time()
 
+                # Prepare API parameters
+                api_params = {
+                    "model": self.model,
+                    "messages": messages,
+                    "response_model": response_model,
+                    "temperature": temperature,
+                }
+                
+                # GPT-5 models use max_completion_tokens instead of max_tokens
+                # and only the default temperature (1) is supported
+                if self.model.startswith("gpt-5"):
+                    api_params["max_completion_tokens"] = max_tokens
+                    api_params["temperature"] = 1.0
+                else:
+                    api_params["max_tokens"] = max_tokens
+
                 # Use Instructor's structured output generation
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    response_model=response_model,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                )
+                response = self.client.chat.completions.create(**api_params)
 
                 latency_ms = (time.time() - start_time) * 1000
+
+                # Track token usage
+                usage = self._extract_usage(response)
+                self._update_total_usage(usage)
 
                 # Log successful response
                 self._log_response(
@@ -119,6 +155,7 @@ class LLMClient:
                     latency_ms=latency_ms,
                     attempt=attempt,
                     success=True,
+                    usage=usage,
                 )
 
                 return response
@@ -156,6 +193,87 @@ class LLMClient:
             f"Last error: {last_exception}"
         )
 
+    def _extract_usage(self, response: T) -> TokenUsage:
+        """Extract token usage from response.
+
+        Args:
+            response: Pydantic model response from Instructor
+
+        Returns:
+            TokenUsage object with token counts
+        """
+        usage = TokenUsage()
+        
+        # Try to get usage from _raw_response attribute (Instructor stores it)
+        if hasattr(response, "_raw_response") and hasattr(response._raw_response, "usage"):
+            raw_usage = response._raw_response.usage
+            usage.prompt_tokens = getattr(raw_usage, "prompt_tokens", 0)
+            usage.completion_tokens = getattr(raw_usage, "completion_tokens", 0)
+            usage.total_tokens = getattr(raw_usage, "total_tokens", 0)
+            
+            # Check for cached tokens (OpenAI returns this in usage)
+            if hasattr(raw_usage, "prompt_tokens_details"):
+                details = raw_usage.prompt_tokens_details
+                usage.cached_tokens = getattr(details, "cached_tokens", 0)
+        
+        return usage
+    
+    def _update_total_usage(self, usage: TokenUsage) -> None:
+        """Update cumulative token usage.
+
+        Args:
+            usage: Token usage from current request
+        """
+        self.total_usage.prompt_tokens += usage.prompt_tokens
+        self.total_usage.completion_tokens += usage.completion_tokens
+        self.total_usage.total_tokens += usage.total_tokens
+        self.total_usage.cached_tokens += usage.cached_tokens
+    
+    def get_usage_summary(self) -> dict:
+        """Get summary of total token usage.
+
+        Returns:
+            Dictionary with usage stats and cost estimates
+        """
+        # Cost estimates (per 1M tokens)
+        # https://openai.com/api/pricing/
+        costs = {
+            "gpt-4.1-nano": {"input": 0.1, "output": 0.4, "cached": 0.025},
+            "gpt-4.1-mini": {"input": 0.4, "output": 1.6, "cached": 0.1},
+            "gpt-4.1": {"input": 2, "output": 8, "cached": 0.5},
+            "gpt-5-mini": {"input": 0.25, "output": 2, "cached": 0.025},
+            "gpt-5.2": {"input": 1.75, "output": 14, "cached": 0.175},
+            "claude-sonnet-4.5": {"input": 3, "output": 15, "cached": 1.5},
+            "google/gemini-3-pro-preview": {"input": 2, "output": 12, "cached": 1},
+        }
+        
+        model_cost = costs.get(self.model, costs["gpt-4.1-mini"])
+        
+        # Calculate costs (cached tokens cost 50% less)
+        uncached_prompt = self.total_usage.prompt_tokens - self.total_usage.cached_tokens
+        input_cost = (uncached_prompt * model_cost["input"] + 
+                     self.total_usage.cached_tokens * model_cost["cached"]) / 1_000_000
+        output_cost = self.total_usage.completion_tokens * model_cost["output"] / 1_000_000
+        
+        return {
+            "model": self.model,
+            "prompt_tokens": self.total_usage.prompt_tokens,
+            "completion_tokens": self.total_usage.completion_tokens,
+            "total_tokens": self.total_usage.total_tokens,
+            "cached_tokens": self.total_usage.cached_tokens,
+            "cache_hit_rate": (
+                f"{self.total_usage.cached_tokens / self.total_usage.prompt_tokens * 100:.1f}%"
+                if self.total_usage.prompt_tokens > 0 else "0.0%"
+            ),
+            "estimated_cost_usd": round(input_cost + output_cost, 4),
+            "input_cost_usd": round(input_cost, 4),
+            "output_cost_usd": round(output_cost, 4),
+        }
+    
+    def reset_usage(self) -> None:
+        """Reset token usage counters."""
+        self.total_usage = TokenUsage()
+
     def _hash_prompt(self, prompt: str) -> str:
         """Generate SHA256 hash of prompt for logging.
 
@@ -186,6 +304,7 @@ class LLMClient:
         latency_ms: float,
         attempt: int,
         success: bool,
+        usage: Optional[TokenUsage] = None,
         error: Optional[str] = None,
     ) -> None:
         """Log structured response metadata.
@@ -196,6 +315,7 @@ class LLMClient:
             latency_ms: Response latency in milliseconds
             attempt: Attempt number
             success: Whether the request succeeded
+            usage: Token usage statistics
             error: Error message if failed
         """
         log_data = {
@@ -206,6 +326,14 @@ class LLMClient:
             "attempt": attempt,
             "success": success,
         }
+        
+        if usage:
+            log_data["tokens"] = {
+                "prompt": usage.prompt_tokens,
+                "completion": usage.completion_tokens,
+                "total": usage.total_tokens,
+                "cached": usage.cached_tokens,
+            }
 
         if error:
             log_data["error"] = error

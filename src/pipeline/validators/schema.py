@@ -91,6 +91,31 @@ class FailureType(str, Enum):
 # ============================================================================
 
 
+class Example(BaseModel):
+    """Example sentence with translation and optional media."""
+
+    text: str = Field(
+        ..., description="Example text in target language"
+    )
+    translation_en: str = Field(
+        ..., description="English translation of the example"
+    )
+    media_urls: List[str] = Field(
+        default_factory=list,
+        description="URLs for media resources (audio, image, video)"
+    )
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "text": "我去银行取钱。",
+                "translation_en": "I go to the bank to withdraw money.",
+                "media_urls": []
+            }
+        }
+    }
+
+
 class LearningItem(BaseModel):
     """Atomic pedagogical unit (vocabulary, grammar, pronunciation, cultural note).
 
@@ -98,7 +123,8 @@ class LearningItem(BaseModel):
     - Chinese/Japanese MUST have romanization
     - If sense_gloss_en is present, there must be another item with same
       target_item but different sense_gloss_en (polysemy)
-    - level_min <= level_max in ordinal comparison
+    - level_min <= level_
+    max in ordinal comparison
     """
 
     id: str = Field(default_factory=lambda: str(uuid4()), description="UUID v4")
@@ -109,10 +135,10 @@ class LearningItem(BaseModel):
     target_item: str = Field(
         ..., description="The word, phrase, or grammar pattern being taught"
     )
-    explanation_en: str = Field(
-        ..., description="Learner-friendly explanation in English"
+    definition_en: str = Field(
+        ..., description="Clear English definition suitable for learners, to be used in flashcards"
     )
-    examples: List[str] = Field(
+    examples: List[Example] = Field(
         ...,
         min_length=3,
         max_length=5,
@@ -133,6 +159,10 @@ class LearningItem(BaseModel):
     )
     aliases: List[str] = Field(
         default_factory=list, description="Alternative forms or spellings"
+    )
+    media_urls: List[str] = Field(
+        default_factory=list,
+        description="URLs for media resources (audio, image, video) for this learning item"
     )
 
     # Level metadata
@@ -166,16 +196,29 @@ class LearningItem(BaseModel):
                 "language": "zh",
                 "category": "vocab",
                 "target_item": "银行",
-                "explanation_en": "A financial institution where people deposit money and obtain loans",
+                "definition_en": "A financial institution where people deposit money and obtain loans",
                 "examples": [
-                    "我去银行取钱。(Wǒ qù yínháng qǔ qián.) - I go to the bank to withdraw money.",
-                    "这家银行提供低利率贷款。(Zhè jiā yínháng tígōng dī lìlǜ dàikuǎn.) - This bank offers low-interest loans.",
-                    "银行的营业时间是周一到周五。(Yínháng de yíngyè shíjiān shì zhōuyī dào zhōuwǔ.) - The bank's business hours are Monday to Friday.",
+                    {
+                        "text": "我去银行取钱。",
+                        "translation_en": "I go to the bank to withdraw money.",
+                        "media_urls": []
+                    },
+                    {
+                        "text": "这家银行提供低利率贷款。",
+                        "translation_en": "This bank offers low-interest loans.",
+                        "media_urls": []
+                    },
+                    {
+                        "text": "银行的营业时间是周一到周五。",
+                        "translation_en": "The bank's business hours are Monday to Friday.",
+                        "media_urls": []
+                    }
                 ],
                 "romanization": "yínháng",
                 "sense_gloss_en": "bank (financial institution)",
                 "lemma": "银行",
                 "pos": "noun",
+                "media_urls": [],
                 "level_system": "hsk",
                 "level_min": "HSK1",
                 "level_max": "HSK1",

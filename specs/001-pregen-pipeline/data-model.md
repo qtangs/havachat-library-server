@@ -40,13 +40,18 @@ class Category(str, Enum):
     PATTERN = "pattern"
     OTHER = "other"
 
+class Example(BaseModel):
+    text: str = Field(..., description="Example text in target language")
+    translation_en: str = Field(..., description="English translation of the example")
+    media_urls: List[str] = Field(default_factory=list, description="URLs for media resources (audio, image, video)")
+
 class LearningItem(BaseModel):
     id: str = Field(..., description="UUID v4")
     language: str = Field(..., description="ISO 639-1 code: zh, ja, fr, en, es")
     category: Category
     target_item: str = Field(..., description="The word, phrase, or grammar pattern being taught")
-    explanation_en: str = Field(..., description="Learner-friendly explanation in English")
-    examples: List[str] = Field(..., min_items=3, max_items=5, description="Contextual usage examples")
+    definition_en: str = Field(..., description="Learner-friendly explanation in English")
+    examples: List[Example] = Field(..., min_items=3, max_items=5, description="Contextual usage examples with translations and optional media")
     
     # Optional fields (language-specific)
     romanization: Optional[str] = Field(None, description="Pinyin for Chinese, Romaji for Japanese")
@@ -54,6 +59,7 @@ class LearningItem(BaseModel):
     lemma: Optional[str] = Field(None, description="Base form for inflected words")
     pos: Optional[str] = Field(None, description="Part of speech: noun, verb, adj, etc.")
     aliases: List[str] = Field(default_factory=list, description="Alternative forms or spellings")
+    media_urls: List[str] = Field(default_factory=list, description="URLs for media resources (audio, image, video) for this learning item")
     
     # Level metadata
     level_system: LevelSystem
@@ -72,15 +78,24 @@ class LearningItem(BaseModel):
                 "language": "zh",
                 "category": "vocab",
                 "target_item": "银行",
-                "explanation_en": "A financial institution where people deposit money and obtain loans",
+                "definition_en": "A financial institution where people deposit money and obtain loans",
                 "examples": [
-                    "我去银行取钱。(Wǒ qù yínháng qǔ qián.) - I go to the bank to withdraw money.",
-                    "这家银行提供低利率贷款。(Zhè jiā yínháng tígōng dī lìlǜ dàikuǎn.) - This bank offers low-interest loans."
+                    {
+                        "text": "我去银行取钱。",
+                        "translation_en": "I go to the bank to withdraw money.",
+                        "media_urls": []
+                    },
+                    {
+                        "text": "这家银行提供低利率贷款。",
+                        "translation_en": "This bank offers low-interest loans.",
+                        "media_urls": []
+                    }
                 ],
                 "romanization": "yínháng",
                 "sense_gloss_en": "bank (financial institution)",
                 "lemma": "银行",
                 "pos": "noun",
+                "media_urls": [],
                 "level_system": "hsk",
                 "level_min": "HSK1",
                 "level_max": "HSK1",
@@ -95,14 +110,27 @@ class LearningItem(BaseModel):
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
-  "required": ["id", "language", "category", "target_item", "explanation_en", "examples", "level_system", "level_min", "level_max"],
+  "required": ["id", "language", "category", "target_item", "definition_en", "examples", "level_system", "level_min", "level_max"],
   "properties": {
     "id": {"type": "string", "format": "uuid"},
     "language": {"type": "string", "enum": ["zh", "ja", "fr", "en", "es"]},
     "category": {"type": "string", "enum": ["vocab", "grammar", "pronunciation", "idiom", "functional", "cultural", "writing_system", "sociolinguistic", "pragmatic", "literacy", "pattern", "other"]},
     "target_item": {"type": "string"},
-    "explanation_en": {"type": "string"},
-    "examples": {"type": "array", "items": {"type": "string"}, "minItems": 3, "maxItems": 5},
+    "definition_en": {"type": "string"},
+    "examples": {
+      "type": "array", 
+      "items": {
+        "type": "object",
+        "required": ["text", "translation_en"],
+        "properties": {
+          "text": {"type": "string"},
+          "translation_en": {"type": "string"},
+          "media_urls": {"type": "array", "items": {"type": "string"}}
+        }
+      },
+      "minItems": 3, 
+      "maxItems": 5
+    },
     "romanization": {"type": "string"},
     "sense_gloss_en": {"type": "string"},
     "lemma": {"type": "string"},

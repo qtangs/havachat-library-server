@@ -1,0 +1,72 @@
+[
+  {
+    "word": "学校",
+    "meaning": "school",
+    "furigana": "がっこう",
+    "romaji": "gakkou",
+    "level": "N5"
+  },
+  {
+    "word": "先生",
+    "meaning": "teacher",
+    "furigana": "せんせい",
+    "romaji": "sensei",
+    "level": "N5"
+  },
+  {
+    "word": "学生",
+    "meaning": "student",
+    "furigana": "がくせい",
+    "romaji": "gakusei",
+    "level": "N5"
+  },
+  {
+    "word": "友達",
+    "meaning": "friend",
+    "furigana": "ともだち",
+    "romaji": "tomodachi",
+    "level": "N5"
+  },
+  {
+    "word": "今日",
+    "meaning": "today",
+    "furigana": "きょう",
+    "romaji": "kyou",
+    "level": "N5"
+  },
+  {
+    "word": "明日",
+    "meaning": "tomorrow",
+    "furigana": "あした",
+    "romaji": "ashita",
+    "level": "N5"
+  },
+  {
+    "word": "昨日",
+    "meaning": "yesterday",
+    "furigana": "きのう",
+    "romaji": "kinou",
+    "level": "N5"
+  },
+  {
+    "word": "時間",
+    "meaning": "time",
+    "furigana": "じかん",
+    "romaji": "jikan",
+    "level": "N5"
+  },
+  {
+    "word": "勉強",
+    "meaning": "study",
+    "furigana": "べんきょう",
+    "romaji": "benkyou",
+    "level": "N5"
+  },
+  {
+    "word": "仕事",
+    "meaning": "work, job",
+    "furigana": "しごと",
+    "romaji": "shigoto",
+    "level": "N5"
+  }
+]

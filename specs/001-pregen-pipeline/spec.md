@@ -20,15 +20,15 @@ Content ops imports an official HSK1 vocabulary list (TSV with Word and Part of 
 
 **Why this priority**: Vocabulary is the foundation of all learning content. Without enriched vocab items, no other pipeline stages can proceed. This delivers immediate value by transforming raw word lists into structured, searchable learning resources.
 
-**Independent Test**: Can be fully tested by providing an official vocab TSV, running the enrichment script, and verifying that output JSON files contain all required fields (target_item, explanation_en, examples, romanization, level_system, level_min/max) and pass schema validation.
+**Independent Test**: Can be fully tested by providing an official vocab TSV, running the enrichment script, and verifying that output JSON files contain all required fields (target_item, definition_en, examples, romanization, level_system, level_min/max) and pass schema validation.
 
 **Acceptance Scenarios**:
 
-1. **Given** an official HSK1 vocab TSV with columns "Word, Part of Speech", **When** the MandarinVocabEnricher runs, **Then** each word is enriched with explanation_en, 3-5 examples, pinyin romanization, sense_gloss_en, and written to `Mandarin/HSK1/vocab/item-{uuid}.json`
+1. **Given** an official HSK1 vocab TSV with columns "Word, Part of Speech", **When** the MandarinVocabEnricher runs, **Then** each word is enriched with definition_en, 3-5 examples, pinyin romanization, sense_gloss_en, and written to `Mandarin/HSK1/vocab/item-{uuid}.json`
 2. **Given** a Japanese JLPT N1 vocab JSON with fields `{word, meaning, furigana, romaji, level}`, **When** the JapaneseVocabEnricher runs, **Then** existing meaning/furigana/romaji are preserved, and only missing fields (examples, sense_gloss_en for polysemy, aliases) are LLM-generated
-3. **Given** a French CEFR A1 vocab file with existing definitions, **When** the FrenchVocabEnricher runs, **Then** existing definitions are preserved as explanation_en base, and only missing fields (contextual examples, sense_gloss_en for polysemy, aliases, pos) are LLM-generated and written to `French/A1/vocab/item-{uuid}.json`
+3. **Given** a French CEFR A1 vocab file with existing definitions, **When** the FrenchVocabEnricher runs, **Then** existing definitions are preserved as definition_en base, and only missing fields (contextual examples, sense_gloss_en for polysemy, aliases, pos) are LLM-generated and written to `French/A1/vocab/item-{uuid}.json`
 4. **Given** an enriched vocab item fails schema validation (missing required field), **When** the LLM retry loop executes, **Then** the system retries up to 3 times before flagging the item for manual review with error context
-5. **Given** an enriched vocab list, **When** the validation script runs, **Then** all items pass presence checks (romanization for zh/ja, explanation_en for all) and duplicate detection (no items with identical lemma+sense_gloss)
+5. **Given** an enriched vocab list, **When** the validation script runs, **Then** all items pass presence checks (romanization for zh/ja, definition_en for all) and duplicate detection (no items with identical lemma+sense_gloss)
 
 ---
 
@@ -42,9 +42,9 @@ Content ops imports an official grammar list and runs the language-specific gram
 
 **Acceptance Scenarios**:
 
-1. **Given** an official HSK1 grammar CSV with columns "类别,类别名称,细目,语法内容" where 类别="句型", 细目="是...的", **When** the MandarinGrammarEnricher runs, **Then** a grammar learning item is created with target_item="是...的", explanation_en describing form and use, 3-5 contextual examples, and category="grammar"
-2. **Given** a Japanese JLPT N5 grammar TSV with columns "Type, Rule, Example" where Type="Basic Particles", Rule="は (wa) - Topic Marker", Example="私は学生です。", **When** the JapaneseGrammarEnricher runs, **Then** the existing example is preserved and enriched with explanation_en, additional usage examples, common learner errors, and the particle "は" is stored as target_item
-3. **Given** a French A1 grammar markdown with category "## A1: Pronouns" and item "Il/elle/ils/elles = it/he/she/they (French Subject Pronouns)", **When** the FrenchGrammarEnricher runs, **Then** a grammar learning item is created parsing the title into target_item="Il/elle/ils/elles", generating explanation_en for form/usage, 3-5 contextual examples, and category="grammar"
+1. **Given** an official HSK1 grammar CSV with columns "类别,类别名称,细目,语法内容" where 类别="句型", 细目="是...的", **When** the MandarinGrammarEnricher runs, **Then** a grammar learning item is created with target_item="是...的", definition_en describing form and use, 3-5 contextual examples, and category="grammar"
+2. **Given** a Japanese JLPT N5 grammar TSV with columns "Type, Rule, Example" where Type="Basic Particles", Rule="は (wa) - Topic Marker", Example="私は学生です。", **When** the JapaneseGrammarEnricher runs, **Then** the existing example is preserved and enriched with definition_en, additional usage examples, common learner errors, and the particle "は" is stored as target_item
+3. **Given** a French A1 grammar markdown with category "## A1: Pronouns" and item "Il/elle/ils/elles = it/he/she/they (French Subject Pronouns)", **When** the FrenchGrammarEnricher runs, **Then** a grammar learning item is created parsing the title into target_item="Il/elle/ils/elles", generating definition_en for form/usage, 3-5 contextual examples, and category="grammar"
 4. **Given** a broad grammar pattern like "past tense" in any language, **When** the LLM generates the item, **Then** the enricher prompts for sub-item breakdown (e.g., "regular past -ed", "irregular past forms", "past continuous") and creates linked learning items with narrower scope
 5. **Given** enriched grammar lists from multiple languages (English CEFR, Chinese HSK, Japanese JLPT), **When** stored in respective directories, **Then** each item includes correct level_system (cefr|hsk|jlpt) and level_min/max values
 
@@ -107,7 +107,7 @@ Content ops runs the QA gate script on a batch of content (e.g., all French A1 c
 - **Language-specific source formats**: 
   - **Vocab**: Japanese JSON has `{word, meaning, furigana, romaji, level}` while French might be CSV `{Mot, Définition, Exemple}` and Chinese TSV `{Word, Part of Speech}`. 
   - **Grammar**: Chinese CSV has hierarchical categories `{类别,类别名称,细目,语法内容}`, Japanese TSV has `{Type, Rule, Example}`, French markdown has category headers (`## A1: Pronouns`) followed by descriptive title lists. Each language subclass handles its own source format without requiring generic configuration.
-- **Pre-existing fields**: Japanese vocab already includes romanization (furigana/romaji) and English meanings; Japanese grammar includes examples with romaji and translations. Enrichment subclasses must preserve these and only generate missing fields (additional examples, sense_gloss_en if polysemy detected, explanation_en for grammar).
+- **Pre-existing fields**: Japanese vocab already includes romanization (furigana/romaji) and English meanings; Japanese grammar includes examples with romaji and translations. Enrichment subclasses must preserve these and only generate missing fields (additional examples, sense_gloss_en if polysemy detected, definition_en for grammar).
 - **Grammar hierarchical parsing**: French grammar titles contain the pattern itself plus explanation (e.g., "Il/elle/ils/elles = it/he/she/they (French Subject Pronouns)"). The FrenchGrammarEnricher must parse title to extract target_item ("Il/elle/ils/elles") and category hint ("Subject Pronouns").
 - **Missing romanization**: For Chinese, if source TSV lacks Pinyin, the MandarinVocabEnricher LLM must generate it; validation must enforce presence before writing output.
 - **Polysemous words**: "banco" (bank/bench), "bat" (animal/sports equipment), Japanese "bank" (financial vs riverbank) must result in separate learning items with distinct sense_gloss_en to avoid quiz ambiguity.
@@ -141,7 +141,7 @@ Content ops runs the QA gate script on a batch of content (e.g., all French A1 c
 
 **Schema Validation:**
 
-- **FR-010**: All generated learning items MUST conform to the schema: `{id, language, category, target_item, explanation_en, examples[], level_system, level_min, level_max, created_at, version}` with additional fields per category (romanization for zh/ja, sense_gloss_en for vocab, lemma/pos where applicable)
+- **FR-010**: All generated learning items MUST conform to the schema: `{id, language, category, target_item, definition_en, examples[], level_system, level_min, level_max, created_at, version}` with additional fields per category (romanization for zh/ja, sense_gloss_en for vocab, lemma/pos where applicable)
 - **FR-011**: All generated content units MUST conform to: `{id, language, type, title, description, text, segments[], learning_item_ids[], topic_ids[], scenario_ids[], level_system, level_min, level_max, word_count, estimated_reading_time_seconds, has_audio, has_questions, publishable, created_at, version}`
 - **FR-012**: All generated questions MUST conform to: `{id, content_id, question_type, question_text, options[], answer_key, rationale, difficulty, tags[], created_at, version}`
 
@@ -178,7 +178,7 @@ Content ops runs the QA gate script on a batch of content (e.g., all French A1 c
 
 ### Key Entities
 
-- **Learning Item**: Atomic pedagogical unit (vocabulary, grammar, pronunciation, etc.) with fields: id, language, category, target_item, explanation_en, examples, romanization (for zh/ja), level_system, level_min/max, sense_gloss_en (for polysemy), lemma, pos, aliases, created_at, version. Stored as individual JSON files in `{language}/{level}/{category}/item-{uuid}.json`.
+- **Learning Item**: Atomic pedagogical unit (vocabulary, grammar, pronunciation, etc.) with fields: id, language, category, target_item, definition_en, examples, romanization (for zh/ja), level_system, level_min/max, sense_gloss_en (for polysemy), lemma, pos, aliases, created_at, version. Stored as individual JSON files in `{language}/{level}/{category}/item-{uuid}.json`.
 
 - **Content Unit**: Conversation or story containing multiple segments. Fields: id, language, type (conversation|story), title, description, text, segments[] (each with type, speaker, text, learning_item_ids, start/end times), learning_item_ids[] (all featured items), topic_ids[], scenario_ids[], level_system, level_min/max, word_count, estimated_reading_time_seconds, has_audio, has_questions, publishable, created_at, version. Stored as `{language}/{level}/conversations/content-{uuid}.json` or `stories/content-{uuid}.json`.
 

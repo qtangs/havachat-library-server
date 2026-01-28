@@ -9,7 +9,7 @@
     "language",
     "category",
     "target_item",
-    "explanation_en",
+    "definition_en",
     "examples",
     "level_system",
     "level_min",
@@ -38,7 +38,7 @@
       "minLength": 1,
       "description": "The word, phrase, or grammar pattern being taught"
     },
-    "explanation_en": {
+    "definition_en": {
       "type": "string",
       "minLength": 10,
       "maxLength": 500,
@@ -47,12 +47,31 @@
     "examples": {
       "type": "array",
       "items": {
-        "type": "string",
-        "minLength": 5
+        "type": "object",
+        "required": ["text", "translation_en"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Example text in target language"
+          },
+          "translation_en": {
+            "type": "string",
+            "description": "English translation of the example"
+          },
+          "media_urls": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": "URLs for media resources (audio, image, video)"
+          }
+        }
       },
       "minItems": 3,
       "maxItems": 5,
-      "description": "Contextual usage examples"
+      "description": "Contextual usage examples with translations and optional media"
     },
     "romanization": {
       "type": "string",
@@ -77,6 +96,14 @@
         "type": "string"
       },
       "description": "Alternative forms or spellings"
+    },
+    "media_urls": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uri"
+      },
+      "description": "URLs for media resources (audio, image, video) for this learning item"
     },
     "level_system": {
       "type": "string",
@@ -113,17 +140,30 @@
       "language": "zh",
       "category": "vocab",
       "target_item": "银行",
-      "explanation_en": "A financial institution where people deposit money and obtain loans",
+      "definition_en": "A financial institution where people deposit money and obtain loans",
       "examples": [
-        "我去银行取钱。(Wǒ qù yínháng qǔ qián.) - I go to the bank to withdraw money.",
-        "这家银行提供低利率贷款。(Zhè jiā yínháng tígōng dī lìlǜ dàikuǎn.) - This bank offers low-interest loans.",
-        "银行在街角。(Yínháng zài jiē jiǎo.) - The bank is at the corner."
+        {
+          "text": "我去银行取钱。",
+          "translation_en": "I go to the bank to withdraw money.",
+          "media_urls": []
+        },
+        {
+          "text": "这家银行提供低利率贷款。",
+          "translation_en": "This bank offers low-interest loans.",
+          "media_urls": []
+        },
+        {
+          "text": "银行在街角。",
+          "translation_en": "The bank is at the corner.",
+          "media_urls": []
+        }
       ],
       "romanization": "yínháng",
       "sense_gloss_en": "bank (financial institution)",
       "lemma": "银行",
       "pos": "noun",
       "aliases": [],
+      "media_urls": [],
       "level_system": "hsk",
       "level_min": "HSK1",
       "level_max": "HSK1",

@@ -30,6 +30,7 @@ class BaseEnricher(ABC):
     - detect_missing_fields(): Identify fields requiring enrichment
     - build_prompt(): Construct LLM prompts for enrichment
     - validate_output(): Validate enriched content
+    - system_prompt (property): System prompt for LLM context
 
     Provides:
     - Common retry loop logic
@@ -39,14 +40,14 @@ class BaseEnricher(ABC):
 
     def __init__(
         self,
-        llm_client: LLMClient,
+        llm_client: Optional[LLMClient],
         max_retries: int = 3,
         manual_review_dir: Optional[Union[str, Path]] = None,
     ):
         """Initialize base enricher.
 
         Args:
-            llm_client: LLM client for structured response generation
+            llm_client: LLM client for structured response generation (None for dry-run)
             max_retries: Maximum retry attempts for failed enrichments (default: 3)
             manual_review_dir: Directory for manual review queue files (default: None)
         """
@@ -60,6 +61,16 @@ class BaseEnricher(ABC):
         logger.info(
             f"{self.__class__.__name__} initialized: max_retries={max_retries}"
         )
+    
+    @property
+    @abstractmethod
+    def system_prompt(self) -> str:
+        """System prompt for LLM context.
+        
+        Returns:
+            System prompt string with instructions and guidelines
+        """
+        pass
 
     @abstractmethod
     def parse_source(self, source_path: Union[str, Path]) -> List[Dict[str, Any]]:
@@ -90,7 +101,7 @@ class BaseEnricher(ABC):
             List of field names that need enrichment
 
         Example:
-            ["romanization", "explanation_en", "examples"]
+            ["romanization", "definition_en", "examples"]
         """
         pass
 
@@ -137,93 +148,104 @@ class BaseEnricher(ABC):
         """
         pass
 
+    @abstractmethod
     def enrich_item(
         self,
         item: Dict[str, Any],
         response_model: Type[T],
         system_prompt: Optional[str] = None,
     ) -> Optional[T]:
-        """Enrich a single item with retry logic.
-
-        This method orchestrates the enrichment process:
-        1. Detect missing fields
-        2. Build prompt if enrichment needed
-        3. Call LLM with retry logic
-        4. Validate output
-        5. Add to manual review queue if all retries fail
-
-        Args:
-            item: Item dictionary to enrich
-            response_model: Pydantic model class for structured output
-            system_prompt: Optional system prompt for LLM
-
-        Returns:
-            Enriched Pydantic model instance, or None if all retries failed
         """
-        # Detect missing fields
-        missing_fields = self.detect_missing_fields(item)
+        Enrich a single item with retry logic.
+        """
 
-        if not missing_fields:
-            logger.debug(f"Item already complete, skipping enrichment: {item}")
-            return None
+    #     This method orchestrates the enrichment process:
+    #     1. Detect missing fields
+    #     2. Build prompt if enrichment needed
+    #     3. Call LLM with retry logic
+    #     4. Validate output
+    #     5. Add to manual review queue if all retries fail
 
-        logger.info(
-            f"Enriching item with missing fields: {missing_fields}",
-            extra={"item_preview": str(item)[:100], "missing_fields": missing_fields},
-        )
+    #     Args:
+    #         item: Item dictionary to enrich
+    #         response_model: Pydantic model class for structured output
+    #         system_prompt: Optional system prompt override (defaults to self.system_prompt)
 
-        # Build prompt
-        prompt = self.build_prompt(item, missing_fields)
+    #     Returns:
+    #         Enriched Pydantic model instance, or None if all retries failed
+    #     """
+    #     # Use enricher's system prompt if not provided
+    #     if system_prompt is None:
+    #         system_prompt = self.system_prompt
+        
+    #     # Detect missing fields
+    #     missing_fields = self.detect_missing_fields(item)
 
-        # Retry loop
-        for attempt in range(1, self.max_retries + 1):
-            try:
-                # Call LLM with structured output
-                enriched_data = self.llm_client.generate(
-                    prompt=prompt,
-                    response_model=response_model,
-                    system_prompt=system_prompt,
-                )
+    #     if not missing_fields:
+    #         logger.debug(f"Item already complete, skipping enrichment: {item}")
+    #         return None
 
-                # Validate output
-                if self.validate_output(item, enriched_data):
-                    logger.info(
-                        f"Successfully enriched item on attempt {attempt}",
-                        extra={"attempt": attempt},
-                    )
-                    return enriched_data
-                else:
-                    logger.warning(
-                        f"Validation failed on attempt {attempt}",
-                        extra={"attempt": attempt, "item": item},
-                    )
+    #     logger.info(
+    #         f"Enriching item with missing fields: {missing_fields}",
+    #         extra={"item_preview": str(item)[:100], "missing_fields": missing_fields},
+    #     )
 
-            except ValidationError as e:
-                logger.warning(
-                    f"Pydantic validation error on attempt {attempt}: {str(e)[:200]}",
-                    extra={"attempt": attempt},
-                )
+    #     # Build prompt
+    #     prompt = self.build_prompt(item, missing_fields)
 
-            except Exception as e:
-                logger.warning(
-                    f"Enrichment error on attempt {attempt}: {str(e)[:200]}",
-                    extra={"attempt": attempt},
-                    exc_info=True,
-                )
+    #     # Retry loop
+    #     for attempt in range(1, self.max_retries + 1):
+    #         try:
+    #             # Call LLM with structured output
+    #             enriched_data = self.llm_client.generate(
+    #                 prompt=prompt,
+    #                 response_model=response_model,
+    #                 system_prompt=system_prompt,
+    #             )
 
-            # If not last attempt, continue to retry
-            if attempt < self.max_retries:
-                logger.info(f"Retrying... (attempt {attempt + 1}/{self.max_retries})")
+    #             # Validate output
+    #             if self.validate_output(item, enriched_data):
+    #                 logger.info(
+    #                     f"Successfully enriched item on attempt {attempt}",
+    #                     extra={"attempt": attempt},
+    #                 )
+    #                 logger.info(
+    #                     f"enriched_data: {enriched_data}",
+    #                     extra={"enriched_data": enriched_data.model_dump_json()},
+    #                 )
+    #                 return enriched_data
+    #             else:
+    #                 logger.warning(
+    #                     f"Validation failed on attempt {attempt}",
+    #                     extra={"attempt": attempt, "item": item},
+    #                 )
 
-        # All retries failed - add to manual review queue
-        logger.error(
-            f"All {self.max_retries} enrichment attempts failed",
-            extra={"item": item, "missing_fields": missing_fields},
-        )
+    #         except ValidationError as e:
+    #             logger.warning(
+    #                 f"Pydantic validation error on attempt {attempt}: {str(e)[:200]}",
+    #                 extra={"attempt": attempt},
+    #             )
 
-        self.add_to_manual_review(item, missing_fields, "All retry attempts failed")
+    #         except Exception as e:
+    #             logger.warning(
+    #                 f"Enrichment error on attempt {attempt}: {str(e)[:200]}",
+    #                 extra={"attempt": attempt},
+    #                 exc_info=True,
+    #             )
 
-        return None
+    #         # If not last attempt, continue to retry
+    #         if attempt < self.max_retries:
+    #             logger.info(f"Retrying... (attempt {attempt + 1}/{self.max_retries})")
+
+    #     # All retries failed - add to manual review queue
+    #     logger.error(
+    #         f"All {self.max_retries} enrichment attempts failed",
+    #         extra={"item": item, "missing_fields": missing_fields},
+    #     )
+
+    #     self.add_to_manual_review(item, missing_fields, "All retry attempts failed")
+
+    #     return None
 
     def add_to_manual_review(
         self,

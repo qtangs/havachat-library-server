@@ -34,7 +34,7 @@ class TestLearningItem:
             language="zh",
             category=Category.VOCAB,
             target_item="银行",
-            explanation_en="A financial institution",
+            definition_en="A financial institution",
             examples=[
                 "Example 1",
                 "Example 2",
@@ -57,7 +57,7 @@ class TestLearningItem:
                 language="zhn",  # Invalid: 3 chars
                 category=Category.VOCAB,
                 target_item="test",
-                explanation_en="test",
+                definition_en="test",
                 examples=["1", "2", "3"],
                 level_system=LevelSystem.HSK,
                 level_min="HSK1",
@@ -72,7 +72,7 @@ class TestLearningItem:
                 language="zh",
                 category=Category.VOCAB,
                 target_item="test",
-                explanation_en="test",
+                definition_en="test",
                 examples=["1", "2"],  # Only 2
                 level_system=LevelSystem.HSK,
                 level_min="HSK1",
@@ -87,7 +87,7 @@ class TestLearningItem:
                 language="zh",
                 category=Category.VOCAB,
                 target_item="test",
-                explanation_en="test",
+                definition_en="test",
                 examples=["1", "2", "3", "4", "5", "6"],  # 6 examples
                 level_system=LevelSystem.HSK,
                 level_min="HSK1",
@@ -101,7 +101,7 @@ class TestLearningItem:
             language="ja",
             category=Category.GRAMMAR,
             target_item="は",
-            explanation_en="Topic marker particle",
+            definition_en="Topic marker particle",
             examples=["Example 1", "Example 2", "Example 3"],
             romanization="wa",
             sense_gloss_en="topic marker",
