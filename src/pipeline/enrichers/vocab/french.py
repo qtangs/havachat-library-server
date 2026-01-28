@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class FrenchEnrichedVocab(BaseModel):
     """French vocab enrichment."""
     
-    definition_en: str = Field(
+    definition: str = Field(
         ...,
         description="Clear English definition suitable for learners, to be used in flashcards"
     )
@@ -63,7 +63,7 @@ CRITICAL INSTRUCTIONS:
 
 **Example Response Format:**
 {
-  "definition_en": "hello; good morning; good afternoon; good-day",
+  "definition": "hello; good morning; good afternoon; good-day",
   "examples": [
     "Bonjour, comment allez-vous ?",
     "Bonjour madame, puis-je vous aider ?",
@@ -184,7 +184,7 @@ class FrenchVocabEnricher(BaseEnricher):
         """Detect which fields need enrichment.
 
         For optimized French enricher:
-        - Always need: definition_en, examples (LLM)
+        - Always need: definition, examples (LLM)
         - Optionally need: pos (if not provided)
         - No romanization needed (Latin alphabet)
 
@@ -197,8 +197,8 @@ class FrenchVocabEnricher(BaseEnricher):
         missing = []
 
         # Always need these from LLM
-        if not item.get("definition_en"):
-            missing.append("definition_en")
+        if not item.get("definition"):
+            missing.append("definition")
 
         if not item.get("examples") or len(item.get("examples", [])) < 3:
             missing.append("examples")
@@ -272,9 +272,9 @@ class FrenchVocabEnricher(BaseEnricher):
                 language="fr",
                 category=Category.VOCAB,
                 target_item=target_item,
-                definition_en=llm_response.definition_en,
+                definition=llm_response.definition,
                 examples=formatted_examples,
-                sense_gloss_en=None,  # Not commonly used for French
+                sense_gloss=None,  # Not commonly used for French
                 romanization=None,  # French doesn't need romanization
                 pos=llm_response.pos,
                 lemma=llm_response.lemma,
@@ -354,14 +354,14 @@ Remember: We will add English translations automatically later.
             translations: List of English translations (same order)
             
         Returns:
-            List of Example objects with text, translation_en, and empty media_urls
+            List of Example objects with text, translation, and empty media_urls
         """
         formatted = []
         
         for french, translation in zip(french_examples, translations):
             example = Example(
                 text=french,
-                translation_en=translation if translation else "",
+                translation=translation if translation else "",
                 media_urls=[]
             )
             formatted.append(example)

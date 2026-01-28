@@ -436,7 +436,7 @@ curl -X POST http://localhost:8001/api/v1/scenarios/search \
   "found": true,
   "scenario": {
     "id": "cafe-order-casual-fr-a2",
-    "name_en": "Ordering at a Café",
+    "name": "Ordering at a Café",
     "description": "Casual interaction ordering coffee and pastries",
     "similarity_score": 0.92,
     "formality": "informal",
@@ -456,7 +456,7 @@ curl -X POST http://localhost:8001/api/v1/scenarios/search \
   "similar_scenarios": [
     {
       "id": "restaurant-order-fr-a2",
-      "name_en": "Ordering at a Restaurant",
+      "name": "Ordering at a Restaurant",
       "similarity_score": 0.78,
       "description": "Formal restaurant ordering"
     }
@@ -487,7 +487,7 @@ curl -X POST http://localhost:8001/api/v1/scenarios/generate \
 {
   "scenario": {
     "id": "d50e8400-e29b-41d4-a716-446655440000",
-    "name_en": "Ordering Coffee at Café",
+    "name": "Ordering Coffee at Café",
     "description": "Casual café ordering interaction",
     "language": "fr",
     "formality": "informal",
@@ -502,13 +502,13 @@ curl -X POST http://localhost:8001/api/v1/scenarios/generate \
       "id": "550e8400-...",
       "category": "vocab",
       "target_item": "un café",
-      "definition_en": "a coffee"
+      "definition": "a coffee"
     },
     {
       "id": "650e8400-...",
       "category": "functional",
       "target_item": "Je voudrais...",
-      "definition_en": "I would like... (polite request)"
+      "definition": "I would like... (polite request)"
     }
   ],
   "content_unit": {
@@ -520,7 +520,7 @@ curl -X POST http://localhost:8001/api/v1/scenarios/generate \
         "segment_id": "seg-1",
         "speaker": "Client",
         "text": "Bonjour! Je voudrais un café, s'il vous plaît.",
-        "translation_en": "Hello! I would like a coffee, please.",
+        "translation": "Hello! I would like a coffee, please.",
         "learning_item_ids": ["550e8400-...", "650e8400-..."]
       }
     ],

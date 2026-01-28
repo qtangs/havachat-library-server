@@ -101,7 +101,7 @@ class BaseEnricher(ABC):
             List of field names that need enrichment
 
         Example:
-            ["romanization", "definition_en", "examples"]
+            ["romanization", "definition", "examples"]
         """
         pass
 

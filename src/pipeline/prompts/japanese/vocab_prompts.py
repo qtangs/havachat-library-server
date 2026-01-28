@@ -8,7 +8,7 @@ Key requirements:
 2. **Furigana**: Include hiragana readings for kanji when applicable
 3. **Clarity**: Explanations must be clear and suitable for learners at the specified level (N5-N1)
 4. **Examples**: Provide 3-5 contextual examples with English translations
-5. **Polysemy**: If a word has multiple meanings, specify the sense with sense_gloss_en
+5. **Polysemy**: If a word has multiple meanings, specify the sense with sense_gloss
 6. **Formality**: Note if usage is formal, informal, or neutral
 
 Output format: Structured JSON matching the LearningItem schema.
@@ -66,9 +66,9 @@ def build_vocab_enrichment_prompt(
     # Build description of missing fields
     field_descriptions = {
         "romanization": "- **Romaji romanization** (Hepburn style)",
-        "definition_en": "- **English explanation** (clear, learner-friendly)",
+        "definition": "- **English explanation** (clear, learner-friendly)",
         "examples": "- **3-5 usage examples** with Japanese and English",
-        "sense_gloss_en": "- **Sense disambiguation** (if word has multiple meanings)",
+        "sense_gloss": "- **Sense disambiguation** (if word has multiple meanings)",
     }
 
     missing_descriptions = "\n".join(

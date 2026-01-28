@@ -73,7 +73,7 @@
             "type": "string",
             "minLength": 1
           },
-          "translation_en": {
+          "translation": {
             "type": "string"
           },
           "learning_item_ids": {
@@ -166,7 +166,7 @@
           "type": "dialogue",
           "speaker": "Alice",
           "text": "Bonjour! Je m'appelle Alice.",
-          "translation_en": "Hello! My name is Alice.",
+          "translation": "Hello! My name is Alice.",
           "learning_item_ids": ["550e8400-e29b-41d4-a716-446655440001", "550e8400-e29b-41d4-a716-446655440002"]
         },
         {
@@ -174,7 +174,7 @@
           "type": "dialogue",
           "speaker": "Bob",
           "text": "Enchanté, Alice. Je suis Bob.",
-          "translation_en": "Nice to meet you, Alice. I am Bob.",
+          "translation": "Nice to meet you, Alice. I am Bob.",
           "learning_item_ids": ["550e8400-e29b-41d4-a716-446655440003", "550e8400-e29b-41d4-a716-446655440002"]
         }
       ],

@@ -140,7 +140,7 @@ def setup_meilisearch_index(
                     "source": "openAi",
                     "apiKey": api_key,
                     "model": "text-embedding-3-small",
-                    "documentTemplate": "{{doc.target_item}}: {{doc.definition_en}}",
+                    "documentTemplate": "{{doc.target_item}}: {{doc.definition}}",
                 }
             }
         )
@@ -206,7 +206,7 @@ def test_search_queries(client: meilisearch.Client, index_name: str) -> None:
 
             for j, hit in enumerate(result["hits"][:5], 1):
                 print(f"\n  {j}. {hit['target_item']}")
-                print(f"     Explanation: {hit['definition_en'][:100]}...")
+                print(f"     Explanation: {hit['definition'][:100]}...")
                 if "_semanticScore" in hit:
                     print(f"     Semantic score: {hit['_semanticScore']:.4f}")
 

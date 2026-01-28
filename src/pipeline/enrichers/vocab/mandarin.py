@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 class ChineseEnrichedVocab(BaseModel):
     """Chinese vocab enrichment."""
     
-    definition_en: str = Field(
+    definition: str = Field(
         ...,
         description="Clear English definition suitable for learners, to be used in flashcards"
     )
@@ -51,7 +51,7 @@ class ChineseEnrichedVocab(BaseModel):
         max_length=5,
         description="Example sentences in Chinese ONLY (no pinyin, no English translation). Example: '我去银行。'"
     )
-    sense_gloss_en: Optional[str] = Field(
+    sense_gloss: Optional[str] = Field(
         None,
         description="Sense gloss for polysemous words, for example: “and/with” for 和1 (hé) (conjunction/preposition). Other sense glosses for “和” are “harmony” (noun) or “sum” (noun) in math."
     )
@@ -70,7 +70,7 @@ CRITICAL INSTRUCTIONS:
 2. **CHINESE ONLY EXAMPLES**: Provide examples in Chinese characters ONLY. Do NOT add pinyin or English translations.
 3. **Clarity**: Explanations must be clear and suitable for learners at the specified level.
 4. **Examples**: Provide 3-5 contextual example sentences using ONLY Chinese characters.
-5. **Polysemy**: If a word has multiple meanings, specify the sense gloss in sense_gloss_en.
+5. **Polysemy**: If a word has multiple meanings, specify the sense gloss in sense_gloss.
 6. **Part of Speech**: Identify the part of speech (noun, verb, adjective, etc.).
 
 **Understanding Chinese POS (词性) Labels:**
@@ -80,17 +80,17 @@ CRITICAL INSTRUCTIONS:
 
 **Understanding Sense Markers:**
 Words with trailing numbers (e.g., 本1, 会1) indicate disambiguation.
-Remove the number, but note the specific sense gloss in sense_gloss_en.
+Remove the number, but note the specific sense gloss in sense_gloss.
 
 **Example Response Format:**
 {
-  "definition_en": "and; together with; with",
+  "definition": "and; together with; with",
   "examples": [
     "我和你。",
     "我和吃苹果。",
     "他和看书。"
   ],
-  "sense_gloss_en": "and/with",
+  "sense_gloss": "and/with",
   "pos": "verb"
 }
 
@@ -215,8 +215,8 @@ class MandarinVocabEnricher(BaseEnricher):
         """Detect which fields need enrichment.
 
         For optimized Mandarin enricher:
-        - Always need: definition_en, examples (LLM)
-        - Optionally need: sense_gloss_en (if polysemous), pos (if not provided)
+        - Always need: definition, examples (LLM)
+        - Optionally need: sense_gloss (if polysemous), pos (if not provided)
         - Auto-generated: romanization, traditional, numeric_pinyin, translations
 
         Args:
@@ -228,16 +228,16 @@ class MandarinVocabEnricher(BaseEnricher):
         missing = []
 
         # Always need these from LLM
-        if not item.get("definition_en"):
-            missing.append("definition_en")
+        if not item.get("definition"):
+            missing.append("definition")
 
         if not item.get("examples") or len(item.get("examples", [])) < 3:
             missing.append("examples")
 
-        # Check if sense_gloss_en is needed (polysemous words)
+        # Check if sense_gloss is needed (polysemous words)
         if item.get("sense_marker") or self._detect_polysemy(item.get("target_item", "")):
-            if not item.get("sense_gloss_en"):
-                missing.append("sense_gloss_en")
+            if not item.get("sense_gloss"):
+                missing.append("sense_gloss")
 
         # POS is optional but helpful
         if not item.get("pos"):
@@ -326,9 +326,9 @@ class MandarinVocabEnricher(BaseEnricher):
                 language="zh",
                 category=Category.VOCAB,
                 target_item=target_item,
-                definition_en=llm_response.definition_en,
+                definition=llm_response.definition,
                 examples=formatted_examples,
-                sense_gloss_en=llm_response.sense_gloss_en,
+                sense_gloss=llm_response.sense_gloss,
                 romanization=romanization,
                 pos=llm_response.pos or item.get("pos"),
                 lemma=None,
@@ -387,7 +387,7 @@ class MandarinVocabEnricher(BaseEnricher):
 1. Write a clear, learner-friendly explanation in English
 2. Confirm or correct the part of speech
 3. Create 3-5 original example sentences in CHINESE ONLY (no pinyin, no English)
-4. If the word has multiple meanings, specify which sense in sense_gloss_en
+4. If the word has multiple meanings, specify which sense in sense_gloss
 
 **CRITICAL**: Examples must be Chinese characters ONLY. Example:
 - CORRECT: "我爱你。"
@@ -445,14 +445,14 @@ Remember: We will add pinyin and English translations automatically later.
             translations: List of English translations (same order)
             
         Returns:
-            List of Example objects with text, translation_en, and empty media_urls
+            List of Example objects with text, translation, and empty media_urls
         """
         formatted = []
         
         for chinese, translation in zip(chinese_examples, translations):
             example = Example(
                 text=chinese,
-                translation_en=translation if translation else "",
+                translation=translation if translation else "",
                 media_urls=[]
             )
             formatted.append(example)

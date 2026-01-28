@@ -97,7 +97,7 @@ class Example(BaseModel):
     text: str = Field(
         ..., description="Example text in target language"
     )
-    translation_en: str = Field(
+    translation: str = Field(
         ..., description="English translation of the example"
     )
     media_urls: List[str] = Field(
@@ -109,7 +109,7 @@ class Example(BaseModel):
         "json_schema_extra": {
             "example": {
                 "text": "我去银行取钱。",
-                "translation_en": "I go to the bank to withdraw money.",
+                "translation": "I go to the bank to withdraw money.",
                 "media_urls": []
             }
         }
@@ -121,8 +121,8 @@ class LearningItem(BaseModel):
 
     Validation Rules:
     - Chinese/Japanese MUST have romanization
-    - If sense_gloss_en is present, there must be another item with same
-      target_item but different sense_gloss_en (polysemy)
+    - If sense_gloss is present, there must be another item with same
+      target_item but different sense_gloss (polysemy)
     - level_min <= level_
     max in ordinal comparison
     """
@@ -135,7 +135,7 @@ class LearningItem(BaseModel):
     target_item: str = Field(
         ..., description="The word, phrase, or grammar pattern being taught"
     )
-    definition_en: str = Field(
+    definition: str = Field(
         ..., description="Clear English definition suitable for learners, to be used in flashcards"
     )
     examples: List[Example] = Field(
@@ -149,7 +149,7 @@ class LearningItem(BaseModel):
     romanization: Optional[str] = Field(
         None, description="Pinyin for Chinese, Romaji for Japanese"
     )
-    sense_gloss_en: Optional[str] = Field(
+    sense_gloss: Optional[str] = Field(
         None,
         description="Disambiguation for polysemous words: 'bank (financial)' vs 'bank (river)'",
     )
@@ -196,26 +196,26 @@ class LearningItem(BaseModel):
                 "language": "zh",
                 "category": "vocab",
                 "target_item": "银行",
-                "definition_en": "A financial institution where people deposit money and obtain loans",
+                "definition": "A financial institution where people deposit money and obtain loans",
                 "examples": [
                     {
                         "text": "我去银行取钱。",
-                        "translation_en": "I go to the bank to withdraw money.",
+                        "translation": "I go to the bank to withdraw money.",
                         "media_urls": []
                     },
                     {
                         "text": "这家银行提供低利率贷款。",
-                        "translation_en": "This bank offers low-interest loans.",
+                        "translation": "This bank offers low-interest loans.",
                         "media_urls": []
                     },
                     {
                         "text": "银行的营业时间是周一到周五。",
-                        "translation_en": "The bank's business hours are Monday to Friday.",
+                        "translation": "The bank's business hours are Monday to Friday.",
                         "media_urls": []
                     }
                 ],
                 "romanization": "yínháng",
-                "sense_gloss_en": "bank (financial institution)",
+                "sense_gloss": "bank (financial institution)",
                 "lemma": "银行",
                 "pos": "noun",
                 "media_urls": [],
@@ -238,7 +238,7 @@ class Segment(BaseModel):
         None, description="Speaker name for dialogue, null for narration"
     )
     text: str = Field(..., description="Text in target language")
-    translation_en: Optional[str] = Field(None, description="English translation")
+    translation: Optional[str] = Field(None, description="English translation")
     learning_item_ids: List[str] = Field(
         ..., description="UUIDs of learning items featured in this segment"
     )
@@ -256,7 +256,7 @@ class Segment(BaseModel):
                 "type": "dialogue",
                 "speaker": "Alice",
                 "text": "Bonjour! Je m'appelle Alice.",
-                "translation_en": "Hello! My name is Alice.",
+                "translation": "Hello! My name is Alice.",
                 "learning_item_ids": [
                     "550e8400-e29b-41d4-a716-446655440001",
                     "550e8400-e29b-41d4-a716-446655440002",
@@ -359,7 +359,7 @@ class ContentUnit(BaseModel):
                         "type": "dialogue",
                         "speaker": "Alice",
                         "text": "Bonjour! Je m'appelle Alice.",
-                        "translation_en": "Hello! My name is Alice.",
+                        "translation": "Hello! My name is Alice.",
                         "learning_item_ids": [
                             "550e8400-e29b-41d4-a716-446655440001",
                             "550e8400-e29b-41d4-a716-446655440002",
@@ -484,7 +484,7 @@ class Topic(BaseModel):
     """Broad thematic category (e.g., 'food', 'travel', 'work')."""
 
     id: str = Field(..., description="Slug: food, travel, work-business")
-    name_en: str = Field(..., description="English name")
+    name: str = Field(..., description="English name")
     aliases: List[str] = Field(
         default_factory=list, description="Alternative names"
     )
@@ -500,7 +500,7 @@ class Topic(BaseModel):
         "json_schema_extra": {
             "example": {
                 "id": "food",
-                "name_en": "Food & Dining",
+                "name": "Food & Dining",
                 "aliases": ["cuisine", "eating", "meals"],
                 "language": None,
                 "parent_topic_id": None,
@@ -520,7 +520,7 @@ class Scenario(BaseModel):
         ...,
         description="UUID v4 or slug: ordering-at-restaurant, airport-checkin",
     )
-    name_en: str = Field(..., description="English name")
+    name: str = Field(..., description="English name")
     aliases: List[str] = Field(default_factory=list)
     topic_id: str = Field(..., description="Parent topic")
     language: Optional[str] = Field(
@@ -580,7 +580,7 @@ class Scenario(BaseModel):
         "json_schema_extra": {
             "example": {
                 "id": "ordering-at-restaurant",
-                "name_en": "Ordering Food at a Restaurant",
+                "name": "Ordering Food at a Restaurant",
                 "aliases": ["restaurant order", "dining out"],
                 "topic_id": "food",
                 "language": None,
@@ -663,9 +663,9 @@ class ValidationReport(BaseModel):
                         "item_id": "550e8400-e29b-41d4-a716-446655440003",
                         "item_type": "learning_item",
                         "failure_type": "duplication",
-                        "failure_reason": "Duplicate target_item 'banco' with same sense_gloss_en 'bank (financial)'",
+                        "failure_reason": "Duplicate target_item 'banco' with same sense_gloss 'bank (financial)'",
                         "line_reference": "French/A1/vocab/item-550e8400-e29b-41d4-a716-446655440003.json",
-                        "suggested_fix": "Add sense_gloss_en disambiguation or merge items",
+                        "suggested_fix": "Add sense_gloss disambiguation or merge items",
                     }
                 ],
                 "summary_stats": {

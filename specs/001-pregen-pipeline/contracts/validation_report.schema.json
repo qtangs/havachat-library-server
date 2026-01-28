@@ -115,9 +115,9 @@
           "item_id": "550e8400-e29b-41d4-a716-446655440003",
           "item_type": "learning_item",
           "failure_type": "duplication",
-          "failure_reason": "Duplicate target_item 'banco' with same sense_gloss_en 'bank (financial)'",
+          "failure_reason": "Duplicate target_item 'banco' with same sense_gloss 'bank (financial)'",
           "line_reference": "French/A1/vocab/item-550e8400-e29b-41d4-a716-446655440003.json",
-          "suggested_fix": "Add sense_gloss_en disambiguation or merge items"
+          "suggested_fix": "Add sense_gloss disambiguation or merge items"
         }
       ],
       "summary_stats": {

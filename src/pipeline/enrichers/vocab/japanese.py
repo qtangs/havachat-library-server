@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 class JapaneseEnrichedVocab(BaseModel):
     """French vocab enrichment."""
     
-    definition_en: str = Field(
+    definition: str = Field(
         ...,
         description="Clear English definition suitable for learners, to be used in flashcards"
     )
@@ -63,7 +63,7 @@ CRITICAL INSTRUCTIONS:
 
 **Example Response Format:**
 {
-  "definition_en": "school",
+  "definition": "school",
   "examples": [
     "学校に行きます。",
     "私の学校は大きいです。",
@@ -184,7 +184,7 @@ class JapaneseVocabEnricher(BaseEnricher):
         """Detect which fields need enrichment.
 
         For optimized Japanese enricher:
-        - Always need: definition_en, examples (LLM)
+        - Always need: definition, examples (LLM)
         - Optionally need: pos (if not provided)
         - Auto-generated: romanization, translations
 
@@ -197,8 +197,8 @@ class JapaneseVocabEnricher(BaseEnricher):
         missing = []
 
         # Always need these from LLM
-        if not item.get("definition_en"):
-            missing.append("definition_en")
+        if not item.get("definition"):
+            missing.append("definition")
 
         if not item.get("examples") or len(item.get("examples", [])) < 3:
             missing.append("examples")
@@ -276,9 +276,9 @@ class JapaneseVocabEnricher(BaseEnricher):
                 language="ja",
                 category=Category.VOCAB,
                 target_item=target_item,
-                definition_en=llm_response.definition_en,
+                definition=llm_response.definition,
                 examples=formatted_examples,
-                sense_gloss_en=None,  # Japanese enricher doesn't use sense_gloss
+                sense_gloss=None,  # Japanese enricher doesn't use sense_gloss
                 romanization=romanization,
                 pos=llm_response.pos,
                 lemma=None,
@@ -357,14 +357,14 @@ Remember: We will add romaji and English translations automatically later.
             translations: List of English translations (same order)
             
         Returns:
-            List of Example objects with text, translation_en, and empty media_urls
+            List of Example objects with text, translation, and empty media_urls
         """
         formatted = []
         
         for japanese, translation in zip(japanese_examples, translations):            
             example = Example(
                 text=japanese,
-                translation_en=translation if translation else "",
+                translation=translation if translation else "",
                 media_urls=[]
             )
             formatted.append(example)

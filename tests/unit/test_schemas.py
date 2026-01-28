@@ -34,7 +34,7 @@ class TestLearningItem:
             language="zh",
             category=Category.VOCAB,
             target_item="银行",
-            definition_en="A financial institution",
+            definition="A financial institution",
             examples=[
                 "Example 1",
                 "Example 2",
@@ -57,7 +57,7 @@ class TestLearningItem:
                 language="zhn",  # Invalid: 3 chars
                 category=Category.VOCAB,
                 target_item="test",
-                definition_en="test",
+                definition="test",
                 examples=["1", "2", "3"],
                 level_system=LevelSystem.HSK,
                 level_min="HSK1",
@@ -72,7 +72,7 @@ class TestLearningItem:
                 language="zh",
                 category=Category.VOCAB,
                 target_item="test",
-                definition_en="test",
+                definition="test",
                 examples=["1", "2"],  # Only 2
                 level_system=LevelSystem.HSK,
                 level_min="HSK1",
@@ -87,7 +87,7 @@ class TestLearningItem:
                 language="zh",
                 category=Category.VOCAB,
                 target_item="test",
-                definition_en="test",
+                definition="test",
                 examples=["1", "2", "3", "4", "5", "6"],  # 6 examples
                 level_system=LevelSystem.HSK,
                 level_min="HSK1",
@@ -101,10 +101,10 @@ class TestLearningItem:
             language="ja",
             category=Category.GRAMMAR,
             target_item="は",
-            definition_en="Topic marker particle",
+            definition="Topic marker particle",
             examples=["Example 1", "Example 2", "Example 3"],
             romanization="wa",
-            sense_gloss_en="topic marker",
+            sense_gloss="topic marker",
             lemma="は",
             pos="particle",
             aliases=["ha"],
@@ -113,7 +113,7 @@ class TestLearningItem:
             level_max="N5",
         )
         assert item.romanization == "wa"
-        assert item.sense_gloss_en == "topic marker"
+        assert item.sense_gloss == "topic marker"
         assert item.lemma == "は"
         assert item.pos == "particle"
         assert "ha" in item.aliases
@@ -129,7 +129,7 @@ class TestSegment:
             type=SegmentType.DIALOGUE,
             speaker="Alice",
             text="Bonjour!",
-            translation_en="Hello!",
+            translation="Hello!",
             learning_item_ids=["550e8400-e29b-41d4-a716-446655440000"],
         )
         assert segment.segment_id == "seg-1"
@@ -380,11 +380,11 @@ class TestTopic:
         """Test creating a valid topic."""
         topic = Topic(
             id="food",
-            name_en="Food & Dining",
+            name="Food & Dining",
             aliases=["cuisine", "eating"],
         )
         assert topic.id == "food"
-        assert topic.name_en == "Food & Dining"
+        assert topic.name == "Food & Dining"
         assert len(topic.aliases) == 2
         assert topic.language is None
 
@@ -396,7 +396,7 @@ class TestScenario:
         """Test creating a valid scenario."""
         scenario = Scenario(
             id="ordering-at-restaurant",
-            name_en="Ordering Food at a Restaurant",
+            name="Ordering Food at a Restaurant",
             topic_id="food",
             description="Interacting with a server to order food",
             formality="informal",

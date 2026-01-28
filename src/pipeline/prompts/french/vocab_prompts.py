@@ -8,7 +8,7 @@ Key requirements:
 2. **Examples**: Provide 3-5 contextual examples with English translations
 3. **Gender**: Always note gender for nouns (le/la/l')
 4. **Register**: Note if usage is formal, informal, or neutral
-5. **Polysemy**: If a word has multiple meanings, specify the sense with sense_gloss_en
+5. **Polysemy**: If a word has multiple meanings, specify the sense with sense_gloss
 
 Output format: Structured JSON matching the LearningItem schema.
 Note: French does not require romanization (uses Latin alphabet).
@@ -67,9 +67,9 @@ def build_vocab_enrichment_prompt(
     """
     # Build description of missing fields
     field_descriptions = {
-        "definition_en": "- **English explanation** (clear, learner-friendly, include gender for nouns)",
+        "definition": "- **English explanation** (clear, learner-friendly, include gender for nouns)",
         "examples": "- **3-5 usage examples** with French and English",
-        "sense_gloss_en": "- **Sense disambiguation** (if word has multiple meanings)",
+        "sense_gloss": "- **Sense disambiguation** (if word has multiple meanings)",
         "lemma": "- **Lemma/base form** (if this is a conjugated verb or inflected form)",
     }
 

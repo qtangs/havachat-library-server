@@ -111,11 +111,11 @@
 - [X] T044 [P] [US1] Create src/pipeline/enrichers/vocab/__init__.py
 - [X] T045 [P] [US1] Create src/pipeline/enrichers/vocab/mandarin.py with MandarinVocabEnricher class
 - [X] T046 [US1] Implement parse_source() for TSV with "Word, Part of Speech" columns in mandarin.py
-- [X] T047 [US1] Implement detect_missing_fields() checking for pinyin, definition_en, examples in mandarin.py
+- [X] T047 [US1] Implement detect_missing_fields() checking for pinyin, definition, examples in mandarin.py
 - [X] T048 [US1] Create src/pipeline/prompts/mandarin/vocab_prompts.py with Chinese-specific prompts
 - [X] T049 [US1] Implement build_prompt() using prompts from vocab_prompts.py in mandarin.py
 - [X] T050 [US1] Implement validate_output() enforcing romanization presence in mandarin.py
-- [X] T051 [US1] Add polysemy detection and sense_gloss_en generation in mandarin.py
+- [X] T051 [US1] Add polysemy detection and sense_gloss generation in mandarin.py
 - [X] T052 [US1] Write unit tests for MandarinVocabEnricher in tests/unit/test_mandarin_vocab_enricher.py
 
 ### Japanese Vocab Enricher
@@ -171,7 +171,7 @@
 - [ ] T077 [P] [US2] Create src/pipeline/enrichers/grammar/__init__.py
 - [ ] T078 [P] [US2] Create src/pipeline/enrichers/grammar/mandarin.py with MandarinGrammarEnricher class
 - [ ] T079 [US2] Implement parse_source() for CSV with "类别,类别名称,细目,语法内容" columns in mandarin.py
-- [ ] T080 [US2] Implement detect_missing_fields() checking for definition_en, examples in mandarin.py
+- [ ] T080 [US2] Implement detect_missing_fields() checking for definition, examples in mandarin.py
 - [ ] T081 [US2] Create src/pipeline/prompts/mandarin/grammar_prompts.py with grammar-specific prompts
 - [ ] T082 [US2] Implement build_prompt() with granularity instructions (avoid mega-items) in mandarin.py
 - [ ] T083 [US2] Implement validate_output() with granularity checks in mandarin.py
@@ -226,7 +226,7 @@
 - [ ] T109 [P] [US5] Implement check_learning_item_presence() verifying IDs exist and appear in text in presence.py
 - [ ] T110 [P] [US5] Add language-aware tokenization for Chinese/Japanese/French in presence.py
 - [ ] T111 [P] [US5] Create src/pipeline/validators/duplication.py with duplicate detection
-- [ ] T112 [P] [US5] Implement check_duplicates() comparing (language, category, lemma, sense_gloss_en) in duplication.py
+- [ ] T112 [P] [US5] Implement check_duplicates() comparing (language, category, lemma, sense_gloss) in duplication.py
 - [ ] T113 [P] [US5] Handle polysemy cases (same lemma, different sense_gloss) in duplication.py
 - [ ] T114 [P] [US5] Create src/pipeline/validators/links.py with link correctness validation
 - [ ] T115 [P] [US5] Implement check_link_correctness() resolving all referenced IDs in links.py

@@ -289,7 +289,7 @@ All technical unknowns from spec have been resolved. Ready for Phase 1 (Design &
 **Decision**: Create optimized Pydantic models for each language instead of generic `LearningItem`
 
 **Implementation**:
-- `MandarinVocabItem`: Requires romanization, sense_gloss_en (for polysemous words)
+- `MandarinVocabItem`: Requires romanization, sense_gloss (for polysemous words)
 - `JapaneseVocabItem`: Requires romanization, optional furigana
 - `FrenchVocabItem`: Includes context_category field, no romanization
 
@@ -422,7 +422,7 @@ def __init__(
 - Input format: `Mot\tCatégorie` (tab-separated)
 - Example: `"Bonjour. / Bonsoir.\tSaluer"` (greeting category)
 - Uses `FrenchVocabItem` with `context_category` field
-- Always generates `definition_en` (no brief definition in source)
+- Always generates `definition` (no brief definition in source)
 
 **Impact**: Correct parsing of official French vocabulary sources
 

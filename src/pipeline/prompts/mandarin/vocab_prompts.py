@@ -7,7 +7,7 @@ Key requirements:
 1. **Pinyin Romanization**: Pinyin will be provided automatically, do NOT include it in your response
 2. **Clarity**: Explanations must be clear and suitable for learners at the specified level
 3. **Examples**: Provide 3-5 contextual examples with pinyin and English translations
-4. **Polysemy**: If a word has multiple meanings, specify the sense with sense_gloss_en
+4. **Polysemy**: If a word has multiple meanings, specify the sense with sense_gloss
 5. **Cultural Context**: Include cultural notes when relevant (e.g., formal vs. informal usage)
 
 **Understanding Chinese POS (词性) Labels:**
@@ -30,7 +30,7 @@ Words with trailing numbers (e.g., 本1, 点1, 会1) indicate disambiguation for
 - It marks which specific meaning/usage from multiple senses
 - Example: 会1 (huì) = "can/know how to" vs. another 会 meaning "meeting"
 - Example: 和1 (hé) = "and/with" vs. another 和 meaning "harmony"
-- Remove the number from target_item, but note the specific sense in sense_gloss_en
+- Remove the number from target_item, but note the specific sense in sense_gloss
 
 Output format: Structured JSON matching the LearningItem schema.
 """
@@ -54,7 +54,7 @@ USER_PROMPT_TEMPLATE = """Enrich the following Mandarin Chinese vocabulary item:
    - Chinese characters
    - Pinyin (in parentheses with tone marks)
    - English translation
-5. If the word has multiple common meanings, specify which sense with sense_gloss_en
+5. If the word has multiple common meanings, specify which sense with sense_gloss
 
 **Example Format for Examples**:
 "我去银行取钱。(Wǒ qù yínháng qǔ qián.) - I go to the bank to withdraw money."
@@ -110,9 +110,9 @@ def build_vocab_enrichment_prompt(
     """
     # Build description of missing fields
     field_descriptions = {
-        "definition_en": "- **English explanation** (clear, learner-friendly, note POS meaning)",
+        "definition": "- **English explanation** (clear, learner-friendly, note POS meaning)",
         "examples": "- **3-5 usage examples** with Chinese, pinyin, and English",
-        "sense_gloss_en": "- **Sense disambiguation** (if word has multiple meanings or has sense marker like 1,2)",
+        "sense_gloss": "- **Sense disambiguation** (if word has multiple meanings or has sense marker like 1,2)",
         "lemma": "- **Lemma/base form** (if this is an inflected form)",
     }
 
@@ -125,8 +125,8 @@ def build_vocab_enrichment_prompt(
     # Add context from existing data if available
     context_info = ""
     if existing_data:
-        if existing_data.get("definition_en"):
-            context_info += f"\n**Existing Explanation**: {existing_data['definition_en']}"
+        if existing_data.get("definition"):
+            context_info += f"\n**Existing Explanation**: {existing_data['definition']}"
         if existing_data.get("examples"):
             context_info += f"\n**Existing Examples**: {existing_data['examples'][:2]}"
 

@@ -9,7 +9,7 @@
     "language",
     "category",
     "target_item",
-    "definition_en",
+    "definition",
     "examples",
     "level_system",
     "level_min",
@@ -38,7 +38,7 @@
       "minLength": 1,
       "description": "The word, phrase, or grammar pattern being taught"
     },
-    "definition_en": {
+    "definition": {
       "type": "string",
       "minLength": 10,
       "maxLength": 500,
@@ -48,14 +48,14 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["text", "translation_en"],
+        "required": ["text", "translation"],
         "properties": {
           "text": {
             "type": "string",
             "minLength": 1,
             "description": "Example text in target language"
           },
-          "translation_en": {
+          "translation": {
             "type": "string",
             "description": "English translation of the example"
           },
@@ -77,7 +77,7 @@
       "type": "string",
       "description": "Pinyin for Chinese, Romaji for Japanese (required for zh/ja)"
     },
-    "sense_gloss_en": {
+    "sense_gloss": {
       "type": "string",
       "description": "Disambiguation for polysemous words: 'bank (financial)' vs 'bank (river)'"
     },
@@ -140,26 +140,26 @@
       "language": "zh",
       "category": "vocab",
       "target_item": "银行",
-      "definition_en": "A financial institution where people deposit money and obtain loans",
+      "definition": "A financial institution where people deposit money and obtain loans",
       "examples": [
         {
           "text": "我去银行取钱。",
-          "translation_en": "I go to the bank to withdraw money.",
+          "translation": "I go to the bank to withdraw money.",
           "media_urls": []
         },
         {
           "text": "这家银行提供低利率贷款。",
-          "translation_en": "This bank offers low-interest loans.",
+          "translation": "This bank offers low-interest loans.",
           "media_urls": []
         },
         {
           "text": "银行在街角。",
-          "translation_en": "The bank is at the corner.",
+          "translation": "The bank is at the corner.",
           "media_urls": []
         }
       ],
       "romanization": "yínháng",
-      "sense_gloss_en": "bank (financial institution)",
+      "sense_gloss": "bank (financial institution)",
       "lemma": "银行",
       "pos": "noun",
       "aliases": [],
