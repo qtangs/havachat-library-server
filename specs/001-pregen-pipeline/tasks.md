@@ -3,7 +3,7 @@
 **Feature**: Pre-generation Pipeline  
 **Branch**: `001-pregen-pipeline`  
 **Spec**: [spec.md](spec.md) | **Plan**: [plan.md](plan.md)  
-**Generated**: 2026-01-26
+**Last Updated**: 2026-01-28
 
 ## Task Format
 
@@ -13,7 +13,7 @@
 
 - **TaskID**: Sequential number (T001, T002, ...)
 - **[P]**: Parallelizable marker (different files, no dependencies)
-- **[Story]**: User story label (US1, US2, ...) for story phases only
+- **[Story]**: User story label (US1, US2, US3, ...) for story phases only
 - **Description**: Clear action with exact file path
 
 ## Implementation Strategy
@@ -21,6 +21,12 @@
 **MVP Scope**: User Story 1 + User Story 2 (vocab and grammar enrichment only)  
 **Incremental Delivery**: Each user story is independently testable and deliverable  
 **Priority Order**: P1 (US1, US2) → P2 (US5, US3) → P3 (US4)
+
+## Critical Implementation Notes
+
+**Learning Item Generation**: Each learning item (vocab, grammar, pronunciation, idioms, etc.) is enriched one-by-one via individual LLM calls with retry logic (up to 3 retries per item).
+
+**Content Generation**: Single LLM call per topic generates N conversations + N stories using ALL learning item categories together. Chain-of-thought (generate → critique → revise → assign scenarios) is structured within the prompt itself, not executed as sequential API calls.
 
 ---
 
@@ -251,33 +257,69 @@
 
 ---
 
-## Phase 6: User Story 3 - Content Generation (P2)
+## Phase 6: User Story 3 - Content Generation with Chain-of-Thought (P2)
 
-**Goal**: Generate conversations/stories with explicit learning item links
+**Goal**: Generate conversations/stories using ALL learning item categories together in single LLM call with chain-of-thought
 
-**Independent Test**: Generate content from scenario, verify all learning_item_ids exist and appear in text
+**Independent Test**: Generate content from topic with all learning items, verify all learning_item_ids exist and appear in text
 
-### Content Generator
+**Prerequisites**: All learning items from all categories (vocab, grammar, pronunciation, idioms, functional, cultural, writing system, misc) must be generated first
+
+### Learning Item Generation (All Categories)
 
 - [ ] T128 [P] [US3] Create src/pipeline/generators/__init__.py
-- [ ] T129 [US3] Create src/pipeline/generators/content.py with ContentGenerator class
-- [ ] T130 [US3] Implement scenario similarity search using embeddings in content.py
-- [ ] T131 [US3] Implement reuse decision logic (>85% = reuse, 75-85% = prompt ops) in content.py
-- [ ] T132 [US3] Implement learning item selection (language, level, topic/scenario relevance) in content.py
-- [ ] T134 [US3] Implement conversation generation with 6-10 turns in content.py
-- [ ] T135 [US3] Implement story generation with 3-8 paragraphs in content.py
-- [ ] T136 [US3] Implement segment creation with learning_item_ids in content.py
-- [ ] T137 [US3] Implement linking validation (all IDs exist and appear in text) in content.py
-- [ ] T138 [US3] Implement usage count tracking in metadata file in content.py
-- [ ] T139 [US3] Write unit tests for ContentGenerator in tests/unit/test_content_generator.py
+- [ ] T129 [P] [US3] Create src/pipeline/generators/learning_item_generator.py with BaseLearningItemGenerator class
+- [ ] T130 [US3] Implement pronunciation item generation (tone pairs, initials, finals) from vocab in learning_item_generator.py
+- [ ] T131 [US3] Implement idiom/expression item generation from vocab phrases in learning_item_generator.py
+- [ ] T132 [US3] Implement functional language item generation from grammar patterns in learning_item_generator.py
+- [ ] T133 [US3] Implement cultural note item generation from topic/scenario context in learning_item_generator.py
+- [ ] T134 [US3] Implement writing system item generation for zh/ja languages in learning_item_generator.py
+- [ ] T135 [US3] Implement miscellaneous category item generation (sociolinguistic, pragmatic, literacy, pattern) in learning_item_generator.py
+- [ ] T136 [US3] Add deduplication logic across all categories in learning_item_generator.py
+- [ ] T137 [US3] Write unit tests for learning item generation in tests/unit/test_learning_item_generator.py
+
+### Learning Item Generation CLI
+
+- [ ] T138 [US3] Create src/pipeline/cli/generate_learning_items.py with CLI interface
+- [ ] T139 [US3] Implement argument parsing: --language, --level, --category, --source-dir, --output in generate_learning_items.py
+- [ ] T140 [US3] Implement batch generation with one-by-one LLM calls and retry logic in generate_learning_items.py
+- [ ] T141 [US3] Implement summary statistics (items generated per category, success rate) in generate_learning_items.py
+- [ ] T142 [US3] Write integration test for learning item generation in tests/integration/test_learning_item_generation.py
+
+### Content Generator with Chain-of-Thought
+
+- [ ] T143 [P] [US3] Create src/pipeline/generators/content_generator.py with ContentGenerator class using instructor library
+- [ ] T144 [US3] Define ChainOfThoughtContent Pydantic model with fields: initial_draft, critique, revised_content, learning_items_used in content_generator.py
+- [ ] T145 [US3] Define ContentBatch Pydantic model with fields: conversations[], stories[], chain_of_thought_metadata in content_generator.py
+- [ ] T146 [US3] Implement load_learning_items() in simplified format (target_item only) to minimize tokens in content_generator.py
+- [ ] T147 [US3] Create src/pipeline/prompts/{language}/content_generation_prompts.py with chain-of-thought template (generate → critique → revise → assign scenarios as single prompt)
+- [ ] T148 [US3] Implement generate_content_batch() calling instructor.from_openai() with structured output in content_generator.py
+- [ ] T149 [US3] Implement parse_chain_of_thought() extracting learning_item_ids from revised_content in content_generator.py
+- [ ] T150 [US3] Implement assign_scenario_names() extracting 3-8 word scenarios in content_generator.py
+- [ ] T151 [US3] Implement segment creation with learning_item_ids validation in content_generator.py
+- [ ] T152 [US3] Implement presence validation (all IDs exist and appear in text) in content_generator.py
+- [ ] T153 [US3] Write unit tests for ContentGenerator in tests/unit/test_content_generator.py
+
+### Usage Tracking Module
+
+- [ ] T154 [P] [US3] Create src/pipeline/utils/usage_tracker.py with UsageTracker class
+- [ ] T155 [US3] Implement increment_appearances() updating usage_stats.json in usage_tracker.py
+- [ ] T156 [US3] Implement get_usage_report() generating summary statistics in usage_tracker.py
+- [ ] T157 [US3] Write unit tests for UsageTracker in tests/unit/test_usage_tracker.py
 
 ### Content Generation CLI
 
-- [ ] T140 [US3] Create src/pipeline/cli/generate_content.py with CLI interface
-- [ ] T141 [US3] Implement argument parsing: --language, --level, --type, --topic, --scenario, --turns in generate_content.py
-- [ ] T142 [US3] Implement content generation workflow with validation in generate_content.py
-- [ ] T143 [US3] Implement summary output (segments, word count, linked items) in generate_content.py
-- [ ] T144 [US3] Write integration test for end-to-end content generation in tests/integration/test_end_to_end_content.py
+- [ ] T158 [US3] Create src/pipeline/cli/generate_content.py with CLI interface
+- [ ] T159 [US3] Implement argument parsing: --language, --level, --topic, --num-conversations, --num-stories in generate_content.py
+- [ ] T160 [US3] Implement content generation workflow: load items → generate batch → validate → track usage in generate_content.py
+- [ ] T161 [US3] Implement summary output (conversations generated, stories generated, learning items used, chain-of-thought quality metrics) in generate_content.py
+- [ ] T162 [US3] Add --force-code flag for instructor retry behavior in generate_content.py
+- [ ] T163 [US3] Write integration test for end-to-end two-stage workflow in tests/integration/test_two_stage_content_generation.py
+
+### Test Fixtures
+
+- [ ] T164 [P] [US3] Create tests/fixtures/complete_learning_items/ with sample items from all 12 categories
+- [ ] T165 [P] [US3] Create tests/fixtures/expected_chain_of_thought.json with example chain-of-thought structure
 
 ---
 
@@ -289,52 +331,44 @@
 
 ### Question Generator
 
-- [ ] T145 [P] [US4] Create src/pipeline/generators/questions.py with QuestionGenerator class
-- [ ] T146 [US4] Implement question type distribution (50-60% MCQ, 20-30% T/F, 20% short answer) in questions.py
-- [ ] T147 [US4] Implement cognitive level distribution (40% detail, 30% inference, 30% main idea) in questions.py
-- [ ] T148 [US4] Implement MCQ generation with 4 options (1 correct, 3 distractors) in questions.py
-- [ ] T149 [US4] Implement true/false generation in questions.py
-- [ ] T150 [US4] Implement short answer generation in questions.py
-- [ ] T151 [US4] Implement rationale generation explaining learning value in questions.py
-- [ ] T152 [US4] Implement difficulty tagging within content level range in questions.py
-- [ ] T153 [US4] Write unit tests for QuestionGenerator in tests/unit/test_question_generator.py
+- [ ] T166 [P] [US4] Create src/pipeline/generators/question_generator.py with QuestionGenerator class
+- [ ] T167 [US4] Implement question type distribution (50-60% MCQ, 20-30% T/F, 20% short answer) in question_generator.py
+- [ ] T168 [US4] Implement cognitive level distribution (40% detail, 30% inference, 30% main idea) in question_generator.py
+- [ ] T169 [US4] Implement MCQ generation with 4 options (1 correct, 3 distractors) in question_generator.py
+- [ ] T170 [US4] Implement true/false generation in question_generator.py
+- [ ] T171 [US4] Implement short answer generation in question_generator.py
+- [ ] T172 [US4] Implement rationale generation explaining learning value in question_generator.py
+- [ ] T173 [US4] Implement difficulty tagging within content level range in question_generator.py
+- [ ] T174 [US4] Write unit tests for QuestionGenerator in tests/unit/test_question_generator.py
 
 ### Question Generation CLI
 
-- [ ] T154 [US4] Create src/pipeline/cli/generate_questions.py with CLI interface
-- [ ] T155 [US4] Implement argument parsing: --content-id, --language, --level, --num-questions in generate_questions.py
-- [ ] T156 [US4] Implement question generation workflow with answerability validation in generate_questions.py
-- [ ] T157 [US4] Implement summary output (type distribution, difficulty, tags) in generate_questions.py
-- [ ] T158 [US4] Write integration test for end-to-end question generation in tests/integration/test_end_to_end_questions.py
+- [ ] T175 [US4] Create src/pipeline/cli/generate_questions.py with CLI interface
+- [ ] T176 [US4] Implement argument parsing: --content-id, --language, --level, --num-questions in generate_questions.py
+- [ ] T177 [US4] Implement question generation workflow with answerability validation in generate_questions.py
+- [ ] T178 [US4] Implement summary output (type distribution, difficulty, tags) in generate_questions.py
+- [ ] T179 [US4] Write integration test for end-to-end question generation in tests/integration/test_end_to_end_questions.py
 
 ---
 
-## Phase 8: Other Categories Generation (Post-MVP)
+## Phase 8: Scenario Matching & Normalization (Post-MVP)
 
-**Goal**: Generate pronunciation, idiom, functional, cultural learning items from vocab/grammar
+**Goal**: Implement scenario similarity search and normalization for content reuse
 
-### Base Generator for LLM-Generated Categories
+### Scenario Matcher
 
-- [ ] T159 [P] Create src/pipeline/enrichers/other_categories/__init__.py
-- [ ] T160 Create src/pipeline/enrichers/other_categories/base_generator.py with BaseCategoryGenerator class
-- [ ] T161 Implement analyze_source_items() extracting patterns from vocab/grammar in base_generator.py
-- [ ] T162 Implement generate_category_items() with category-specific prompts in base_generator.py
-- [ ] T163 Implement deduplication logic in base_generator.py
+- [ ] T180 [P] Create src/pipeline/generators/scenario_matcher.py with ScenarioMatcher class
+- [ ] T181 Implement semantic similarity search using Meilisearch vector search in scenario_matcher.py
+- [ ] T182 Implement threshold-based reuse decision (>85% = reuse, 75-85% = prompt for decision) in scenario_matcher.py
+- [ ] T183 Implement scenario name normalization (grouping similar names) in scenario_matcher.py
+- [ ] T184 Write unit tests for ScenarioMatcher in tests/unit/test_scenario_matcher.py
 
-### Specific Category Generators
+### Scenario Matching CLI
 
-- [ ] T164 [P] Create src/pipeline/enrichers/other_categories/pronunciation.py from vocab (tone pairs, initials, finals)
-- [ ] T165 [P] Create src/pipeline/enrichers/other_categories/idiom.py from vocab phrases
-- [ ] T166 [P] Create src/pipeline/enrichers/other_categories/functional.py from grammar patterns
-- [ ] T167 [P] Create src/pipeline/enrichers/other_categories/cultural.py from vocab/scenario context
-- [ ] T168 [P] Create src/pipeline/enrichers/other_categories/writing_system.py for character-based languages
-
-### Other Categories CLI
-
-- [ ] T169 Create src/pipeline/cli/generate_other_categories.py with CLI interface
-- [ ] T170 Implement argument parsing: --language, --level, --category, --source-items, --output in generate_other_categories.py
-- [ ] T171 Implement batch generation workflow in generate_other_categories.py
-- [ ] T172 Write integration tests for other category generation in tests/integration/test_other_categories.py
+- [ ] T185 Create src/pipeline/cli/match_scenarios.py with CLI interface
+- [ ] T186 Implement argument parsing: --scenario-name, --language, --threshold in match_scenarios.py
+- [ ] T187 Implement similarity search and reuse report generation in match_scenarios.py
+- [ ] T188 Write integration test for scenario matching in tests/integration/test_scenario_matching.py
 
 ---
 
@@ -344,34 +378,34 @@
 
 ### API Core
 
-- [ ] T173 Create src/pipeline/api/__init__.py
-- [ ] T174 Create src/pipeline/api/server.py with FastAPI application
-- [ ] T175 Implement health check endpoint GET /health in server.py
-- [ ] T176 Create src/pipeline/api/scenario_search.py with semantic similarity search
-- [ ] T177 Implement embedding cache for fast scenario lookup in scenario_search.py
-- [ ] T178 Implement cosine similarity ranking (>0.85 threshold) in scenario_search.py
+- [ ] T189 Create src/pipeline/api/__init__.py
+- [ ] T190 Create src/pipeline/api/server.py with FastAPI application
+- [ ] T191 Implement health check endpoint GET /health in server.py
+- [ ] T192 Create src/pipeline/api/scenario_search.py with semantic similarity search
+- [ ] T193 Implement embedding cache for fast scenario lookup in scenario_search.py
+- [ ] T194 Implement cosine similarity ranking (>0.85 threshold) in scenario_search.py
 
 ### Scenario Endpoints
 
-- [ ] T179 Create src/pipeline/api/live_scenario_handler.py with endpoint handlers
-- [ ] T180 Implement POST /api/v1/scenarios/search with similarity threshold in live_scenario_handler.py
-- [ ] T181 Implement POST /api/v1/scenarios/generate with on-demand generation in live_scenario_handler.py
-- [ ] T182 Implement GET /api/v1/scenarios/{id} for retrieval in live_scenario_handler.py
-- [ ] T183 Implement PATCH /api/v1/scenarios/{id} for tag updates in live_scenario_handler.py
+- [ ] T195 Create src/pipeline/api/live_scenario_handler.py with endpoint handlers
+- [ ] T196 Implement POST /api/v1/scenarios/search with similarity threshold in live_scenario_handler.py
+- [ ] T197 Implement POST /api/v1/scenarios/generate with on-demand generation in live_scenario_handler.py
+- [ ] T198 Implement GET /api/v1/scenarios/{id} for retrieval in live_scenario_handler.py
+- [ ] T199 Implement PATCH /api/v1/scenarios/{id} for tag updates in live_scenario_handler.py
 
 ### Incremental Generator
 
-- [ ] T184 Create src/pipeline/api/incremental_generator.py with on-demand generation logic
-- [ ] T185 Implement fast LLM model selection (GPT-3.5-turbo) in incremental_generator.py
-- [ ] T186 Implement 30s timeout for generation in incremental_generator.py
-- [ ] T187 Implement lightweight validation (schema only) in incremental_generator.py
-- [ ] T188 Implement publishable:false flag for draft content in incremental_generator.py
+- [ ] T200 Create src/pipeline/api/incremental_generator.py with on-demand generation logic
+- [ ] T201 Implement fast LLM model selection (GPT-3.5-turbo) in incremental_generator.py
+- [ ] T202 Implement 30s timeout for generation in incremental_generator.py
+- [ ] T203 Implement lightweight validation (schema only) in incremental_generator.py
+- [ ] T204 Implement publishable:false flag for draft content in incremental_generator.py
 
 ### API Testing
 
-- [ ] T189 Write API integration tests with pytest-asyncio in tests/integration/test_live_api.py
-- [ ] T190 Create test fixtures for scenario search in tests/fixtures/
-- [ ] T191 Test concurrent request handling in tests/integration/test_live_api.py
+- [ ] T205 Write API integration tests with pytest-asyncio in tests/integration/test_live_api.py
+- [ ] T206 Create test fixtures for scenario search in tests/fixtures/
+- [ ] T207 Test concurrent request handling in tests/integration/test_live_api.py
 
 ---
 
@@ -381,26 +415,26 @@
 
 ### Enrichment Graph
 
-- [ ] T192 Create src/pipeline/langgraph/__init__.py
-- [ ] T193 Create src/pipeline/langgraph/enrichment_graph.py with StateGraph definition
-- [ ] T194 Define graph nodes: load_source, parse_by_language, enrich_with_llm, validate_schema, retry_loop, write_output in enrichment_graph.py
-- [ ] T195 Define conditional edges for retry logic in enrichment_graph.py
-- [ ] T196 Implement checkpoint support for resuming failed batches in enrichment_graph.py
-- [ ] T197 Add execution observability with state logging in enrichment_graph.py
+- [ ] T208 Create src/pipeline/langgraph/__init__.py
+- [ ] T209 Create src/pipeline/langgraph/enrichment_graph.py with StateGraph definition
+- [ ] T210 Define graph nodes: load_source, parse_by_language, enrich_with_llm, validate_schema, retry_loop, write_output in enrichment_graph.py
+- [ ] T211 Define conditional edges for retry logic in enrichment_graph.py
+- [ ] T212 Implement checkpoint support for resuming failed batches in enrichment_graph.py
+- [ ] T213 Add execution observability with state logging in enrichment_graph.py
 
 ### Generation Graph
 
-- [ ] T198 Create src/pipeline/langgraph/generation_graph.py with StateGraph definition
-- [ ] T199 Define graph nodes: check_similarity, reuse_existing, generate_new, link_items, validate_links, write_output in generation_graph.py
-- [ ] T200 Define conditional edges for reuse decision in generation_graph.py
-- [ ] T201 Implement parallel execution for multiple content units in generation_graph.py
+- [ ] T214 Create src/pipeline/langgraph/generation_graph.py with StateGraph definition
+- [ ] T215 Define graph nodes: load_all_learning_items, generate_batch_with_cot, validate_links, track_usage, write_output in generation_graph.py
+- [ ] T216 Define conditional edges for chain-of-thought quality checks in generation_graph.py
+- [ ] T217 Implement parallel execution for multiple topics in generation_graph.py
 
 ### LangGraph CLI
 
-- [ ] T202 Create CLI wrapper for enrichment_graph with config file input
-- [ ] T203 Create CLI wrapper for generation_graph with config file input
-- [ ] T204 Create example config files in configs/ directory
-- [ ] T205 Write integration tests for graph execution in tests/integration/test_langgraph.py
+- [ ] T218 Create CLI wrapper for enrichment_graph with config file input
+- [ ] T219 Create CLI wrapper for generation_graph with config file input
+- [ ] T220 Create example config files in configs/ directory
+- [ ] T221 Write integration tests for graph execution in tests/integration/test_langgraph.py
 
 ---
 
@@ -410,31 +444,31 @@
 
 ### Observability & Metrics
 
-- [ ] T206 [P] Implement batch processing metrics (items processed, success rate, tokens, duration) in all CLIs
-- [ ] T207 [P] Add cost tracking dashboard template (LLM token costs per language/level)
-- [ ] T208 [P] Create manual review queue viewer CLI tool
-- [ ] T209 [P] Implement QA gate trend analysis (pass rate over time)
+- [ ] T222 [P] Implement batch processing metrics (items processed, success rate, tokens, duration) in all CLIs
+- [ ] T223 [P] Add cost tracking dashboard template (LLM token costs per language/level)
+- [ ] T224 [P] Create manual review queue viewer CLI tool
+- [ ] T225 [P] Implement QA gate trend analysis (pass rate over time)
 
 ### Documentation
 
-- [ ] T210 [P] Create comprehensive README.md with all CLI examples
-- [ ] T211 [P] Document prompt engineering guidelines for new languages in docs/
-- [ ] T212 [P] Create troubleshooting guide for common LLM failures in docs/
-- [ ] T213 [P] Document database partitioning setup for Postgres and Meilisearch in docs/
+- [ ] T226 [P] Update comprehensive README.md with two-stage workflow and all CLI examples
+- [ ] T227 [P] Document prompt engineering guidelines for chain-of-thought content generation in docs/
+- [ ] T228 [P] Create troubleshooting guide for common LLM failures in docs/
+- [ ] T229 [P] Document database partitioning setup for Postgres and Meilisearch in docs/
 
 ### Deployment & CI/CD
 
-- [ ] T214 [P] Create Dockerfile for batch workers
-- [ ] T215 [P] Create docker-compose.yml for local development
-- [ ] T216 [P] Create GitHub Actions workflow for pytest on PR
-- [ ] T217 [P] Create GitHub Actions workflow for schema validation on PR
-- [ ] T218 [P] Create deployment guide for production batch workers in docs/
+- [ ] T230 [P] Create Dockerfile for batch workers
+- [ ] T231 [P] Create docker-compose.yml for local development
+- [ ] T232 [P] Create GitHub Actions workflow for pytest on PR
+- [ ] T233 [P] Create GitHub Actions workflow for schema validation on PR
+- [ ] T234 [P] Create deployment guide for production batch workers in docs/
 
 ### Contract Tests
 
-- [ ] T219 [P] Write contract tests for all JSON schemas in tests/contract/test_schemas.py
-- [ ] T220 [P] Write contract tests for output file structure in tests/contract/test_output_format.py
-- [ ] T221 [P] Implement schema version compatibility tests in tests/contract/test_schema_evolution.py
+- [ ] T235 [P] Write contract tests for all JSON schemas in tests/contract/test_schemas.py
+- [ ] T236 [P] Write contract tests for output file structure in tests/contract/test_output_format.py
+- [ ] T237 [P] Implement schema version compatibility tests in tests/contract/test_schema_evolution.py
 
 ---
 
@@ -443,53 +477,54 @@
 ### Story Completion Order
 
 ```
-Phase 1 (Setup)
+Phase 1 (Setup) ✅ COMPLETE
   ↓
-Phase 2 (Foundational) 
+Phase 2 (Foundational) ✅ COMPLETE
   ↓
-Phase 3 (US1: Vocab Enrichment) ──┐
-  ↓                                │
-Phase 4 (US2: Grammar Enrichment) ─┤
-  ↓                                │
-Phase 5 (US5: QA Gates) ───────────┘  (can validate vocab+grammar immediately)
+Phase 3 (US1: Vocab Enrichment) ✅ COMPLETE
   ↓
-Phase 6 (US3: Content Generation)  (depends on US1+US2)
+Phase 4 (US2: Grammar Enrichment) ← CURRENT
   ↓
-Phase 7 (US4: Question Generation) (depends on US3)
+Phase 5 (US5: QA Gates)
   ↓
-Phase 8 (Other Categories)         (depends on US1+US2)
+Phase 6 (US3: Two-Stage Content Generation)
+  ├─ Stage 1: Generate ALL learning items (pronunciation, idioms, functional, cultural, etc.)
+  └─ Stage 2: Generate content using ALL items together with chain-of-thought
   ↓
-Phase 9 (Live API)                 (depends on US1-US4)
+Phase 7 (US4: Question Generation)
   ↓
-Phase 10 (LangGraph)               (optional enhancement)
+Phase 8 (Scenario Matching & Normalization)
   ↓
-Phase 11 (Polish)                  (ongoing)
+Phase 9 (Live API)
+  ↓
+Phase 10 (LangGraph Orchestration)
+  ↓
+Phase 11 (Polish)
 ```
 
 ### Parallelization Opportunities
 
-**Within Phase 3 (US1):**
-- T045-T052 (Mandarin enricher)
-- T053-T059 (Japanese enricher)
-- T060-T066 (French enricher)
-- Can develop all 3 enrichers in parallel
-
-**Within Phase 4 (US2):**
+**Within Phase 4 (US2) - Grammar Enrichment:**
 - T078-T085 (Mandarin grammar)
 - T086-T092 (Japanese grammar)
 - T093-T099 (French grammar)
 - Can develop all 3 enrichers in parallel
 
-**Within Phase 5 (US5):**
+**Within Phase 5 (US5) - QA Gates:**
 - T108-T117 (All validation modules)
 - Can develop all gates in parallel
 
-**Within Phase 8:**
-- T164-T168 (All category generators)
-- Can develop all generators in parallel
+**Within Phase 6 (US3) - Learning Item Generation:**
+- T130-T136 (All category generators)
+- Can develop pronunciation, idioms, functional, cultural, writing_system, miscellaneous generators in parallel
+- Note: Each generator processes items one-by-one with individual LLM calls
 
-**Within Phase 11:**
-- T206-T221 (All polish tasks)
+**Within Phase 8 - Scenario Matching:**
+- T180-T184 (Scenario matcher components)
+- Can develop in parallel with other phases
+
+**Within Phase 11 - Polish:**
+- T222-T237 (All polish tasks)
 - Can execute all polish tasks in parallel
 
 ---
@@ -499,46 +534,92 @@ Phase 11 (Polish)                  (ongoing)
 ### MVP Delivery (Phases 1-5)
 
 **Timeline**: 4-6 weeks  
+**Status**: Phases 1-3 ✅ COMPLETE, Phase 4 IN PROGRESS  
 **Deliverables**:
-- ✅ Vocab enrichment for 3 languages
-- ✅ Grammar enrichment for 3 languages
-- ✅ QA gates with validation reports
-- ✅ CLI tools for batch processing
-- ✅ Test coverage >80%
+- ✅ Vocab enrichment for 3 languages (Mandarin, Japanese, French)
+- 🔄 Grammar enrichment for 3 languages (IN PROGRESS)
+- QA gates with validation reports
+- CLI tools for batch processing
+- Test coverage >80%
 
 **Example MVP Command Sequence**:
 ```bash
-# Enrich Mandarin HSK1 vocab
-python -m src.pipeline.cli.enrich_vocab --language zh --level HSK1 --input hsk1_vocab.tsv --enricher mandarin
+# Stage 1: Enrich vocab (COMPLETED)
+python -m src.pipeline.cli.enrich_vocab \
+  --language zh --level HSK1 \
+  --input sources/hsk1_vocab.tsv \
+  --enricher mandarin \
+  --parallel 5 --resume
 
-# Enrich Mandarin HSK1 grammar
-python -m src.pipeline.cli.enrich_grammar --language zh --level HSK1 --input hsk1_grammar.csv --enricher mandarin
+# Stage 2: Enrich grammar (NEXT)
+python -m src.pipeline.cli.enrich_grammar \
+  --language zh --level HSK1 \
+  --input sources/hsk1_grammar.csv \
+  --enricher mandarin
 
-# Run QA gates
-python -m src.pipeline.cli.run_qa_gates --language zh --level HSK1 --content-dir ../havachat-knowledge/generated content/Mandarin/HSK1/
+# Stage 3: Run QA gates
+python -m src.pipeline.cli.run_qa_gates \
+  --language zh --level HSK1 \
+  --content-dir ../havachat-knowledge/generated content/Mandarin/HSK1/
 ```
 
-### Incremental Expansion (Phases 6-7)
+### Two-Stage Content Generation (Phases 6-7)
 
-**Timeline**: 2-3 weeks  
+**Timeline**: 4-5 weeks  
+**Status**: NOT STARTED  
 **Deliverables**:
-- ✅ Content generation (conversations/stories)
-- ✅ Question generation
-- ✅ End-to-end pipeline from vocab → content → questions
+- Learning item generation for all categories (pronunciation, idioms, functional, cultural, writing system, misc)
+- Content generation with chain-of-thought (single LLM call per topic)
+- Question generation
+- Usage tracking and metrics
+
+**Example Two-Stage Command Sequence**:
+```bash
+# Stage 1: Generate ALL learning items first
+python -m src.pipeline.cli.generate_learning_items \
+  --language zh --level HSK1 \
+  --category pronunciation \
+  --source-dir ../havachat-knowledge/generated content/Mandarin/HSK1/vocab/
+
+python -m src.pipeline.cli.generate_learning_items \
+  --language zh --level HSK1 \
+  --category idiom \
+  --source-dir ../havachat-knowledge/generated content/Mandarin/HSK1/vocab/
+
+# ... repeat for functional, cultural, writing_system, misc categories
+
+# Stage 2: Generate content using ALL learning items together
+python -m src.pipeline.cli.generate_content \
+  --language zh --level HSK1 \
+  --topic "Food" \
+  --num-conversations 5 \
+  --num-stories 5
+```
 
 ### Advanced Features (Phases 8-10)
 
 **Timeline**: 4-6 weeks  
+**Status**: NOT STARTED  
 **Deliverables**:
-- ✅ Other category generation (pronunciation, idioms, etc.)
-- ✅ Live API for on-demand generation
-- ✅ LangGraph orchestration
+- Scenario matching and normalization
+- Live API for on-demand generation
+- LangGraph orchestration for production batches
 
 ### Total Estimated Effort
 
-- **MVP (Phases 1-5)**: 221 tasks, ~4-6 weeks
-- **Full Pipeline (Phases 1-7)**: 158 additional tasks, ~2-3 weeks
-- **Complete System (Phases 1-11)**: 221 tasks total, ~10-15 weeks
+- **Phase 1 (Setup)**: 12 tasks, ~1 week ✅ COMPLETE
+- **Phase 2 (Foundational)**: 31 tasks, ~2 weeks ✅ COMPLETE
+- **Phase 3 (US1: Vocab)**: 33 tasks, ~2 weeks ✅ COMPLETE
+- **Phase 4 (US2: Grammar)**: 31 tasks, ~2 weeks 🔄 IN PROGRESS
+- **Phase 5 (US5: QA Gates)**: 20 tasks, ~1-2 weeks
+- **Phase 6 (US3: Two-Stage Content)**: 38 tasks, ~3-4 weeks
+- **Phase 7 (US4: Questions)**: 14 tasks, ~1 week
+- **Phase 8 (Scenario Matching)**: 9 tasks, ~1 week
+- **Phase 9 (Live API)**: 19 tasks, ~2-3 weeks
+- **Phase 10 (LangGraph)**: 14 tasks, ~2 weeks
+- **Phase 11 (Polish)**: 16 tasks, ongoing
+
+**Total**: 237 tasks, ~15-20 weeks for complete system
 
 ---
 
@@ -556,11 +637,21 @@ Each phase must pass these gates before proceeding:
 
 ### MVP Acceptance Criteria (End of Phase 5)
 
-- [X] Can process 500 vocab items in <30min with >95% schema validation pass rate
-- [X] Can process 100 grammar patterns with >90% granularity validation (deferred to Phase 4)
+- [X] ✅ Can process 500 vocab items in <10min with >95% schema validation pass rate (ACHIEVED with parallel processing)
+- [ ] Can process 100 grammar patterns with >90% granularity validation
 - [ ] QA gates run on 100-item batch in <10min with <5% flagged items
 - [ ] Manual review queue contains only legitimate failures
-- [X] All 3 languages (Mandarin, Japanese, French) fully supported for vocabulary
+- [X] ✅ All 3 languages (Mandarin, Japanese, French) fully supported for vocabulary
+
+### Two-Stage Content Generation Acceptance (End of Phase 6)
+
+- [ ] Can generate ALL learning item categories (vocab, grammar, pronunciation, idioms, functional, cultural, writing_system, misc) for a given language/level
+- [ ] Content generation using instructor library produces valid structured output with chain-of-thought metadata
+- [ ] Single LLM call generates N conversations + N stories using items from ALL categories
+- [ ] Chain-of-thought quality: >95% of revised versions show improved learning item coverage vs initial drafts
+- [ ] Token optimization: <500 tokens for 200 learning items (target_item only vs >2000 with full definitions)
+- [ ] Learning item presence validation: 100% of referenced items exist and appear in text
+- [ ] Usage tracking: appearances_count correctly incremented for all items in generated content
 
 ### Production Readiness (End of Phase 11)
 
@@ -575,7 +666,7 @@ Each phase must pass these gates before proceeding:
 
 ## Implementation Notes
 
-### Phase 3 Completion (Vocab Enrichment) - 2026-01-28
+### Phase 3 Completion (Vocab Enrichment) - 2026-01-28 ✅
 
 **Summary**: All vocabulary enrichment tasks (T044-T076a) completed with 10 additional optimizations for cost reduction, performance, and maintainability.
 
@@ -621,6 +712,60 @@ Each phase must pass these gates before proceeding:
 - ✅ Dry-run validation for all 3 enrichers
 - ✅ Meilisearch integration test (20 records indexed successfully)
 
-**Next Phase**: Phase 4 - Grammar Enrichment (T077-T106)
+**Next Phase**: Phase 4 - Grammar Enrichment (T077-T107)
 
-**Next Steps**: Begin Phase 1 (Setup) by initializing the Python project with uv and installing core dependencies.
+---
+
+### Phase 4 Current Status (Grammar Enrichment) - 2026-01-28 🔄
+
+**Status**: IN PROGRESS  
+**Remaining Tasks**: T077-T107 (31 tasks)  
+**Expected Completion**: ~2 weeks
+
+**Key Considerations for Grammar**:
+- Each grammar item must be enriched one-by-one via individual LLM calls (same as vocab)
+- Must implement retry logic for each individual item (up to 3 retries)
+- Language-specific source formats:
+  - Mandarin: CSV with "类别,类别名称,细目,语法内容"
+  - Japanese: TSV with "Type, Rule, Example"
+  - French: Markdown with "## Category" headers
+- Must enforce narrow-scope items (avoid "mega-items" like "past tense" without sub-items)
+- Preserve existing examples from source data (especially for Japanese)
+
+---
+
+### Phase 6 Planning Notes (Two-Stage Content Generation)
+
+**Critical Implementation Requirements**:
+
+1. **Stage 1 - Learning Item Generation (T128-T142)**:
+   - Generate items for: pronunciation, idioms, functional, cultural, writing_system, miscellaneous
+   - Each item generated one-by-one with individual LLM call
+   - Implement retry logic (3 attempts) for each item
+   - Must complete ALL categories before Stage 2
+
+2. **Stage 2 - Content Generation with Chain-of-Thought (T143-T165)**:
+   - Load ALL learning items in simplified format (target_item only, <500 tokens for 200 items)
+   - Use `instructor` library for structured output with Pydantic validation
+   - Chain-of-thought steps in single prompt (not sequential calls):
+     ```
+     1. Generate: N conversations + N stories using all categories
+     2. Critique: Evaluate level-appropriateness, item coverage, natural flow
+     3. Revise: Improve based on critique, explicitly list items used
+     4. Assign Scenarios: Give 3-8 word scenario name to each piece
+     ```
+   - Single LLM call generates entire batch (5 conversations + 5 stories by default)
+   - Validate all learning_item_ids exist and appear in text
+   - Track usage: increment appearances_count for each item in usage_stats.json
+
+**Chain-of-Thought Quality Metrics**:
+- >95% of revised versions show improved learning item coverage vs initial drafts
+- Explicit learning_item_ids[] list matches items found in text (100% accuracy)
+- Scenario names follow 3-8 word format and can be normalized (>85% success rate)
+
+**Prompt Engineering Guidelines**:
+- System prompt must describe ALL four chain-of-thought steps
+- Include examples of good vs bad coverage
+- Specify learner level expectations (A1 = simple sentences, HSK1 = basic structures)
+- Request explicit item listing in critique/revise steps
+- Use instructor field descriptions to guide structured output
