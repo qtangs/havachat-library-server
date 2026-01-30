@@ -7,7 +7,6 @@ import traceback
 from datetime import datetime
 
 from loguru import logger
-from pydantic.v1.json import pydantic_encoder
 
 from constants import ENV
 from constants import PRODUCT
@@ -34,7 +33,6 @@ class JSONFormatter(logging.Formatter):
                     else {}
                 ),
             },
-            default=pydantic_encoder,
         )
         return super().format(record)
 

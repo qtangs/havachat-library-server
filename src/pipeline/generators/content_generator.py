@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field
 
 from pipeline.parsers.source_parsers import load_source_file
 from pipeline.prompts.content_generator_prompts import build_content_generation_system_prompt
+from pipeline.utils.azure_translation import AzureTranslationHelper
 from pipeline.utils.llm_client import LLMClient
 from pipeline.validators.schema import (
     Category,
@@ -52,7 +53,6 @@ class Topic(BaseModel):
     
     id: str = Field(..., description="Topic UUID")
     name: str = Field(..., description="Topic name in English")
-    language: str = Field(..., description="ISO 639-1 language code")
 
 
 class Scenario(BaseModel):
@@ -60,7 +60,6 @@ class Scenario(BaseModel):
     
     id: str = Field(..., description="Scenario UUID")
     name: str = Field(..., description="Scenario name in English")
-    language: str = Field(..., description="ISO 639-1 language code")
 
 
 # ============================================================================
@@ -107,12 +106,25 @@ class SimplifiedLearningItem(BaseModel):
 
 
 class SegmentDraft(BaseModel):
-    """Draft segment with learning items."""
+    """Draft segment with learning items (no translation in initial draft)."""
     
     speaker: Optional[int] = Field(
         None, description="Speaker index (0-based, references speakers in overview)"
     )
     text: str = Field(..., description="Text in target language")
+    learning_item_ids: List[str] = Field(
+        ..., description="Short UUIDs (8 chars) of learning items in this segment"
+    )
+
+
+class RevisedSegmentDraft(BaseModel):
+    """Revised segment with learning items and translation (from LLM or Azure)."""
+    
+    speaker: Optional[int] = Field(
+        None, description="Speaker index (0-based, references speakers in overview)"
+    )
+    text: str = Field(..., description="Text in target language")
+    translation: str = Field(..., description="English translation of the text")
     learning_item_ids: List[str] = Field(
         ..., description="Short UUIDs (8 chars) of learning items in this segment"
     )
@@ -145,9 +157,9 @@ class Critique(BaseModel):
 
 
 class RevisedContent(BaseModel):
-    """Revised content after critique (references overview for type/title/speakers)."""
+    """Revised content after critique (includes translations)."""
     
-    segments: List[SegmentDraft]
+    segments: List[RevisedSegmentDraft]
     improvements_made: List[str] = Field(
         ..., description="Changes made based on critique"
     )
@@ -219,6 +231,7 @@ class ContentGenerator:
         level_system: LevelSystem,
         level: str,
         llm_client: Optional[LLMClient] = None,
+        use_azure_translation: bool = False,
     ):
         """Initialize content generator.
 
@@ -227,11 +240,13 @@ class ContentGenerator:
             level_system: Level system (cefr, hsk, jlpt)
             level: Target level (A1, HSK1, N5, etc.)
             llm_client: Optional LLM client (creates default if None)
+            use_azure_translation: Use Azure Translation instead of LLM (default: False)
         """
         self.language = language
         self.level_system = level_system
         self.level = level
         self.llm_client = llm_client or LLMClient()
+        self.use_azure_translation = use_azure_translation
 
         # Storage for loaded learning items
         self.all_learning_items: Dict[str, LearningItem] = {}
@@ -245,6 +260,18 @@ class ContentGenerator:
         self.scenarios: Dict[str, Scenario] = {}  # name -> Scenario
         self.topics_file: Optional[Path] = None
         self.scenarios_file: Optional[Path] = None
+        
+        # Initialize Azure Translation helper only if requested
+        if use_azure_translation:
+            try:
+                self.azure_translator = AzureTranslationHelper()
+                logger.info("Azure Translation initialized for content generation")
+            except ValueError as e:
+                logger.warning(f"Azure Translation not available: {e}")
+                self.azure_translator = None
+        else:
+            logger.info("Using LLM for translations (default)")
+            self.azure_translator = None
 
     def load_topics_and_scenarios(self, output_dir: Path) -> None:
         """Load topics and scenarios from JSON files.
@@ -252,6 +279,9 @@ class ContentGenerator:
         Args:
             output_dir: Directory containing topics.json and scenarios.json
         """
+        # Ensure output directory exists
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
         self.topics_file = output_dir / "topics.json"
         self.scenarios_file = output_dir / "scenarios.json"
         
@@ -279,13 +309,23 @@ class ContentGenerator:
     
     def _save_topics_and_scenarios(self) -> None:
         """Save topics and scenarios to JSON files."""
-        if self.topics_file:
+        if not self.topics_file or not self.scenarios_file:
+            logger.warning("Topics/scenarios file paths not set. Call load_topics_and_scenarios() first.")
+            return
+        
+        # Ensure parent directories exist
+        self.topics_file.parent.mkdir(parents=True, exist_ok=True)
+        self.scenarios_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Save topics
+        if self.topics:
             with open(self.topics_file, "w", encoding="utf-8") as f:
                 topics_list = [topic.model_dump() for topic in self.topics.values()]
                 json.dump(topics_list, f, ensure_ascii=False, indent=2)
             logger.info(f"Saved {len(self.topics)} topics to {self.topics_file}")
         
-        if self.scenarios_file:
+        # Save scenarios
+        if self.scenarios:
             with open(self.scenarios_file, "w", encoding="utf-8") as f:
                 scenarios_list = [scenario.model_dump() for scenario in self.scenarios.values()]
                 json.dump(scenarios_list, f, ensure_ascii=False, indent=2)
@@ -304,7 +344,6 @@ class ContentGenerator:
             topic = Topic(
                 id=str(uuid4()),
                 name=topic_name,
-                language=self.language,
             )
             self.topics[topic_name] = topic
             logger.info(f"Created new topic: {topic_name} (ID: {topic.id})")
@@ -323,7 +362,6 @@ class ContentGenerator:
             scenario = Scenario(
                 id=str(uuid4()),
                 name=scenario_name,
-                language=self.language,
             )
             self.scenarios[scenario_name] = scenario
             logger.info(f"Created new scenario: {scenario_name} (ID: {scenario.id})")
@@ -730,6 +768,27 @@ Remember:
 
             # Create ContentUnit segments with A/B/C speaker IDs
             segments = []
+            
+            # If using Azure Translation, override LLM translations
+            if self.use_azure_translation and self.azure_translator:
+                segment_texts = [seg_draft.text for seg_draft in revised.segments]
+                
+                try:
+                    segment_translations = self.azure_translator.translate_batch(
+                        texts=segment_texts,
+                        from_language=self.language,
+                        to_language="en"
+                    )
+                    logger.debug(f"Azure Translation: translated {len(segment_translations)} segments for content {idx}")
+                except Exception as e:
+                    logger.error(f"Azure Translation failed for content {idx}: {e}, using LLM translations")
+                    # Fall back to LLM translations from seg_draft.translation
+                    segment_translations = [seg_draft.translation for seg_draft in revised.segments]
+            else:
+                # Use LLM translations (default)
+                segment_translations = [seg_draft.translation for seg_draft in revised.segments]
+            
+            # Create segments with translations
             for i, seg_draft in enumerate(revised.segments):
                 # Convert speaker index to A/B/C ID
                 speaker_id = None
@@ -745,6 +804,7 @@ Remember:
                 segment = Segment(
                     speaker=speaker_id,
                     text=seg_draft.text,
+                    translation=segment_translations[i] if i < len(segment_translations) else "",
                     learning_item_ids=full_item_ids,
                 )
                 segments.append(segment)

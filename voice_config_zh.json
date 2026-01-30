@@ -1,0 +1,94 @@
+{
+  "voices": [
+    {
+      "voice_id": "elevenlabs/9lHjugDhwqoxA5MhX0az",
+      "name": "Anna Su",
+      "type": "conversation",
+      "gender": "female",
+      "description": "Casual & Friendly - A youthful and bright Chinese female voice with a soft, friendly tone — warm, conversational, and effortlessly engaging, like a friend catching up with you over coffee.",
+      "supported_languages": ["zh"],
+      "comment": ""
+    },
+    {
+      "voice_id": "elevenlabs/ByhETIclHirOlWnWKhHc",
+      "name": "ShanShan",
+      "type": "conversation",
+      "gender": "female",
+      "description": " - Young, Energetic Female - A youthful Chinese female voice with lively energy. Suitable for narrating stories and creating content for social media videos.",
+      "supported_languages": ["zh"],
+      "comment": ""
+    },
+    {
+      "voice_id": "elevenlabs/kAIqZ7fZv234ClKXwzDx",
+      "name": "Susan",
+      "type": "conversation",
+      "gender": "female",
+      "description": "Clear & calm storyteller - Can be used to generate English content. Sounds very clean and natural as well. A native Mandarin voice crafted for clarity, authenticity, and connection. Her tone is warm yet professional—perfect for narrations that need to sound both human and engaging. With balanced pacing and subtle emotional expression, this voice brings out the meaning and rhythm of every sentence, whether it’s a heartfelt story, a brand campaign, or an educational video.",
+      "supported_languages": ["zh"],
+      "comment": ""
+    },
+    {
+      "voice_id": "elevenlabs/r6qgCCGI7RWKXCagm158",
+      "name": "Anna Su",
+      "type": "conversation",
+      "gender": "female",
+      "description": "Trustworthy, Clear and Natural - Video Narration - Perfect for YouTube videos, documentaries, and informative projects that require a clear and natural delivery.",
+      "supported_languages": ["zh"],
+      "comment": ""
+    },
+    {
+      "voice_id": "elevenlabs/BqljjWyTnrioXPCNkCd4",
+      "name": "Stella Gu",
+      "type": "conversation",
+      "gender": "female",
+      "description": "Cold & Indifferent - A cold, apathetic female voice with a calm, distant tone. Minimal emotion, clear delivery, and a quietly detached presence.",
+      "supported_languages": ["zh"],
+      "comment": ""
+    },
+    {
+      "voice_id": "elevenlabs/MI36FIkp9wRP7cpWKPTl",
+      "name": "Evan Zhao",
+      "type": "conversation",
+      "gender": "male",
+      "description": "A calm and trustworthy Mandarin male voice with smooth rhythm and warm tone — perfect for audiobooks, language content, and emotional narration.",
+      "supported_languages": ["zh"],
+      "comment": ""
+    },
+    {
+      "voice_id": "elevenlabs/DowyQ68vDpgFYdWVGjc3",
+      "name": "Jason Chen",
+      "type": "conversation",
+      "gender": "male",
+      "description": "I am Jason Chen, a deep and magnetic Chinese male voice. My tone is calm, steady, and expressive, carrying a sense of confidence and composure. I am perfect for narrations, audiobooks, podcasts, and any content that needs a mature and captivating voice.",
+      "supported_languages": ["zh"],
+      "comment": ""
+    },
+    {
+      "voice_id": "elevenlabs/BWN0mOtkGHghA3CYFzFK",
+      "name": "Danyu Zhao",
+      "type": "conversation",
+      "gender": "male",
+      "description": "A calm and pleasant Chinese male voice with a clear tone and friendly presence. Suitable for lifestyle content, conversational narration, product voiceovers, and character dialogues with a gentle and engaging delivery",
+      "supported_languages": ["zh"],
+      "comment": ""
+    },
+    {
+      "voice_id": "elevenlabs/kbrsaic1zriFXx1pgRYN",
+      "name": "Evan",
+      "type": "conversation",
+      "gender": "male",
+      "description": "Warm, Soothing and Soft - Laid-Back, Soothing Mandarin - Therapeutic and calming Taiwanese Mandarin, with a laid-back warmth that soothes and reassures.",
+      "supported_languages": ["zh"],
+      "comment": ""
+    },
+    {
+      "voice_id": "elevenlabs/ByhETIclHirOlWnWKhHc",
+      "name": "Jin",
+      "type": "conversation",
+      "gender": "male",
+      "description": "Clear, Warm and Casual - from Singapore - Podcast & Social Media - A warm, casual male Chinese voice with a subtle Taiwanese and Singaporean influence, clear and approachable for global audiences. The accent is light, unplaceable, and versatile — making it ideal for natural conversations, Youtube Podcasts, storytelling, and friendly narration.",
+      "supported_languages": ["zh"],
+      "comment": ""
+    }
+  ]
+}

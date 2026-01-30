@@ -335,99 +335,99 @@
 
 ### Voice Configuration & Validation
 
-- [ ] T180 [P] [US5] Create voice_config.json at repo root with language-to-voice-ID mappings
-- [ ] T181 [P] [US5] Define voice schema: voice_id, name, type (single|conversation_N_M_speaker_K), description, supported_languages[], comment
-- [ ] T182 [P] [US5] Add voice configurations for Mandarin (single + conversation_2_1 pair) in voice_config.json
-- [ ] T183 [P] [US5] Add voice configurations for French, Japanese (single + conversation pairs) in voice_config.json
-- [ ] T184 [P] [US5] Create src/pipeline/models/voice_config.py with VoiceConfig Pydantic model
-- [ ] T185 [P] [US5] Create src/pipeline/validators/voice_validator.py with voice config validation logic
-- [ ] T186 [US5] Implement validate_voice_config() checking voice ID exists for target language in voice_validator.py
-- [ ] T187 [US5] Implement validate_conversation_config() checking all speaker voice IDs exist in voice_validator.py
-- [ ] T188 [US5] Write unit tests for voice validation in tests/unit/test_voice_validator.py
+- [X] T180 [P] [US5] Create voice_config.json at repo root with language-to-voice-ID mappings
+- [X] T181 [P] [US5] Define voice schema: voice_id, name, type (single|conversation_N_M_speaker_K), description, supported_languages[], comment
+- [X] T182 [P] [US5] Add voice configurations for Mandarin (single + conversation_2_1 pair) in voice_config.json
+- [X] T183 [P] [US5] Add voice configurations for French, Japanese (single + conversation pairs) in voice_config.json
+- [X] T184 [P] [US5] Create src/pipeline/models/voice_config.py with VoiceConfig Pydantic model
+- [X] T185 [P] [US5] Create src/pipeline/validators/voice_validator.py with voice config validation logic
+- [X] T186 [US5] Implement validate_voice_config() checking voice ID exists for target language in voice_validator.py
+- [X] T187 [US5] Implement validate_conversation_config() checking all speaker voice IDs exist in voice_validator.py
+- [X] T188 [US5] Write unit tests for voice validation in tests/unit/test_voice_validator.py
 
 ### ElevenLabs Client
 
-- [ ] T189 [P] [US5] Create src/pipeline/utils/elevenlabs_client.py with ElevenLabsClient class
-- [ ] T190 [US5] Implement text_to_speech() calling ElevenLabs API with voice_id and format params in elevenlabs_client.py
-- [ ] T191 [US5] Implement retry logic (3 attempts with exponential backoff) for rate limits in elevenlabs_client.py
-- [ ] T192 [US5] Implement format support: opus_48000_32 (default), mp3_44100_64 (comparison) in elevenlabs_client.py
-- [ ] T193 [US5] Add request logging (voice_id, character count, format, latency) in elevenlabs_client.py
-- [ ] T194 [US5] Add cost tracking (character usage per request) in elevenlabs_client.py
-- [ ] T195 [US5] Write unit tests for ElevenLabsClient with mocked API in tests/unit/test_elevenlabs_client.py
+- [X] T189 [P] [US5] Create src/pipeline/utils/elevenlabs_client.py with ElevenLabsClient class
+- [X] T190 [US5] Implement text_to_speech() calling ElevenLabs API with voice_id and format params in elevenlabs_client.py
+- [X] T191 [US5] Implement retry logic (3 attempts with exponential backoff) for rate limits in elevenlabs_client.py
+- [X] T192 [US5] Implement format support: opus_48000_32 (default), mp3_44100_64 (comparison) in elevenlabs_client.py
+- [X] T193 [US5] Add request logging (voice_id, character count, format, latency) in elevenlabs_client.py
+- [X] T194 [US5] Add cost tracking (character usage per request) in elevenlabs_client.py
+- [X] T195 [US5] Write unit tests for ElevenLabsClient with mocked API in tests/unit/test_elevenlabs_client.py
 
 ### Audio Generator Core
 
-- [ ] T196 [P] [US5] Create src/pipeline/generators/audio_generator.py with AudioGenerator class
-- [ ] T197 [US5] Implement load_learning_items() from consolidated JSON files in audio_generator.py
-- [ ] T198 [US5] Implement load_content_units() from conversations.json and stories.json in audio_generator.py
-- [ ] T199 [US5] Implement generate_audio_for_item() synthesizing target_item text in audio_generator.py
-- [ ] T200 [US5] Implement generate_audio_for_content() with speaker-aware voice mapping in audio_generator.py
-- [ ] T201 [US5] Implement multi-version generation (1-3 versions per item) with _v1, _v2, _v3 suffixes in audio_generator.py
-- [ ] T202 [US5] Implement local file storage at {Language}/{Level}/02_Generated/audio/{category}/ in audio_generator.py
-- [ ] T203 [US5] Implement metadata update in learning_items_media.json and content_units_media.json in audio_generator.py
-- [ ] T204 [US5] Add batch processing with configurable batch size in audio_generator.py
-- [ ] T205 [US5] Write unit tests for AudioGenerator in tests/unit/test_audio_generator.py
+- [X] T196 [P] [US5] Create src/pipeline/generators/audio_generator.py with AudioGenerator class
+- [X] T197 [US5] Implement load_learning_items() from consolidated JSON files in audio_generator.py
+- [X] T198 [US5] Implement load_content_units() from conversations.json and stories.json in audio_generator.py
+- [X] T199 [US5] Implement generate_audio_for_item() synthesizing target_item text in audio_generator.py
+- [X] T200 [US5] Implement generate_audio_for_content() with speaker-aware voice mapping in audio_generator.py
+- [X] T201 [US5] Implement multi-version generation (1-3 versions per item) with _v1, _v2, _v3 suffixes in audio_generator.py
+- [X] T202 [US5] Implement local file storage at {Language}/{Level}/02_Generated/audio/{category}/ in audio_generator.py
+- [X] T203 [US5] Implement metadata update in learning_items_media.json and content_units_media.json in audio_generator.py
+- [X] T204 [US5] Add batch processing with configurable batch size in audio_generator.py
+- [X] T205 [US5] Write unit tests for AudioGenerator in tests/unit/test_audio_generator.py
 
 ### Audio Progress Tracking
 
-- [ ] T206 [P] [US5] Create src/pipeline/models/audio_progress.py with AudioProgress model
-- [ ] T207 [US5] Implement checkpoint-based resumption (save progress every N items) in audio_generator.py
-- [ ] T208 [US5] Store progress in {Language}/{Level}/audio_generation_progress.json in audio_generator.py
-- [ ] T209 [US5] Implement --resume-from-checkpoint flag logic in audio_generator.py
-- [ ] T210 [US5] Write unit tests for checkpoint resumption in tests/unit/test_audio_generator.py
+- [X] T206 [P] [US5] Create src/pipeline/models/audio_progress.py with AudioProgress model
+- [X] T207 [US5] Implement checkpoint-based resumption (save progress every N items) in audio_generator.py
+- [X] T208 [US5] Store progress in {Language}/{Level}/audio_generation_progress.json in audio_generator.py
+- [X] T209 [US5] Implement --resume-from-checkpoint flag logic in audio_generator.py
+- [X] T210 [US5] Write unit tests for checkpoint resumption in tests/unit/test_audio_generator.py
 
 ### Audio Generation CLI
 
-- [ ] T211 [US5] Create src/pipeline/cli/generate_audio.py with CLI interface
-- [ ] T212 [US5] Implement argument parsing: --language, --level, --category, --batch-size, --versions, --format in generate_audio.py
-- [ ] T213 [US5] Implement --voice-id (for learning items) and --voice-config (for conversations) params in generate_audio.py
-- [ ] T214 [US5] Implement voice config validation before batch starts (fail fast) in generate_audio.py
-- [ ] T215 [US5] Implement batch processing workflow with progress logging in generate_audio.py
-- [ ] T216 [US5] Implement failure logging to {language}/audio_generation_failures.jsonl in generate_audio.py
-- [ ] T217 [US5] Implement summary output (items processed, success rate, format, character count) in generate_audio.py
-- [ ] T218 [US5] Write integration test for audio generation in tests/integration/test_audio_generation.py
+- [X] T211 [US5] Create src/pipeline/cli/generate_audio.py with CLI interface
+- [X] T212 [US5] Implement argument parsing: --language, --level, --category, --batch-size, --versions, --format in generate_audio.py
+- [X] T213 [US5] Implement --voice-id (for learning items) and --voice-config (for conversations) params in generate_audio.py
+- [X] T214 [US5] Implement voice config validation before batch starts (fail fast) in generate_audio.py
+- [X] T215 [US5] Implement batch processing workflow with progress logging in generate_audio.py
+- [X] T216 [US5] Implement failure logging to {language}/audio_generation_failures.jsonl in generate_audio.py
+- [X] T217 [US5] Implement summary output (items processed, success rate, format, character count) in generate_audio.py
+- [X] T218 [US5] Write integration test for audio generation in tests/integration/test_audio_generation.py
 
 ### Audio Selection Tool
 
-- [ ] T219 [P] [US5] Create src/pipeline/cli/select_audio.py with CLI interface
-- [ ] T220 [US5] Implement argument parsing: --item-id, --selected-version in select_audio.py
-- [ ] T221 [US5] Implement metadata update setting selected: true for chosen version in select_audio.py
-- [ ] T222 [US5] Update audio_local_path to point to selected version in select_audio.py
-- [ ] T223 [US5] Write unit tests for audio selection in tests/unit/test_select_audio.py
+- [X] T219 [P] [US5] Create src/pipeline/cli/select_audio.py with CLI interface
+- [X] T220 [US5] Implement argument parsing: --item-id, --selected-version in select_audio.py
+- [X] T221 [US5] Implement metadata update setting selected: true for chosen version in select_audio.py
+- [X] T222 [US5] Update audio_local_path to point to selected version in select_audio.py
+- [X] T223 [US5] Write unit tests for audio selection in tests/unit/test_select_audio.py
 
 ### Cloudflare R2 Sync
 
-- [ ] T224 [P] [US5] Create src/pipeline/utils/r2_client.py with R2Client class using boto3
-- [ ] T225 [US5] Implement upload_file() with retry logic (3 attempts, exponential backoff) in r2_client.py
-- [ ] T226 [US5] Implement batch_upload() for multiple files in r2_client.py
-- [ ] T227 [US5] Add upload logging (file path, size, duration, success/failure) in r2_client.py
-- [ ] T228 [US5] Write unit tests for R2Client with mocked boto3 in tests/unit/test_r2_client.py
+- [X] T224 [P] [US5] Create src/pipeline/utils/r2_client.py with R2Client class using boto3
+- [X] T225 [US5] Implement upload_file() with retry logic (3 attempts, exponential backoff) in r2_client.py
+- [X] T226 [US5] Implement batch_upload() for multiple files in r2_client.py
+- [X] T227 [US5] Add upload logging (file path, size, duration, success/failure) in r2_client.py
+- [X] T228 [US5] Write unit tests for R2Client with mocked boto3 in tests/unit/test_r2_client.py
 
 ### Audio Sync CLI
 
-- [ ] T229 [US5] Create src/pipeline/cli/sync_audio.py with CLI interface
-- [ ] T230 [US5] Implement argument parsing: --language, --level, --category, --dry-run, --cleanup-local in sync_audio.py
-- [ ] T231 [US5] Implement sync workflow: read media JSON → filter selected versions → upload to R2 in sync_audio.py
-- [ ] T232 [US5] Update audio_url fields in media JSON files after successful upload in sync_audio.py
-- [ ] T233 [US5] Implement --dry-run flag for testing without actual upload in sync_audio.py
-- [ ] T234 [US5] Implement --cleanup-local flag to remove local files after successful sync in sync_audio.py
-- [ ] T235 [US5] Implement sync progress logging and summary output in sync_audio.py
-- [ ] T236 [US5] Write integration test for R2 sync workflow in tests/integration/test_audio_sync.py
+- [X] T229 [US5] Create src/pipeline/cli/sync_audio.py with CLI interface
+- [X] T230 [US5] Implement argument parsing: --language, --level, --category, --dry-run, --cleanup-local in sync_audio.py
+- [X] T231 [US5] Implement sync workflow: read media JSON → filter selected versions → upload to R2 in sync_audio.py
+- [X] T232 [US5] Update audio_url fields in media JSON files after successful upload in sync_audio.py
+- [X] T233 [US5] Implement --dry-run flag for testing without actual upload in sync_audio.py
+- [X] T234 [US5] Implement --cleanup-local flag to remove local files after successful sync in sync_audio.py
+- [X] T235 [US5] Implement sync progress logging and summary output in sync_audio.py
+- [X] T236 [US5] Write integration test for R2 sync workflow in tests/integration/test_audio_sync.py
 
 ### Audio QA Validation
 
-- [ ] T237 [P] [US5] Create src/pipeline/validators/audio_validator.py with audio validation logic
-- [ ] T238 [US5] Implement check_local_audio_files() verifying file exists, size >5KB, valid format header in audio_validator.py
-- [ ] T239 [US5] Implement check_audio_urls() verifying HTTP 200, content-type matches format in audio_validator.py
-- [ ] T240 [US5] Integrate audio validation into QA gates (src/pipeline/cli/run_qa_gates.py)
-- [ ] T241 [US5] Add audio validation to QA gate reports (missing files, broken URLs) in run_qa_gates.py
-- [ ] T242 [US5] Write unit tests for audio validation in tests/unit/test_audio_validator.py
+- [X] T237 [P] [US5] Create src/pipeline/validators/audio_validator.py with audio validation logic
+- [X] T238 [US5] Implement check_local_audio_files() verifying file exists, size >5KB, valid format header in audio_validator.py
+- [X] T239 [US5] Implement check_audio_urls() verifying HTTP 200, content-type matches format in audio_validator.py
+- [X] T240 [US5] Integrate audio validation into QA gates (src/pipeline/cli/run_qa_gates.py)
+- [X] T241 [US5] Add audio validation to QA gate reports (missing files, broken URLs) in run_qa_gates.py
+- [X] T242 [US5] Write unit tests for audio validation in tests/unit/test_audio_validator.py
 
 ### Test Fixtures for Audio
 
-- [ ] T243 [P] [US5] Create tests/fixtures/voice_config_test.json with test voice configurations
-- [ ] T244 [P] [US5] Create tests/fixtures/audio_metadata_test.json with sample audio metadata
-- [ ] T245 [P] [US5] Create mock audio files (.opus, .mp3) for testing in tests/fixtures/audio/
+- [X] T243 [P] [US5] Create tests/fixtures/voice_config_test.json with test voice configurations
+- [X] T244 [P] [US5] Create tests/fixtures/audio_metadata_test.json with sample audio metadata
+- [X] T245 [P] [US5] Create mock audio files (.opus, .mp3) for testing in tests/fixtures/audio/
 
 ---
 

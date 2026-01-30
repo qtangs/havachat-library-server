@@ -1,0 +1,31 @@
+{
+  "voices": [
+    {
+      "voice_id": "elevenlabs/ThT5KcBeYPX3keUQqHPh",
+      "name": "Dorothy",
+      "type": "single",
+      "gender": "female",
+      "description": "Female voice, pleasant and friendly",
+      "supported_languages": ["zh", "ja", "fr", "en"],
+      "comment": "General purpose female voice for learning items"
+    },
+    {
+      "voice_id": "elevenlabs/XrExE9yKIg1WjnnlVkGX",
+      "name": "Matilda",
+      "type": "conversation",
+      "gender": "female",
+      "description": "Female voice, warm and approachable",
+      "supported_languages": ["zh", "ja", "fr", "en"],
+      "comment": "Conversation voice, female"
+    },
+    {
+      "voice_id": "elevenlabs/flq6f7yk4E4fJM5XTYuZ",
+      "name": "Michael",
+      "type": "conversation",
+      "gender": "male",
+      "description": "Male voice, clear and articulate",
+      "supported_languages": ["zh", "ja", "fr", "en"],
+      "comment": "Conversation voice, male"
+    }
+  ]
+}

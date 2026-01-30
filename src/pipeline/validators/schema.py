@@ -272,7 +272,7 @@ class Speaker(BaseModel):
     id: str = Field(..., description="Speaker ID (A, B, C, etc.)")
     name: str = Field(..., description="Speaker name")
     role: str = Field(..., description="Speaker role or relationship")
-    gender: str = Field(..., description="Speaker gender in English (male/female/other)")
+    gender: Optional[str] = Field(None, description="Speaker gender in English (male/female/any)")
 
     model_config = {
         "json_schema_extra": {

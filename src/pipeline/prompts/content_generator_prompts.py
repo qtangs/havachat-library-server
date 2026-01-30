@@ -25,40 +25,7 @@ def build_content_generation_system_prompt(
     elif content_type == "story":
         return build_story_generation_system_prompt(language, level)
     else:
-        content_description = "conversations and stories"
-    
-    return f"""You are an expert language teacher creating learning content for {language} learners at level {level}.
-
-Your task is to generate {content_description} that incorporate learning items from these categories:
-- Vocabulary
-- Grammar patterns
-- Idioms and expressions
-- Others
-
-You will follow a chain-of-thought process in FOUR steps:
-
-1. GENERATE: Create initial drafts
-   - Use learning items from multiple categories naturally
-   - Match {level} difficulty level
-   - Make content engaging and realistic
-
-2. CRITIQUE: Evaluate each draft
-   - Coverage: How well are learning items incorporated?
-   - Level: Is difficulty appropriate for {level}?
-   - Flow: Does it sound natural and conversational?
-   - Identify specific issues and strengths
-
-3. REVISE: Improve based on critique
-   - Address identified issues
-   - Enhance learning item coverage
-   - Maintain natural flow
-   - Explicitly list all learning item IDs used in revised version
-
-4. ASSIGN SCENARIOS: Give each piece a 3-8 word scenario name
-   - Examples: "Ordering food at a restaurant", "Making weekend plans", "Buying a train ticket"
-   - Should be specific and descriptive
-
-Return structured output with all four components."""
+        raise ValueError(f"Unsupported content_type: {content_type}")
 
 
 def build_conversation_generation_system_prompt(
@@ -69,39 +36,9 @@ def build_conversation_generation_system_prompt(
 
     return f"""You are an expert language teacher creating learning content for {language} learners at level {level}.
 
-Your task is to generate {content_description} that incorporate learning items from these categories:
-- Vocabulary
-- Grammar patterns
-- Idioms and expressions
-- Others
+Your task is to generate {content_description} that incorporate learning items from these categories: Vocabulary, Grammar patterns, Idioms and expressions and others.
 
-You will follow a chain-of-thought process in FOUR steps:
-
-1. GENERATE: Create initial drafts
-   - Use learning items from multiple categories naturally
-   - Match {level} difficulty level
-   - Make content engaging and realistic
-   - Conversations: 6-10 dialogue turns each
-     * For each dialogue segment, include speaker name, role, and gender. Example: speaker="Alice", speaker_role="Student", speaker_gender="female"
-
-2. CRITIQUE: Evaluate each draft
-   - Coverage: How well are learning items incorporated?
-   - Level: Is difficulty appropriate for {level}?
-   - Flow: Does it sound natural and conversational?
-   - Identify specific issues and strengths
-
-3. REVISE: Improve based on critique
-   - Address identified issues
-   - Enhance learning item coverage
-   - Maintain natural flow
-   - Explicitly list all learning item IDs used in revised version
-
-4. ASSIGN SCENARIOS: Give each piece a 3-8 word scenario name
-   - Examples: "Ordering food at a restaurant", "Making weekend plans", "Buying a train ticket"
-   - Should be specific and descriptive
-
-Return structured output with all four components.
-"""
+Notes: Use learning items from multiple categories naturally. Content, sentence length, and complexity should match {level} difficulty level. Make content engaging and realistic. There should be 6-8 dialogue turns for each conversation. The conversation should start and end naturally."""
 
 # https://elevenlabs.io/docs/overview/capabilities/text-to-speech/best-practices#enhancing-input
 audio_tag_prompt = """
@@ -172,6 +109,7 @@ You will follow a chain-of-thought process in FOUR steps:
    - Address identified issues
    - Enhance learning item coverage
    - Maintain natural flow
+   - For EACH revised segment, provide both the text in {language} AND its English translation
    - Explicitly list all learning item IDs used in revised version
 
 4. ASSIGN SCENARIOS: Give each piece a 3-8 word scenario name

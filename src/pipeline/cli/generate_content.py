@@ -164,6 +164,11 @@ def main():
         help="Track learning item usage in usage_stats.json",
     )
     parser.add_argument(
+        "--use-azure-translation",
+        action="store_true",
+        help="Use Azure Translation API instead of LLM for segment translations",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Print plan without generating content",
@@ -208,6 +213,7 @@ def main():
         level_system=level_system,
         level=args.level,
         llm_client=llm_client,
+        use_azure_translation=args.use_azure_translation,
     )
     
     # Initialize usage tracker if requested
@@ -231,6 +237,9 @@ def main():
             sys.exit(1)
         
         logger.info(f"Loaded {num_items} learning items from all categories")
+        
+        # Load existing topics and scenarios (or initialize empty)
+        generator.load_topics_and_scenarios(args.output)
         
         # Stage 2: Generate content with chain-of-thought
         logger.info("\n" + "=" * 80)
