@@ -12,6 +12,14 @@
 - Q: Should the enrichment script use a flexible column-mapping configuration to handle different source formats (CSV/TSV/JSON) across languages? → A: **No**. Use language-specific subclasses (e.g., `JapaneseVocabEnricher`, `MandarinVocabEnricher`, `FrenchVocabEnricher`) where each implements its own file parsing logic, field mapping, and LLM prompts. This is cleaner than generic configuration because each language has fundamentally different source structures (Japanese has furigana+romaji already, French has definitions, Chinese needs Pinyin generation) and requires domain-specific prompts.
 - Q: Do grammar lists follow the same format across languages? → A: **No**. Chinese uses CSV with hierarchical categories (类别,类别名称,细目,语法内容), Japanese uses TSV with Type/Rule/Example columns, French uses markdown with category headers and descriptive title lists. Grammar enrichment also requires language-specific subclasses (e.g., `JapaneseGrammarEnricher`, `MandarinGrammarEnricher`, `FrenchGrammarEnricher`) to parse these different formats and apply appropriate enrichment strategies.
 
+### Session 2026-01-29
+
+- Q: Should audio generation be integrated into the main pipeline or run as a separate post-processing stage? → A: Separate post-processing stage. Audio generation runs after learning items and content units are complete and validated, allowing ops to control which items/content get audio and how many versions to generate per item.
+- Q: How should audio file versioning be handled when generating multiple versions for manual selection? → A: Store all versions with suffix pattern `{uuid}_v1.{format}`, `{uuid}_v2.{format}`, `{uuid}_v3.{format}`. The selected version's URL is saved to the learning item/content unit metadata. Unselected versions remain in storage for potential future use.
+- Q: What audio format and quality settings should be used? → A: Default is `opus_48000_32` (Opus codec, 48kHz, 32kbps) for optimal quality-to-size ratio. Alternative `mp3_44100_64` (MP3, 44.1kHz, 64kbps) available for comparison testing. Format is configurable per batch.
+- Q: Should audio files be uploaded directly to R2 or stored locally first? → A: Store locally first in `havachat-knowledge/generated content/{Language}/{Level}/02_Generated/audio/{category}/` (e.g., `Mandarin/HSK1/02_Generated/audio/vocab/`) for testing and review, then sync to R2 bucket via separate sync command. This allows ops to validate audio before publishing.
+- Q: How are learning items and content units stored? → A: Consolidated JSON files per category: `vocab.json`, `grammar.json`, `conversations.json`, etc. (not individual item files). Each file contains array of items. Enables efficient batch loading and updates.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Import and Enrich Official Vocabulary Lists (Priority: P1)
@@ -24,7 +32,7 @@ Content ops imports an official HSK1 vocabulary list (TSV with Word and Part of 
 
 **Acceptance Scenarios**:
 
-1. **Given** an official HSK1 vocab TSV with columns "Word, Part of Speech", **When** the MandarinVocabEnricher runs, **Then** each word is enriched one-by-one via individual LLM calls, generating definition, 3-5 examples, pinyin romanization, sense_gloss for each item, and written to `Mandarin/HSK1/vocab/item-{uuid}.json`
+1. **Given** an official HSK1 vocab TSV with columns "Word, Part of Speech", **When** the MandarinVocabEnricher runs, **Then** each word is enriched one-by-one via individual LLM calls, generating definition, 2-3 examples, pinyin romanization, sense_gloss for each item, and written to `Mandarin/HSK1/vocab/item-{uuid}.json`
 2. **Given** a Japanese JLPT N1 vocab JSON with fields `{word, meaning, furigana, romaji, level}`, **When** the JapaneseVocabEnricher runs, **Then** existing meaning/furigana/romaji are preserved, and only missing fields (examples, sense_gloss for polysemy, aliases) are LLM-generated one-by-one via individual LLM calls for each item
 3. **Given** a French CEFR A1 vocab file with existing definitions, **When** the FrenchVocabEnricher runs, **Then** existing definitions are preserved as definition base, and only missing fields (contextual examples, sense_gloss for polysemy, aliases, pos) are LLM-generated one-by-one via individual LLM calls and written to `French/A1/vocab/item-{uuid}.json`
 4. **Given** an enriched vocab item fails schema validation (missing required field), **When** the LLM retry loop executes, **Then** the system retries up to 3 times for that specific item before flagging it for manual review with error context
@@ -42,9 +50,9 @@ Content ops imports an official grammar list and runs the language-specific gram
 
 **Acceptance Scenarios**:
 
-1. **Given** an official HSK1 grammar CSV with columns "类别,类别名称,细目,语法内容" where 类别="句型", 细目="是...的", **When** the MandarinGrammarEnricher runs, **Then** each grammar pattern is enriched one-by-one via individual LLM calls, creating a learning item with target_item="是...的", definition describing form and use, 3-5 contextual examples, and category="grammar"
+1. **Given** an official HSK1 grammar CSV with columns "类别,类别名称,细目,语法内容" where 类别="句型", 细目="是...的", **When** the MandarinGrammarEnricher runs, **Then** each grammar pattern is enriched one-by-one via individual LLM calls, creating a learning item with target_item="是...的", definition describing form and use, 2-3 contextual examples, and category="grammar"
 2. **Given** a Japanese JLPT N5 grammar TSV with columns "Type, Rule, Example" where Type="Basic Particles", Rule="は (wa) - Topic Marker", Example="私は学生です。", **When** the JapaneseGrammarEnricher runs, **Then** the existing example is preserved and each grammar item is enriched one-by-one with definition, additional usage examples, common learner errors, and the particle "は" is stored as target_item
-3. **Given** a French A1 grammar markdown with category "## A1: Pronouns" and item "Il/elle/ils/elles = it/he/she/they (French Subject Pronouns)", **When** the FrenchGrammarEnricher runs, **Then** each grammar item is enriched one-by-one, parsing the title into target_item="Il/elle/ils/elles", generating definition for form/usage, 3-5 contextual examples, and category="grammar"
+3. **Given** a French A1 grammar markdown with category "## A1: Pronouns" and item "Il/elle/ils/elles = it/he/she/they (French Subject Pronouns)", **When** the FrenchGrammarEnricher runs, **Then** each grammar item is enriched one-by-one, parsing the title into target_item="Il/elle/ils/elles", generating definition for form/usage, 2-3 contextual examples, and category="grammar"
 4. **Given** a broad grammar pattern like "past tense" in any language, **When** the LLM generates that specific item, **Then** the enricher prompts for sub-item breakdown (e.g., "regular past -ed", "irregular past forms", "past continuous") and creates linked learning items with narrower scope, processing each sub-item individually
 5. **Given** enriched grammar lists from multiple languages (English CEFR, Chinese HSK, Japanese JLPT), **When** stored in respective directories, **Then** each item includes correct level_system (cefr|hsk|jlpt) and level_min/max values
 
@@ -92,7 +100,28 @@ Content ops runs the question generation script on a completed conversation. The
 
 ---
 
-### User Story 5 - Run QA Gates and Generate Validation Report (Priority: P2)
+### User Story 5 - Generate Audio Using ElevenLabs TTS (Priority: P2)
+
+Content ops runs audio generation on completed learning items or content units. The system processes items by category (e.g., all HSK1 vocab, then grammar separately), generates 1-3 audio versions per item using configured ElevenLabs voice IDs, uploads files to Cloudflare R2, and saves the audio URLs to each item's metadata. For conversation content units with multiple speakers, the system uses voice pairs configured for dialogue.
+
+**Why this priority**: Audio enhances learning value significantly but depends on completed, validated content (P1/P2 dependencies). Can be added iteratively to existing content after text validation passes. Separate generation per category allows ops to control batch sizes and costs.
+
+**Independent Test**: Can be fully tested by providing a batch of learning items (e.g., 50 vocab items), running audio generation with `--versions=2`, verifying that 2 MP3 files are generated and uploaded to R2 for each item, URLs are saved to item metadata, and ops can manually select the best version.
+
+**Acceptance Scenarios**:
+
+1. **Given** 50 completed Mandarin HSK1 vocab learning items in `vocab.json`, **When** audio generation runs with `--category=vocab --versions=1 --voice-id=voice-zh-female-01 --format=opus_48000_32`, **Then** 50 audio files are generated (target_item text spoken), saved locally to `havachat-knowledge/generated content/Mandarin/HSK1/02_Generated/audio/vocab/{uuid}.opus`, and file paths saved to `learning_items_media.json` with each item's `audio_local_path` field
+2. **Given** the same 50 vocab items, **When** audio generation runs with `--versions=3`, **Then** 3 versions per item are generated (`{uuid}_v1.opus`, `{uuid}_v2.opus`, `{uuid}_v3.opus`), saved locally, and the item's metadata in `learning_items_media.json` includes `audio_versions: [{version: 1, local_path: "...", url: null, selected: false}, {version: 2, local_path: "...", url: null, selected: false}, {version: 3, local_path: "...", url: null, selected: false}]`
+3. **Given** a French A1 conversation content unit with 8 turns (4 per speaker), **When** audio generation runs with `--voice-config=conversation_2_1` (which maps to 2-speaker voice pair group 1), **Then** audio is generated with alternating voices matching speaker labels, saved locally as `havachat-knowledge/generated content/French/A1/02_Generated/audio/conversations/{uuid}.opus`, and the content unit's `has_audio` field is set to `true` with `audio_local_path` populated in `content_units_media.json`
+4. **Given** 20 Japanese JLPT N5 grammar items, **When** audio generation runs with `--category=grammar --batch-size=10 --format=mp3_44100_64`, **Then** the script processes 10 items at a time (two batches), preventing API rate limit issues, and all 20 items receive audio local paths in `learning_items_media.json` as MP3 files for comparison testing
+5. **Given** audio generation completes for a batch, **When** ops reviews the local audio files in `havachat-knowledge/generated content/{Language}/{Level}/02_Generated/audio/{category}/`, **Then** they can update selected versions by running `python src/pipeline/audio_selection.py --item-id={uuid} --selected-version=2`, which updates the item's metadata in `learning_items_media.json` to reference `_v2.{format}` and sets `selected: true` for that version
+6. **Given** selected audio files validated locally, **When** ops runs `python src/pipeline/audio_sync.py --language={lang} --category={cat}`, **Then** selected audio files are uploaded to R2 at `{language}/{category}/{uuid}.{format}`, URLs are updated in `learning_items_media.json` and `content_units_media.json`, and sync progress is logged
+7. **Given** an audio generation request fails (ElevenLabs API error, file write failure), **When** retry logic executes, **Then** the system retries up to 3 times, and if still failing, logs the error to `{language}/audio_generation_failures.jsonl` with item_id, error details, and timestamp
+8. **Given** different learning item categories (vocab, grammar, idioms), **When** audio is generated separately per category via `--category` flag, **Then** ops can control generation order and volume, and the system tracks per-category progress in `audio_generation_progress.json`
+
+---
+
+### User Story 6 - Run QA Gates and Generate Validation Report (Priority: P2)
 
 Content ops runs the QA gate script on a batch of content (e.g., all French A1 conversations for "Food" topic). The system executes presence checks (learning items appear in text), duplication checks (no near-duplicate items), link correctness (all references valid), question answerability (answers derivable), and generates a validation report with pass/fail status and flagged items for manual review.
 
@@ -105,7 +134,6 @@ Content ops runs the QA gate script on a batch of content (e.g., all French A1 c
 1. **Given** a batch of French A1 content, **When** the presence check runs, **Then** every learning_item_id referenced in content segments exists in the learning item directories (vocab/, grammar/, pronunciation/, idioms/, etc.) and the target_item appears in the segment text (using French tokenization)
 2. **Given** two learning items with identical lemma "banco" but different sense_gloss ("bank financial" vs "bench seat"), **When** the duplication check runs, **Then** both items pass (sense disambiguation prevents collision)
 3. **Given** a question with answer "tomorrow morning", **When** the answerability check runs, **Then** the system verifies the phrase appears in or is clearly inferrable from the conversation text
-4. **Given** a validation report with 95% pass rate (5% flagged for review), **When** reviewed by ops, **Then** the report includes specific line references, failure reasons, and suggested fixes for each flagged item
 4. **Given** a validation report with 95% pass rate (5% flagged for review), **When** reviewed by ops, **Then** the report includes specific line references, failure reasons, and suggested fixes for each flagged item
 
 ---
@@ -124,6 +152,14 @@ Content ops runs the QA gate script on a batch of content (e.g., all French A1 c
 - **Broken learning item references**: If a content unit references a learning item ID that doesn't exist (e.g., item was deleted), the link validation must catch and report it.
 - **Question difficulty misalignment**: If an A1-level conversation has a generated question requiring B1-level inference, the difficulty validation must flag it.
 - **Cross-language contamination**: Japanese vocab must not appear in French content directories; validation must check language field matches directory structure.
+- **Audio generation voice pairing**: For conversations with 2+ speakers, voice configuration must specify complete speaker mapping (e.g., conversation_2_1 requires both speaker_1 and speaker_2 voice IDs). If voice config is missing or incomplete, audio generation must fail with clear error message listing missing speaker mappings rather than using mismatched voices.
+- **Audio generation retry failures**: If ElevenLabs API consistently fails for a specific item (e.g., text contains unsupported characters, voice ID invalid), system must log detailed error and skip item after 3 retries rather than blocking entire batch.
+- **R2 sync failures**: If Cloudflare R2 upload fails during sync due to network issues or permission errors, system must retry with exponential backoff, log failures separately from generation failures, and continue with remaining files rather than aborting entire sync batch.
+- **Local storage cleanup**: After successful R2 sync and validation, ops may want to archive or delete local audio files to save disk space. System should support `--cleanup-local` flag on sync command to optionally remove local files after successful upload.
+- **Audio version selection edge case**: If ops manually deletes a selected audio file from local storage or R2, the learning item's `audio_local_path` or `audio_url` becomes broken. System should detect broken paths during validation (file exists check for local, HTTP 404 for R2) and flag for re-generation.
+- **Large batch memory handling**: For batches >1000 items, audio generation must process in configurable sub-batches to prevent memory exhaustion and allow progress checkpointing.
+- **Multi-language voice configuration**: Each language requires different voice IDs. System must validate voice config exists for target language and requested type (single vs conversation_N_M) before starting batch (fail fast) rather than discovering mismatch mid-generation.
+- **Audio format migration**: If ops needs to regenerate all audio from opus to mp3 (or vice versa), system should support batch re-generation with `--force-regenerate --format=mp3_44100_64` flag that overwrites existing files and updates media JSON with new format and paths.
 
 ## Requirements *(mandatory)*
 
@@ -200,11 +236,29 @@ Content ops runs the QA gate script on a batch of content (e.g., all French A1 c
 
 - **FR-038**: System MUST implement database partitioning by language for both Meilisearch (separate indexes per language: `learning_items_zh`, `scenarios_ja`, etc.) and Postgres (table partitioning or separate schemas per language). Implementation includes index creation scripts, schema setup, and partition configuration validation.
 
+**Audio Generation:**
+
+- **FR-039**: Audio generation MUST be executable independently via CLI with `python src/pipeline/audio_generator.py --config {config.json} --category {vocab|grammar|idioms|functional|cultural|pronunciation|writing_system|misc|conversations|stories}` allowing per-category batch control
+- **FR-040**: Audio generation script MUST accept parameters: `--language`, `--level`, `--category`, `--batch-size` (default: 50), `--versions` (1-3, default: 1), `--format` (opus_48000_32|mp3_44100_64, default: opus_48000_32), `--voice-id` (single voice for learning items) or `--voice-config` (conversation config like conversation_2_1 for multi-speaker)
+- **FR-041**: For learning items, audio generation MUST synthesize the `target_item` text using ElevenLabs TTS API (https://elevenlabs.io/docs/api-reference/text-to-speech) with specified voice ID, output format Opus 48kHz 32kbps (default) or MP3 44.1kHz 64kbps (comparison), and save locally to `havachat-knowledge/generated content/{Language}/{Level}/02_Generated/audio/{category}/{uuid}.{opus|mp3}` (e.g., `Mandarin/HSK1/02_Generated/audio/vocab/abc123.opus`)
+- **FR-042**: For content units (conversations/stories), audio generation MUST synthesize the full text with speaker-aware voice mapping: conversations use voice configuration (e.g., conversation_2_1 maps to 2-speaker group 1 with speaker_1 and speaker_2 voice IDs), stories use single voice. Voice mapping loaded from `voice_config.json`.
+- **FR-043**: Generated audio files MUST be saved locally first at paths: `havachat-knowledge/generated content/{Language}/{Level}/02_Generated/audio/{category}/{uuid}.{format}` (single version) or `{uuid}_v{N}.{format}` (multiple versions). Files remain local until synced to R2 via separate sync command.
+- **FR-044**: After successful local file write, learning item/content unit metadata MUST be updated in consolidated JSON files: `learning_items_media.json` or `content_units_media.json` with fields: single version writes `audio_local_path: "{Language}/{Level}/02_Generated/audio/{category}/{uuid}.{format}"` (e.g., `"Mandarin/HSK1/02_Generated/audio/vocab/abc123.opus"`), `audio_url: null` (until synced), `has_audio: true`; multiple versions writes `audio_versions: [{version: 1, local_path: "...", url: null, selected: false}, ...]` array
+- **FR-045**: Audio generation MUST implement retry logic: attempt ElevenLabs API call → retry up to 3 times on failure (rate limit, network error) with exponential backoff → log failure to `{language}/audio_generation_failures.jsonl` if still failing
+- **FR-046**: Audio generation MUST validate voice configuration before processing batch: for learning items, check voice ID exists in `voice_config.json` and supports target language; for conversations, check voice config group (e.g., conversation_2_1) has all required speaker voice IDs → fail fast with error message if invalid
+- **FR-047**: System MUST track audio generation progress in `{language}/audio_generation_progress.json` per category with fields: category, language, level, total_items, processed_count, failed_count, format, last_updated, allowing resume after interruption
+- **FR-048**: Audio selection tool MUST allow ops to mark selected version via `python src/pipeline/audio_selection.py --item-id {uuid} --selected-version {N}` which updates item's `audio_local_path` in `learning_items_media.json` to selected version and sets `audio_versions[N].selected: true`
+- **FR-049**: R2 sync tool MUST be separate command: `python src/pipeline/audio_sync.py --language {lang} --category {cat} [--dry-run]` uploads selected local audio files to R2 at `{language}/{category}/{uuid}.{format}`, updates `audio_url` fields in media JSON files, implements retry logic (3 attempts with exponential backoff), and logs sync results
+- **FR-050**: Audio generation for large batches (>1000 items) MUST support checkpoint-based resumption: process in sub-batches (configurable via `--checkpoint-interval`), save progress after each sub-batch, allow `--resume-from-checkpoint` flag to skip already-processed items
+- **FR-051**: QA validation MUST include audio file checks: for items with `has_audio: true`, verify local file exists at `audio_local_path`, file size >5KB, and valid audio format; after R2 sync, verify `audio_url` is accessible (HTTP 200); flag missing/broken files for re-generation
+- **FR-052**: Voice configuration MUST be stored in `voice_config.json` at repo root with schema: `{language: string, voices: [{voice_id: string, name: string, type: string, description: string, supported_languages: string[], comment: string}]}` where type follows pattern "single" or "conversation_{total_speakers}_{group_id}_speaker_{speaker_number}" (e.g., "conversation_2_1_speaker_1" for 2-speaker conversation group 1 speaker 1)
+- **FR-053**: Learning items and content units MUST be stored in consolidated JSON files: `{language}/{level}/vocab.json`, `grammar.json`, `idioms.json`, `conversations.json`, `stories.json` containing arrays of items, enabling efficient batch loading. Media metadata (audio paths/URLs) stored separately in `learning_items_media.json` and `content_units_media.json` with fields: `{item_id: string, audio_local_path: string, audio_url: string, audio_versions: [...], has_audio: bool}`
+
 ### Key Entities
 
-- **Learning Item**: Atomic pedagogical unit (vocabulary, grammar, pronunciation, idioms, functional language, cultural notes, writing system, miscellaneous categories) with fields: id, language, category, target_item, definition, examples, romanization (for zh/ja), level_system, level_min/max, sense_gloss (for polysemy), lemma, pos, aliases, created_at, version. Stored as individual JSON files in `{language}/{level}/{category}/item-{uuid}.json`.
+- **Learning Item**: Atomic pedagogical unit (vocabulary, grammar, pronunciation, idioms, functional language, cultural notes, writing system, miscellaneous categories) with fields: id, language, category, target_item, definition, examples, romanization (for zh/ja), level_system, level_min/max, sense_gloss (for polysemy), lemma, pos, aliases, created_at, version. Stored in consolidated JSON files: `{Language}/{Level}/vocab.json`, `grammar.json`, `idioms.json`, etc., each containing array of items. Audio metadata stored separately in `{Language}/{Level}/learning_items_media.json` with fields per item: `{item_id, audio_local_path, audio_url, audio_versions: [{version, local_path, url, selected}], has_audio, audio_format}`. Audio files stored at `{Language}/{Level}/02_Generated/audio/{category}/`.
 
-- **Content Unit**: Conversation or story containing multiple segments. Fields: id, language, type (conversation|story), title, description, text, segments[] (each with type, speaker, text, learning_item_ids, start/end times), learning_item_ids[] (all featured items), topic_name, scenario_name (3-8 word description assigned by LLM), level_system, level_min/max, word_count, estimated_reading_time_seconds, has_audio, has_questions, publishable, chain_of_thought_metadata (initial_draft, critique, revisions_made), created_at, version. Stored as `{language}/{level}/conversations/content-{uuid}.json` or `stories/content-{uuid}.json`.
+- **Content Unit**: Conversation or story containing multiple segments. Fields: id, language, type (conversation|story), title, description, text, segments[] (each with type, speaker, text, learning_item_ids, start/end times), learning_item_ids[] (all featured items), topic_name, scenario_name (3-8 word description assigned by LLM), level_system, level_min/max, word_count, estimated_reading_time_seconds, has_questions, publishable, chain_of_thought_metadata (initial_draft, critique, revisions_made), created_at, version. Stored in consolidated JSON files: `{Language}/{Level}/conversations.json` and `stories.json`, each containing array of content units. Audio metadata stored separately in `{Language}/{Level}/content_units_media.json` with fields per unit: `{content_id, audio_local_path, audio_url, audio_versions: [{version, local_path, url, selected}], has_audio, audio_format, voice_config_used}`. Audio files stored at `{Language}/{Level}/02_Generated/audio/conversations/` and `{Language}/{Level}/02_Generated/audio/stories/`.
 
 - **Question Set**: Comprehension questions for a content unit. Fields: id, content_id (reference), segment_range, question_type (mcq|true_false|short_answer|summary), question_text, options[] (for MCQ), answer_key, rationale, difficulty, tags[] (inference, detail, main-idea), created_at, version. Stored as `{language}/{level}/questions/questions-{content_id}.json`.
 
@@ -215,6 +269,42 @@ Content ops runs the QA gate script on a batch of content (e.g., all French A1 c
 - **Usage Metadata**: Tracks how often each learning item appears in published content. Fields: learning_item_id, appearances_count, last_used_content_id, last_updated. Stored in `{language}/{level}/usage_stats.json` as array.
 
 - **Validation Report**: Output of QA gates for a batch. Fields: batch_id, language, level, timestamp, total_items, passed_count, failed_count, flagged_items[] (each with item_id, item_type, failure_reason, line_reference, suggested_fix), summary_stats (pass_rate_percent, most_common_failures). Stored as `{language}/{level}/qa_reports/report-{timestamp}.json` and `report-{timestamp}.md`.
+
+- **Audio Generation Progress**: Tracks progress for resumable batch processing. Fields: category, language, level, total_items, processed_count, failed_count, checkpoint_interval, last_checkpoint_item_id, last_updated, status (in_progress|completed|failed). Stored as `{language}/{level}/audio_generation_progress.json`.
+
+- **Voice Configuration**: Maps languages to ElevenLabs voice IDs with rich metadata. Fields: language, voices[] where each voice has: voice_id (ElevenLabs ID), name (human-readable), type ("single" or "conversation_{total_speakers}_{group_id}_speaker_{speaker_number}"), description (voice characteristics), supported_languages[] (array of ISO codes), comment (optional notes). Stored as `voice_config.json` at repo root. Example:
+  ```json
+  {
+    "zh": {
+      "voices": [
+        {
+          "voice_id": "21m00Tcm4TlvDq8ikWAM",
+          "name": "Rachel - Calm Female",
+          "type": "single",
+          "description": "Calm, clear female voice suitable for educational content",
+          "supported_languages": ["zh", "zh-CN"],
+          "comment": "Best for vocab and grammar items"
+        },
+        {
+          "voice_id": "pNInz6obpgDQGcFmaJgB",
+          "name": "Adam - Conversational Male",
+          "type": "conversation_2_1_speaker_1",
+          "description": "Natural conversational male voice",
+          "supported_languages": ["zh", "zh-CN"],
+          "comment": "Pair with speaker_2 for dialogues"
+        },
+        {
+          "voice_id": "EXAVITQu4vr4xnSDxMaL",
+          "name": "Bella - Friendly Female",
+          "type": "conversation_2_1_speaker_2",
+          "description": "Warm, friendly female voice",
+          "supported_languages": ["zh", "zh-CN"],
+          "comment": "Pair with speaker_1 for dialogues"
+        }
+      ]
+    }
+  }
+  ```
 
 ## Success Criteria *(mandatory)*
 
@@ -244,3 +334,11 @@ Content ops runs the QA gate script on a batch of content (e.g., all French A1 c
 - **SC-011**: Cross-language validation prevents contamination: 0% of generated content has language field mismatching directory structure (e.g., Japanese vocab in French directories)
 - **SC-012**: Manual review queue contains only legitimate failures (schema violations, ambiguous polysemy, unanswerable questions, broken foundation links), not false positives from validation bugs
 - **SC-013**: Phase sequencing validation: 0% of Phase 2-7 content generated without valid Phase 1 foundation reference (all non-Phase-1 content must link to Phase 1)
+- **SC-014**: Audio generation for 500 learning items with `--versions=1 --format=opus_48000_32` completes within 30 minutes (including ElevenLabs API calls, local file writes, metadata updates), with >98% success rate and <2% requiring retry or manual review
+- **SC-015**: Audio generation with `--versions=3` produces 3 distinct audio files per item (verifiable via different file sizes/durations), saves all locally with correct naming pattern `{uuid}_v{N}.{format}`, and updates `learning_items_media.json` with all 3 local paths
+- **SC-016**: Voice configuration validation: 100% of conversation audio generation requests validate complete voice config (e.g., conversation_2_1 has both speaker_1 and speaker_2 voice IDs) before generation starts, preventing incomplete or mismatched voice pairs
+- **SC-017**: Audio file validation: >99% of items with `has_audio: true` have valid local files at `audio_local_path` (file exists, size >5KB, valid format header); after R2 sync, >99% have accessible URLs (HTTP 200) with matching content-type (audio/opus or audio/mpeg)
+- **SC-018**: Audio generation resumption: given 1000-item batch interrupted at 600 items, `--resume-from-checkpoint` flag successfully skips processed items and continues from item 601, completing remaining 400 items without re-generating earlier items
+- **SC-019**: Audio sync workflow: ops can review all locally generated audio, select best versions via audio_selection.py, then run audio_sync.py to upload only selected versions to R2, updating URLs in media JSON files
+- **SC-020**: Audio generation cost tracking: structured logs capture ElevenLabs API character usage per item and audio format used, enabling ops to calculate per-item cost and compare opus vs mp3 efficiency for budget planning
+- **SC-021**: Format comparison: ops can generate parallel batches with `--format=opus_48000_32` and `--format=mp3_44100_64` for same items, producing files like `{uuid}_opus.opus` and `{uuid}_mp3.mp3` for A/B quality testing before selecting default format

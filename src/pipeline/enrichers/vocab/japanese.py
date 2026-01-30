@@ -40,8 +40,8 @@ class JapaneseEnrichedVocab(BaseModel):
     )
     examples: List[str] = Field(
         ...,
-        min_length=3,
-        max_length=5,
+        min_length=2,
+        max_length=3,
         description="Example sentences in Japanese ONLY (no romaji, no English translation). Example: '学校に行きます。'"
     )
     pos: Optional[str] = Field(
@@ -58,7 +58,7 @@ CRITICAL INSTRUCTIONS:
 1. **NO ROMAJI**: Do NOT include romaji/romanization in your response. It will be added automatically.
 2. **JAPANESE ONLY EXAMPLES**: Provide examples in Japanese characters ONLY. Do NOT add romaji or English translations.
 3. **Clarity**: Explanations must be clear and suitable for learners at the specified level.
-4. **Examples**: Provide 3-5 contextual example sentences using ONLY Japanese characters (hiragana, katakana, kanji).
+4. **Examples**: Provide 2-3 contextual example sentences using ONLY Japanese characters (hiragana, katakana, kanji).
 5. **Part of Speech**: Identify the part of speech (noun, verb, adjective, etc.).
 
 **Example Response Format:**
@@ -93,6 +93,8 @@ class JapaneseVocabEnricher(BaseEnricher):
         llm_client: Optional[LLMClient] = None,
         max_retries: int = 3,
         manual_review_dir: Optional[Union[str, Path]] = None,
+        skip_llm: bool = False,
+        skip_translation: bool = False,
     ):
         """Initialize Japanese enricher with Azure Translation.
         
@@ -100,15 +102,21 @@ class JapaneseVocabEnricher(BaseEnricher):
             llm_client: Optional LLM client for enrichment
             max_retries: Maximum retry attempts (default: 3)
             manual_review_dir: Directory for manual review queue
+            skip_llm: Skip LLM enrichment (default: False)
+            skip_translation: Skip translation service (default: False)
         """
-        super().__init__(llm_client, max_retries, manual_review_dir)
+        super().__init__(llm_client, max_retries, manual_review_dir, skip_llm, skip_translation)
         
-        # Initialize Azure Translation helper
-        try:
-            self.azure_translator = AzureTranslationHelper()
-            logger.info("Azure Translation initialized successfully")
-        except ValueError as e:
-            logger.warning(f"Azure Translation not available: {e}")
+        # Initialize Azure Translation helper unless skip_translation is True
+        if not skip_translation:
+            try:
+                self.azure_translator = AzureTranslationHelper()
+                logger.info("Azure Translation initialized successfully")
+            except ValueError as e:
+                logger.warning(f"Azure Translation not available: {e}")
+                self.azure_translator = None
+        else:
+            logger.info("Translation service skipped (--skip-translation)")
             self.azure_translator = None
 
     @property
@@ -129,56 +137,7 @@ class JapaneseVocabEnricher(BaseEnricher):
             FileNotFoundError: If source file doesn't exist
             json.JSONDecodeError: If JSON format is invalid
         """
-        source_path = Path(source_path)
-
-        if not source_path.exists():
-            raise FileNotFoundError(f"Source file not found: {source_path}")
-
-        with open(source_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        # Handle both array and object formats
-        if isinstance(data, dict):
-            items = data.get("vocabulary", [])
-        elif isinstance(data, list):
-            items = data
-        else:
-            raise ValueError(f"Unexpected JSON format in {source_path}")
-
-        # Normalize field names
-        normalized_items = []
-        for i, item in enumerate(items):
-            target_word = item.get("word") or item.get("target_item")
-
-            # Generate romaji if missing
-            romaji = item.get("romaji") or item.get("romanization")
-            if not romaji and target_word:
-                romaji = get_japanese_romaji(target_word)
-
-            normalized = {
-                "target_item": target_word,
-                "meaning": item.get("meaning") or item.get("definition"),
-                "furigana": item.get("furigana"),
-                "romanization": romaji,
-                "level_min": self._normalize_jlpt_level(item.get("level")),
-                "source_index": i,
-            }
-
-            if not normalized["target_item"]:
-                logger.warning(f"Item {i} missing 'word' field, skipping: {item}")
-                continue
-
-            # Set level_max same as level_min if not specified
-            normalized["level_max"] = normalized["level_min"]
-
-            normalized_items.append(normalized)
-
-        logger.info(
-            f"Parsed {len(normalized_items)} items from {source_path}",
-            extra={"source": str(source_path), "item_count": len(normalized_items)},
-        )
-
-        return normalized_items
+        return parse_japanese_vocab_json(source_path)
 
     def detect_missing_fields(self, item: Dict[str, Any]) -> List[str]:
         """Detect which fields need enrichment.
@@ -224,12 +183,42 @@ class JapaneseVocabEnricher(BaseEnricher):
         Returns:
             LearningItem with all fields populated, or None if enrichment fails
         """
+        target_item = item.get("target_item", "")
+        
+        # If skip_llm is True, generate minimal structure with UUID only
+        if self.skip_llm:
+            logger.info(f"Skipping LLM enrichment for '{target_item}' (--skip-llm mode)")
+            
+            # Generate romaji if not present
+            romanization = item.get("romanization") or get_japanese_romaji(target_item)
+            
+            # Create minimal item with UUID
+            minimal_item = LearningItem(
+                id=str(uuid4()),
+                language="ja",
+                category=Category.VOCAB,
+                target_item=target_item,
+                definition=item.get("definition", ""),  # Empty or from source
+                examples=[],  # Empty examples
+                sense_gloss=None,
+                romanization=romanization,
+                pos=item.get("pos"),
+                lemma=None,
+                aliases=[],
+                level_system=LevelSystem.JLPT,
+                level_min=item.get("level_min", "N5"),
+                level_max=item.get("level_max", "N5"),
+                created_at=datetime.now(UTC),
+                version="1.0.0",
+                source_file=item.get("source_file"),
+            )
+            
+            return minimal_item
+        
         if not self.llm_client:
             logger.warning("LLM client not available, skipping enrichment")
             return None
 
-        target_item = item.get("target_item", "")
-        
         try:
             # Step 1: Get minimal LLM response (Japanese-only examples)
             missing_fields = self.detect_missing_fields(item)
@@ -334,7 +323,7 @@ class JapaneseVocabEnricher(BaseEnricher):
 **Instructions**:
 1. Write a clear, learner-friendly explanation in English (ignore the brief meaning above, generate a full explanation)
 2. Identify the part of speech
-3. Create 3-5 original example sentences in JAPANESE ONLY (no romaji, no English)
+3. Create 2-3 original example sentences in JAPANESE ONLY (no romaji, no English)
 
 **CRITICAL**: Examples must be Japanese characters ONLY. Example:
 - CORRECT: "学校に行きます。"
@@ -389,7 +378,7 @@ Remember: We will add romaji and English translations automatically later.
         # Check examples
         if not (3 <= len(enriched_data.examples) <= 5):
             logger.warning(
-                f"Expected 3-5 examples, got {len(enriched_data.examples)} "
+                f"Expected 2-3 examples, got {len(enriched_data.examples)} "
                 f"for '{enriched_data.target_item}'"
             )
             return False

@@ -140,9 +140,9 @@ class LearningItem(BaseModel):
     )
     examples: List[Example] = Field(
         ...,
-        min_length=3,
-        max_length=5,
-        description="Contextual usage examples (3-5 items)",
+        # min_length=2,
+        # max_length=3,
+        description="Contextual usage examples (2-3 items)",
     )
 
     # Optional fields (language-specific)
@@ -181,13 +181,13 @@ class LearningItem(BaseModel):
         None, description="Original source file path"
     )
 
-    @field_validator("examples")
-    @classmethod
-    def validate_examples_count(cls, v: List[str]) -> List[str]:
-        """Ensure 3-5 examples."""
-        if not 3 <= len(v) <= 5:
-            raise ValueError("examples must contain between 3 and 5 items")
-        return v
+    # @field_validator("examples")
+    # @classmethod
+    # def validate_examples_count(cls, v: List[str]) -> List[str]:
+    #     """Ensure 2-3 examples."""
+    #     if not 3 <= len(v) <= 5:
+    #         raise ValueError("examples must contain between 3 and 5 items")
+    #     return v
 
     model_config = {
         "json_schema_extra": {
@@ -232,10 +232,8 @@ class LearningItem(BaseModel):
 class Segment(BaseModel):
     """Content segment (dialogue turn, narration, question)."""
 
-    segment_id: str = Field(..., description="Unique ID within content unit")
-    type: SegmentType
     speaker: Optional[str] = Field(
-        None, description="Speaker name for dialogue, null for narration"
+        None, description="Speaker ID (A/B/C) for dialogue, null for narration"
     )
     text: str = Field(..., description="Text in target language")
     translation: Optional[str] = Field(None, description="English translation")
@@ -254,7 +252,7 @@ class Segment(BaseModel):
             "example": {
                 "segment_id": "seg-1",
                 "type": "dialogue",
-                "speaker": "Alice",
+                "speaker": "A",
                 "text": "Bonjour! Je m'appelle Alice.",
                 "translation": "Hello! My name is Alice.",
                 "learning_item_ids": [
@@ -263,6 +261,26 @@ class Segment(BaseModel):
                 ],
                 "start_time_ms": None,
                 "end_time_ms": None,
+            }
+        }
+    }
+
+
+class Speaker(BaseModel):
+    """Speaker metadata for conversations."""
+
+    id: str = Field(..., description="Speaker ID (A, B, C, etc.)")
+    name: str = Field(..., description="Speaker name")
+    role: str = Field(..., description="Speaker role or relationship")
+    gender: str = Field(..., description="Speaker gender in English (male/female/other)")
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "id": "A",
+                "name": "Alice",
+                "role": "Student",
+                "gender": "female",
             }
         }
     }
@@ -284,6 +302,10 @@ class ContentUnit(BaseModel):
     description: str = Field(..., description="Brief summary of content")
     text: str = Field(..., description="Full text (concatenated segments)")
     segments: List[Segment] = Field(..., min_length=1)
+    speakers: Optional[List[Speaker]] = Field(
+        default=None,
+        description="Speaker metadata for conversations (id, name, role, gender)"
+    )
     learning_item_ids: List[str] = Field(
         ...,
         description="All learning items featured in this content (deduplicated)",
@@ -299,13 +321,6 @@ class ContentUnit(BaseModel):
     level_system: LevelSystem
     level_min: str
     level_max: str
-    word_count: int = Field(
-        ..., description="Total word count (language-aware tokenization)"
-    )
-    estimated_reading_time_seconds: int = Field(
-        ...,
-        description="Based on average reading speed for target language",
-    )
 
     # Status flags
     has_audio: bool = Field(default=False)

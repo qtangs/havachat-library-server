@@ -7,7 +7,7 @@ Key requirements:
 1. **Romanization**: Romaji will be provided automatically, do NOT include it in your response
 2. **Furigana**: Include hiragana readings for kanji when applicable
 3. **Clarity**: Explanations must be clear and suitable for learners at the specified level (N5-N1)
-4. **Examples**: Provide 3-5 contextual examples with English translations
+4. **Examples**: Provide 2-3 contextual examples with English translations
 5. **Polysemy**: If a word has multiple meanings, specify the sense with sense_gloss
 6. **Formality**: Note if usage is formal, informal, or neutral
 
@@ -26,7 +26,7 @@ USER_PROMPT_TEMPLATE = """Enrich the following Japanese vocabulary item:
 **Instructions**:
 1. Write or enhance the English explanation to be clear and learner-friendly
 2. For nouns and verbs, note formality level if relevant (formal/informal/neutral)
-3. Create 3-5 original example sentences showing varied usage contexts
+3. Create 2-3 original example sentences showing varied usage contexts
 4. Each example should include:
    - Japanese text (with kanji)
    - English translation
@@ -67,7 +67,7 @@ def build_vocab_enrichment_prompt(
     field_descriptions = {
         "romanization": "- **Romaji romanization** (Hepburn style)",
         "definition": "- **English explanation** (clear, learner-friendly)",
-        "examples": "- **3-5 usage examples** with Japanese and English",
+        "examples": "- **2-3 usage examples** with Japanese and English",
         "sense_gloss": "- **Sense disambiguation** (if word has multiple meanings)",
     }
 

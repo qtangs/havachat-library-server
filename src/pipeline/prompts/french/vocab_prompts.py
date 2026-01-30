@@ -5,7 +5,7 @@ Your task is to enrich vocabulary entries with accurate, learner-friendly inform
 
 Key requirements:
 1. **Clarity**: Explanations must be clear and suitable for learners at the specified CEFR level (A1-C1)
-2. **Examples**: Provide 3-5 contextual examples with English translations
+2. **Examples**: Provide 2-3 contextual examples with English translations
 3. **Gender**: Always note gender for nouns (le/la/l')
 4. **Register**: Note if usage is formal, informal, or neutral
 5. **Polysemy**: If a word has multiple meanings, specify the sense with sense_gloss
@@ -26,7 +26,7 @@ USER_PROMPT_TEMPLATE = """Enrich the following French vocabulary item:
 **Instructions**:
 1. Write or enhance the English explanation to be clear and learner-friendly
 2. For nouns, include gender (masculine/feminine) in the explanation
-3. Create 3-5 original example sentences showing varied usage contexts
+3. Create 2-3 original example sentences showing varied usage contexts
 4. Each example should include:
    - French sentence (with proper accents and spelling)
    - English translation
@@ -68,7 +68,7 @@ def build_vocab_enrichment_prompt(
     # Build description of missing fields
     field_descriptions = {
         "definition": "- **English explanation** (clear, learner-friendly, include gender for nouns)",
-        "examples": "- **3-5 usage examples** with French and English",
+        "examples": "- **2-3 usage examples** with French and English",
         "sense_gloss": "- **Sense disambiguation** (if word has multiple meanings)",
         "lemma": "- **Lemma/base form** (if this is a conjugated verb or inflected form)",
     }

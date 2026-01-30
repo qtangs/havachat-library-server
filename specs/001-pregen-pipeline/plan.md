@@ -12,14 +12,15 @@ Build a Python-based pre-generation pipeline that transforms official vocabulary
 ## Technical Context
 
 **Language/Version**: Python 3.14+  
-**Primary Dependencies**: LangGraph (agent orchestration), OpenAI/Anthropic SDK (LLM), Pydantic (schema validation), uv (package manager)  
-**Storage**: File-based JSON output to havachat-knowledge repo; Postgres + Meilisearch for search (FR-028)  
+**Primary Dependencies**: LangGraph (agent orchestration), OpenAI/Anthropic SDK (LLM), Pydantic (schema validation), uv (package manager), instructor (structured LLM output), ElevenLabs SDK (TTS), boto3/cloudflare-sdk (R2 storage)  
+**Storage**: File-based JSON output to havachat-knowledge repo; Audio files stored locally first at `{Language}/{Level}/02_Generated/audio/{category}/`, then synced to Cloudflare R2; Postgres + Meilisearch for search (FR-038)  
 **Testing**: pytest with contract/unit/integration test structure  
 **Target Platform**: macOS/Linux development; Docker-based deployment (future)  
 **Project Type**: Single Python project (batch pipeline + CLI)  
 **Performance Goals**: 
   - Vocab enrichment: 500 words in <10 minutes with LLM retries
   - Content generation: 1 conversation in <2 minutes
+  - Audio generation: 500 items in <30 minutes (ElevenLabs API + local file write)
   - QA gates: 100-item batch validation in <10 minutes
 **Constraints**: 
   - LLM retry budget: max 3 retries per item before manual review flagging
@@ -99,6 +100,7 @@ src/
 │   │   ├── learning_item_generator.py  # Generate non-official items (pronunciation, idioms, etc.)
 │   │   ├── content_generator.py        # Chain-of-thought content generation
 │   │   ├── question_generator.py
+│   │   ├── audio_generator.py          # ElevenLabs TTS integration
 │   │   └── scenario_matcher.py         # Similarity search for reuse
 │   ├── validators/
 │   │   ├── __init__.py
@@ -121,11 +123,16 @@ src/
 │   │   ├── generate_learning_items.py   # Generate pronunciation, idioms, etc.
 │   │   ├── generate_content.py          # Per-topic content generation
 │   │   ├── generate_questions.py
+│   │   ├── generate_audio.py            # Audio generation with ElevenLabs
+│   │   ├── select_audio.py              # Select best version from multi-version generation
+│   │   ├── sync_audio.py                # Sync local audio to Cloudflare R2
 │   │   └── run_qa_gates.py
 │   └── utils/
 │       ├── __init__.py
 │       ├── file_utils.py
 │       ├── llm_client.py                # Retry logic + logging + instructor integration
+│       ├── elevenlabs_client.py         # ElevenLabs TTS API client with retry logic
+│       ├── r2_client.py                 # Cloudflare R2 storage client
 │       ├── usage_tracker.py             # Track learning item appearances
 │       └── logging_config.py
 ├── models/
@@ -133,6 +140,8 @@ src/
 │   ├── learning_item.py
 │   ├── content_unit.py
 │   ├── question.py
+│   ├── audio_metadata.py               # Audio version tracking
+│   ├── voice_config.py                 # Voice ID mapping
 │   └── validation_report.py
 └── constants.py
 
@@ -145,11 +154,16 @@ tests/
 ├── integration/
 │   ├── test_vocab_enrichment_pipeline.py
 │   ├── test_content_generation_pipeline.py  # Two-stage workflow integration tests
+│   ├── test_audio_generation_pipeline.py    # Audio generation with voice config
 │   └── test_qa_gates_pipeline.py
 └── unit/
     ├── test_japanese_vocab_enricher.py
     ├── test_mandarin_grammar_enricher.py
     ├── test_content_generator_chain_of_thought.py
+    ├── test_audio_generator.py              # Audio generation with format options
+    ├── test_voice_config.py                 # Voice configuration validation
+    ├── test_elevenlabs_client.py            # ElevenLabs API client
+    ├── test_r2_client.py                    # R2 upload/sync
     ├── test_scenario_matcher.py
     ├── test_qa_gates.py
     └── test_usage_tracker.py
@@ -216,7 +230,7 @@ uv run python -m pipeline.cli.generate_content \
   --topic "Food" \
   --num-conversations 5 \
   --num-stories 5 \
-  --output-dir havachat-knowledge/generated content/Mandarin/HSK1/
+  --output-dir ../havachat-knowledge/generated\ content/Mandarin/HSK1/
 
 # Repeat Stage 2 for each desired topic
 uv run python -m pipeline.cli.generate_content \
@@ -225,7 +239,49 @@ uv run python -m pipeline.cli.generate_content \
   --topic "Meeting New People" \
   --num-conversations 5 \
   --num-stories 5 \
-  --output-dir havachat-knowledge/generated content/Mandarin/HSK1/
+  --output-dir ../havachat-knowledge/generated\ content/Mandarin/HSK1/
+
+# Stage 3: Generate audio for learning items and content units
+# Generate audio for vocab items (single version, default opus format)
+uv run python -m pipeline.cli.generate_audio \
+  --language zh \
+  --level hsk1 \
+  --category vocab \
+  --batch-size 50 \
+  --versions 1 \
+  --voice-id 21m00Tcm4TlvDq8ikWAM \
+  --output-dir ../havachat-knowledge/generated\ content/Mandarin/HSK1/02_Generated/audio/vocab/
+
+# Generate audio for conversations (voice pair for 2-speaker dialogues)
+uv run python -m pipeline.cli.generate_audio \
+  --language zh \
+  --level hsk1 \
+  --category conversations \
+  --batch-size 20 \
+  --versions 1 \
+  --voice-config conversation_2_1 \
+  --output-dir ../havachat-knowledge/generated\ content/Mandarin/HSK1/02_Generated/audio/conversations/
+
+# Generate multiple versions for manual selection
+uv run python -m pipeline.cli.generate_audio \
+  --language zh \
+  --level hsk1 \
+  --category grammar \
+  --versions 3 \
+  --voice-id 21m00Tcm4TlvDq8ikWAM \
+  --output-dir ../havachat-knowledge/generated\ content/Mandarin/HSK1/02_Generated/audio/grammar/
+
+# Select best version after manual review
+uv run python -m pipeline.cli.select_audio \
+  --item-id abc123-def456 \
+  --selected-version 2
+
+# Sync selected audio files to Cloudflare R2
+uv run python -m pipeline.cli.sync_audio \
+  --language zh \
+  --level hsk1 \
+  --category vocab \
+  --dry-run  # Test first, then remove --dry-run flag
 ```
 
 ### Key Implementation Details

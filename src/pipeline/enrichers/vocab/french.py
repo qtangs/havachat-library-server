@@ -20,6 +20,7 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from src.pipeline.enrichers.base import BaseEnricher
+from src.pipeline.parsers.source_parsers import parse_french_vocab_tsv
 from src.pipeline.utils.azure_translation import AzureTranslationHelper
 from src.pipeline.utils.llm_client import LLMClient
 from src.pipeline.validators.schema import Category, Example, LearningItem, LevelSystem
@@ -36,8 +37,8 @@ class FrenchEnrichedVocab(BaseModel):
     )
     examples: List[str] = Field(
         ...,
-        min_length=3,
-        max_length=5,
+        min_length=2,
+        max_length=3,
         description="Example sentences in French ONLY (no English translation). Example: 'Bonjour, comment allez-vous ?'"
     )
     pos: Optional[str] = Field(
@@ -57,7 +58,7 @@ Your task is to enrich vocabulary entries with accurate, learner-friendly inform
 CRITICAL INSTRUCTIONS:
 1. **FRENCH ONLY EXAMPLES**: Provide examples in French ONLY. Do NOT add English translations.
 2. **Clarity**: Explanations must be clear and suitable for learners at the specified level.
-3. **Examples**: Provide 3-5 contextual example sentences using ONLY French.
+3. **Examples**: Provide 2-3 contextual example sentences using ONLY French.
 4. **Functional Context**: Consider the functional category (e.g., "Saluer" = greeting, "Prendre congé" = saying goodbye).
 5. **Part of Speech**: Identify the part of speech when applicable.
 
@@ -93,6 +94,8 @@ class FrenchVocabEnricher(BaseEnricher):
         llm_client: Optional[LLMClient] = None,
         max_retries: int = 3,
         manual_review_dir: Optional[Union[str, Path]] = None,
+        skip_llm: bool = False,
+        skip_translation: bool = False,
     ):
         """Initialize French enricher with Azure Translation.
         
@@ -100,15 +103,21 @@ class FrenchVocabEnricher(BaseEnricher):
             llm_client: Optional LLM client for enrichment
             max_retries: Maximum retry attempts (default: 3)
             manual_review_dir: Directory for manual review queue
+            skip_llm: Skip LLM enrichment (default: False)
+            skip_translation: Skip translation service (default: False)
         """
-        super().__init__(llm_client, max_retries, manual_review_dir)
+        super().__init__(llm_client, max_retries, manual_review_dir, skip_llm, skip_translation)
         
-        # Initialize Azure Translation helper
-        try:
-            self.azure_translator = AzureTranslationHelper()
-            logger.info("Azure Translation initialized successfully")
-        except ValueError as e:
-            logger.warning(f"Azure Translation not available: {e}")
+        # Initialize Azure Translation helper unless skip_translation is True
+        if not skip_translation:
+            try:
+                self.azure_translator = AzureTranslationHelper()
+                logger.info("Azure Translation initialized successfully")
+            except ValueError as e:
+                logger.warning(f"Azure Translation not available: {e}")
+                self.azure_translator = None
+        else:
+            logger.info("Translation service skipped (--skip-translation)")
             self.azure_translator = None
 
     @property
@@ -129,56 +138,7 @@ class FrenchVocabEnricher(BaseEnricher):
             FileNotFoundError: If source file doesn't exist
             ValueError: If TSV format is invalid
         """
-        source_path = Path(source_path)
-
-        if not source_path.exists():
-            raise FileNotFoundError(f"Source file not found: {source_path}")
-
-        items = []
-
-        with open(source_path, "r", encoding="utf-8") as f:
-            # Skip BOM if present
-            content = f.read()
-            if content.startswith("\ufeff"):
-                content = content[1:]
-            
-            # Parse TSV
-            lines = content.strip().split("\n")
-            if len(lines) < 2:
-                raise ValueError(f"TSV file must have at least header and one data row")
-            
-            # Parse header
-            header = lines[0].split("\t")
-            if len(header) < 2:
-                raise ValueError(f"Expected at least 2 columns (Mot, Catégorie), got {len(header)}")
-
-            for i, line in enumerate(lines[1:], start=1):
-                parts = line.split("\t")
-                if len(parts) < 2:
-                    logger.warning(f"Row {i} has insufficient columns, skipping: {line}")
-                    continue
-                
-                word = parts[0].strip()
-                category = parts[1].strip()
-
-                if not word:
-                    logger.warning(f"Row {i} missing 'Mot' value, skipping")
-                    continue
-
-                item = {
-                    "target_item": word,
-                    "context_category": category if category else None,
-                    "source_row": i,
-                }
-
-                items.append(item)
-
-        logger.info(
-            f"Parsed {len(items)} items from {source_path}",
-            extra={"source": str(source_path), "item_count": len(items)},
-        )
-
-        return items
+        return parse_french_vocab_tsv(source_path)
 
     def detect_missing_fields(self, item: Dict[str, Any]) -> List[str]:
         """Detect which fields need enrichment.
@@ -223,12 +183,39 @@ class FrenchVocabEnricher(BaseEnricher):
         Returns:
             LearningItem with all fields populated, or None if enrichment fails
         """
+        target_item = item.get("target_item", "")
+        
+        # If skip_llm is True, generate minimal structure with UUID only
+        if self.skip_llm:
+            logger.info(f"Skipping LLM enrichment for '{target_item}' (--skip-llm mode)")
+            
+            # Create minimal item with UUID
+            minimal_item = LearningItem(
+                id=str(uuid4()),
+                language="fr",
+                category=Category.VOCAB,
+                target_item=target_item,
+                definition=item.get("definition", ""),  # Empty or from source
+                examples=[],  # Empty examples
+                sense_gloss=None,
+                romanization=None,  # French doesn't need romanization
+                pos=item.get("pos"),
+                lemma=item.get("lemma"),
+                aliases=[],
+                level_system=LevelSystem.CEFR,
+                level_min=item.get("level_min", "A1"),
+                level_max=item.get("level_max", "A1"),
+                created_at=datetime.now(UTC),
+                version="1.0.0",
+                source_file=item.get("source_file"),
+            )
+            
+            return minimal_item
+        
         if not self.llm_client:
             logger.warning("LLM client not available, skipping enrichment")
             return None
 
-        target_item = item.get("target_item", "")
-        
         try:
             # Step 1: Get minimal LLM response (French-only examples)
             missing_fields = self.detect_missing_fields(item)
@@ -331,7 +318,7 @@ class FrenchVocabEnricher(BaseEnricher):
 **Instructions**:
 1. Write a clear, learner-friendly explanation in English
 2. Identify the part of speech (noun, verb, expression, etc.)
-3. Create 3-5 original example sentences in FRENCH ONLY (no English)
+3. Create 2-3 original example sentences in FRENCH ONLY (no English)
 
 **CRITICAL**: Examples must be French ONLY. Example:
 - CORRECT: "Bonjour, comment allez-vous ?"
@@ -381,7 +368,7 @@ Remember: We will add English translations automatically later.
         # Check examples
         if not (3 <= len(enriched_data.examples) <= 5):
             logger.warning(
-                f"Expected 3-5 examples, got {len(enriched_data.examples)} "
+                f"Expected 2-3 examples, got {len(enriched_data.examples)} "
                 f"for '{enriched_data.target_item}'"
             )
             return False

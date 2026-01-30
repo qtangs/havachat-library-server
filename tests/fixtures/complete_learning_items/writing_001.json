@@ -1,0 +1,29 @@
+{
+  "id": "writing-001-person-radical",
+  "language": "zh",
+  "category": "writing_system",
+  "target_item": "亻(person radical)",
+  "definition": "The person radical (亻), also called 'standing person', appears on the left side of many Chinese characters related to people, human actions, or relationships",
+  "examples": [
+    {
+      "text": "你 (nǐ) - you (contains person radical)",
+      "translation": "The character 你 (you) uses the person radical",
+      "media_urls": []
+    },
+    {
+      "text": "他 (tā) - he/him (contains person radical)",
+      "translation": "The character 他 (he) uses the person radical",
+      "media_urls": []
+    },
+    {
+      "text": "们 (men) - plural suffix (contains person radical)",
+      "translation": "The character 们 (plural marker) uses the person radical",
+      "media_urls": []
+    }
+  ],
+  "level_system": "hsk",
+  "level_min": "HSK1",
+  "level_max": "HSK1",
+  "created_at": "2026-01-28T12:00:00Z",
+  "version": "1.0.0"
+}

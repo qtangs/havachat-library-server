@@ -1,0 +1,32 @@
+{
+  "id": "grammar-001-verb-to-be",
+  "language": "zh",
+  "category": "grammar",
+  "target_item": "是 (shì)",
+  "definition": "The verb 'to be' used to link a subject with a noun or adjective, indicating identity or characteristics",
+  "examples": [
+    {
+      "text": "我是学生。",
+      "translation": "I am a student.",
+      "media_urls": []
+    },
+    {
+      "text": "这是我的书。",
+      "translation": "This is my book.",
+      "media_urls": []
+    },
+    {
+      "text": "他是老师。",
+      "translation": "He is a teacher.",
+      "media_urls": []
+    }
+  ],
+  "romanization": "shì",
+  "lemma": "是",
+  "pos": "verb",
+  "level_system": "hsk",
+  "level_min": "HSK1",
+  "level_max": "HSK1",
+  "created_at": "2026-01-28T12:00:00Z",
+  "version": "1.0.0"
+}

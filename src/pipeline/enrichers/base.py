@@ -43,6 +43,8 @@ class BaseEnricher(ABC):
         llm_client: Optional[LLMClient],
         max_retries: int = 3,
         manual_review_dir: Optional[Union[str, Path]] = None,
+        skip_llm: bool = False,
+        skip_translation: bool = False,
     ):
         """Initialize base enricher.
 
@@ -50,10 +52,14 @@ class BaseEnricher(ABC):
             llm_client: LLM client for structured response generation (None for dry-run)
             max_retries: Maximum retry attempts for failed enrichments (default: 3)
             manual_review_dir: Directory for manual review queue files (default: None)
+            skip_llm: Skip LLM enrichment, only generate structure with UUIDs (default: False)
+            skip_translation: Skip translation service calls (default: False)
         """
         self.llm_client = llm_client
         self.max_retries = max_retries
         self.manual_review_dir = Path(manual_review_dir) if manual_review_dir else None
+        self.skip_llm = skip_llm
+        self.skip_translation = skip_translation
 
         if self.manual_review_dir:
             self.manual_review_dir.mkdir(parents=True, exist_ok=True)
@@ -122,7 +128,7 @@ class BaseEnricher(ABC):
 
         Example:
             "Enrich the following Chinese word with pinyin, English explanation,
-            and 3-5 usage examples:\n\nWord: 银行\nPart of speech: noun"
+            and 2-3 usage examples:\n\nWord: 银行\nPart of speech: noun"
         """
         pass
 
@@ -143,7 +149,7 @@ class BaseEnricher(ABC):
 
         Example validation checks:
         - Chinese/Japanese items must have romanization
-        - Examples list has 3-5 items
+        - Examples list has 2-3 items
         - No prohibited content
         """
         pass

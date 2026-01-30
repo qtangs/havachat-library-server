@@ -151,6 +151,18 @@ Examples:
         help="Logging level (default: INFO)",
     )
 
+    parser.add_argument(
+        "--skip-llm",
+        action="store_true",
+        help="Skip LLM enrichment (generate structure with UUIDs only)",
+    )
+
+    parser.add_argument(
+        "--skip-translation",
+        action="store_true",
+        help="Skip translation service (examples will have no translations)",
+    )
+
     return parser.parse_args()
 
 
@@ -247,8 +259,13 @@ def main():
     else:
         level_system = LevelSystem.CEFR
     
-    # Initialize LLM client (None for dry-run)
-    llm_client = None if args.dry_run else LLMClient()
+    # Initialize LLM client (None for dry-run or skip-llm)
+    if args.dry_run or args.skip_llm:
+        llm_client = None
+        if args.skip_llm:
+            logger.info("SKIP LLM MODE: Generating structure with UUIDs only")
+    else:
+        llm_client = LLMClient()
     
     # Initialize enricher
     manual_review_dir = args.manual_review_dir or Path("./manual_review/grammar")
@@ -258,6 +275,8 @@ def main():
             llm_client=llm_client,
             max_retries=3,
             manual_review_dir=manual_review_dir,
+            skip_llm=args.dry_run or args.skip_llm,
+            skip_translation=args.skip_translation,
         )
     else:
         logger.error(f"Unknown enricher: {args.enricher}")

@@ -171,6 +171,18 @@ Examples:
         help="Logging level",
     )
 
+    parser.add_argument(
+        "--skip-llm",
+        action="store_true",
+        help="Skip LLM enrichment (generate structure with UUIDs only)",
+    )
+
+    parser.add_argument(
+        "--skip-translation",
+        action="store_true",
+        help="Skip translation service (examples will have no translations)",
+    )
+
     return parser.parse_args()
 
 
@@ -297,6 +309,8 @@ def main() -> int:
     logger.info(f"Input: {args.input}")
     logger.info(f"Output: {args.output}")
     logger.info(f"Dry Run: {args.dry_run}")
+    logger.info(f"Skip LLM: {args.skip_llm}")
+    logger.info(f"Skip Translation: {args.skip_translation}")
     if args.max_items:
         logger.info(f"Max Items: {args.max_items}")
     if args.parallel > 1:
@@ -344,6 +358,17 @@ def main() -> int:
         enricher: BaseEnricher = enricher_class(
             llm_client=None,
             manual_review_dir=manual_review_dir,
+            skip_llm=True,
+            skip_translation=True,
+        )
+        llm_client = None
+    elif args.skip_llm:
+        logger.info("SKIP LLM MODE: Generating structure with UUIDs only")
+        enricher: BaseEnricher = enricher_class(
+            llm_client=None,
+            manual_review_dir=manual_review_dir,
+            skip_llm=True,
+            skip_translation=args.skip_translation,
         )
         llm_client = None
     else:
@@ -352,6 +377,8 @@ def main() -> int:
             llm_client=llm_client,
             max_retries=3,
             manual_review_dir=manual_review_dir,
+            skip_llm=False,
+            skip_translation=args.skip_translation,
         )
 
     # Parse source file

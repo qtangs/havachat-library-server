@@ -1,0 +1,118 @@
+{
+  "description": "Example chain-of-thought structure for content generation",
+  "example_flow": {
+    "step_1_generate": {
+      "description": "Initial drafts of conversations and stories",
+      "example": {
+        "type": "conversation",
+        "title": "Meeting a New Friend",
+        "segments": [
+          {
+            "speaker": "Alice",
+            "text": "你好！",
+            "translation": "Hello!",
+            "learning_item_ids": ["vocab-001-nihao"]
+          },
+          {
+            "speaker": "Bob",
+            "text": "你好！我是学生。",
+            "translation": "Hello! I am a student.",
+            "learning_item_ids": ["vocab-001-nihao", "grammar-001-verb-to-be"]
+          }
+        ],
+        "learning_items_used": ["vocab-001-nihao", "grammar-001-verb-to-be"]
+      }
+    },
+    "step_2_critique": {
+      "description": "Evaluation of the initial draft",
+      "example": {
+        "coverage_score": 6,
+        "level_appropriateness_score": 8,
+        "natural_flow_score": 7,
+        "issues_found": [
+          "Only uses 2 learning items, could incorporate more",
+          "Missing pronunciation and cultural elements",
+          "Could add more context to make conversation more natural"
+        ],
+        "strengths": [
+          "Appropriate difficulty for HSK1",
+          "Natural dialogue flow",
+          "Uses core vocabulary and grammar correctly"
+        ]
+      }
+    },
+    "step_3_revise": {
+      "description": "Improved version based on critique",
+      "example": {
+        "type": "conversation",
+        "title": "Meeting a New Friend at School",
+        "segments": [
+          {
+            "speaker": "Alice",
+            "text": "你好！",
+            "translation": "Hello!",
+            "learning_item_ids": ["vocab-001-nihao", "functional-001-greeting"]
+          },
+          {
+            "speaker": "Bob",
+            "text": "你好！我是学生。你呢？",
+            "translation": "Hello! I am a student. And you?",
+            "learning_item_ids": ["vocab-001-nihao", "grammar-001-verb-to-be"]
+          },
+          {
+            "speaker": "Alice",
+            "text": "我也是学生。很高兴见到你！",
+            "translation": "I am also a student. Nice to meet you!",
+            "learning_item_ids": ["grammar-001-verb-to-be", "functional-001-greeting"]
+          },
+          {
+            "speaker": "Bob",
+            "text": "谢谢！",
+            "translation": "Thank you!",
+            "learning_item_ids": ["idiom-001-xie-xie"]
+          }
+        ],
+        "learning_items_used": [
+          "vocab-001-nihao",
+          "grammar-001-verb-to-be",
+          "functional-001-greeting",
+          "idiom-001-xie-xie"
+        ],
+        "improvements_made": [
+          "Added 2 more learning items (functional greeting, idiom)",
+          "Extended conversation to 4 turns for better flow",
+          "Added contextual question '你呢？' to make dialogue more natural",
+          "Included polite expression '谢谢' at the end"
+        ]
+      }
+    },
+    "step_4_assign_scenario": {
+      "description": "3-8 word scenario name",
+      "example": {
+        "content_id": "content-001",
+        "scenario_name": "Meeting a classmate at school"
+      }
+    }
+  },
+  "quality_metrics": {
+    "description": "Expected chain-of-thought quality indicators",
+    "expected_improvements": {
+      "coverage_increase": "Revised version should use more learning items than initial draft",
+      "explicit_listing": "All learning_item_ids should be explicitly listed in revised version",
+      "critique_addresses_issues": "Improvements should directly address issues identified in critique",
+      "scenario_specificity": "Scenario name should be 3-8 words and describe concrete situation"
+    },
+    "target_scores": {
+      "coverage_score": ">=7/10",
+      "level_appropriateness_score": ">=8/10",
+      "natural_flow_score": ">=7/10",
+      "improvement_rate": ">95% (revised versions show improved coverage)"
+    }
+  },
+  "token_optimization": {
+    "description": "Token efficiency for loading learning items",
+    "full_format_tokens": ">2000 tokens for 200 items (includes all fields)",
+    "simplified_format_tokens": "<500 tokens for 200 items (target_item only)",
+    "savings": "~75% token reduction by using simplified format in prompts"
+  }
+}

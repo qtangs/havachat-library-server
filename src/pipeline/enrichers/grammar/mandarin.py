@@ -13,7 +13,6 @@ The enricher:
 4. Validates granularity to ensure narrow-scope learning items
 """
 
-import csv
 import logging
 import re
 from datetime import UTC, datetime
@@ -23,11 +22,13 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from src.pipeline.enrichers.base import BaseEnricher
-from src.pipeline.utils.azure_translation import AzureTranslationHelper
-from src.pipeline.utils.llm_client import LLMClient
-from src.pipeline.utils.romanization import get_mandarin_pinyin
-from src.pipeline.validators.schema import Category, Example, LearningItem, LevelSystem
+from pipeline.enrichers.base import BaseEnricher
+from pipeline.parsers.source_parsers import parse_mandarin_grammar_csv
+from pipeline.prompts.mandarin.grammar_prompts import MANDARIN_GRAMMAR_SYSTEM_PROMPT
+from pipeline.utils.azure_translation import AzureTranslationHelper
+from pipeline.utils.llm_client import LLMClient
+from pipeline.utils.romanization import get_mandarin_pinyin
+from pipeline.validators.schema import Category, Example, LearningItem, LevelSystem
 
 logger = logging.getLogger(__name__)
 
@@ -41,50 +42,25 @@ class ChineseGrammarEnriched(BaseModel):
     )
     examples: List[str] = Field(
         ...,
-        min_length=3,
-        max_length=5,
+        min_length=2,
+        max_length=3,
         description="Example sentences in Chinese ONLY (no pinyin, no English translation)"
     )
 
 
-GRAMMAR_SYSTEM_PROMPT = """You are an expert Mandarin Chinese grammar teacher specializing in teaching grammar patterns to learners.
-Your task is to enrich grammar entries with accurate, learner-friendly explanations and examples.
-
-CRITICAL INSTRUCTIONS:
-1. **NO PINYIN**: Do NOT include pinyin/romanization in your response. It will be added automatically.
-2. **CHINESE ONLY EXAMPLES**: Provide examples in Chinese characters ONLY. Do NOT add pinyin or English translations.
-3. **NARROW SCOPE**: Focus on the SPECIFIC grammar pattern provided. Do not create "mega-items" covering multiple patterns.
-4. **Clear Explanations**: Definitions must explain the grammatical function, usage, and any constraints.
-5. **Natural Examples**: Provide 3-5 example sentences that demonstrate the pattern in natural contexts.
-6. **Learner-Appropriate**: Match the proficiency level specified. Keep examples simple for lower levels.
-
-**Grammar Pattern Types:**
-- **Morphemes (语素)**: Prefixes (前缀) and suffixes (后缀) like 小-, 第-, -们, -边
-- **Word Classes (词类)**: Nouns, verbs, pronouns, measure words, adverbs, prepositions, conjunctions, particles
-- **Phrases (短语)**: Coordination, modification, verb-object, subject-predicate, complement structures
-- **Sentences (句子)**: Statement, question, imperative, exclamation patterns
-- **Sentence Components (句类)**: Subject, predicate, object, attribute, adverbial, complement
-- **Complex Sentences (复句)**: Coordination, causation, condition, concession, etc.
-
-**Special Considerations:**
-- For particles (助词): Explain function, position, and tone/mood implications
-- For modal verbs (能愿动词): Clarify differences in meaning and usage contexts
-- For measure words (量词): Note which nouns they pair with
-- For separable verbs (离合词): Explain insertion patterns with objects/aspects
-- For patterns with numbers (e.g., 会1, 还1): Focus on the specific sense indicated by the number
-
-**Example Response Format:**
-{
-  "definition": "A modal verb expressing ability or capability, similar to 'can' or 'be able to'",
-  "examples": [
-    "我会说中文。",
-    "他会游泳。",
-    "你会开车吗？"
-  ]
-}
-
-Remember: Chinese characters ONLY in examples. No pinyin. No English translations.
-"""
+class ChineseGrammarEnriched(BaseModel):
+    """Grammar enrichment response from LLM."""
+    
+    definition: str = Field(
+        ...,
+        description="Clear English definition explaining the grammar pattern, suitable for learners"
+    )
+    examples: List[str] = Field(
+        ...,
+        min_length=2,
+        max_length=3,
+        description="Example sentences in Chinese ONLY (no pinyin, no English translation)"
+    )
 
 
 class MandarinGrammarEnricher(BaseEnricher):
@@ -104,6 +80,8 @@ class MandarinGrammarEnricher(BaseEnricher):
         llm_client: Optional[LLMClient] = None,
         max_retries: int = 3,
         manual_review_dir: Optional[Union[str, Path]] = None,
+        skip_llm: bool = False,
+        skip_translation: bool = False,
     ):
         """Initialize Mandarin grammar enricher.
         
@@ -111,21 +89,27 @@ class MandarinGrammarEnricher(BaseEnricher):
             llm_client: Optional LLM client for enrichment
             max_retries: Maximum retry attempts (default: 3)
             manual_review_dir: Directory for manual review queue
+            skip_llm: Skip LLM enrichment (default: False)
+            skip_translation: Skip translation service (default: False)
         """
-        super().__init__(llm_client, max_retries, manual_review_dir)
+        super().__init__(llm_client, max_retries, manual_review_dir, skip_llm, skip_translation)
         
-        # Initialize Azure Translation helper
-        try:
-            self.azure_translator = AzureTranslationHelper()
-            logger.info("Azure Translation initialized successfully")
-        except ValueError as e:
-            logger.warning(f"Azure Translation not available: {e}")
+        # Initialize Azure Translation helper unless skip_translation is True
+        if not skip_translation:
+            try:
+                self.azure_translator = AzureTranslationHelper()
+                logger.info("Azure Translation initialized successfully")
+            except ValueError as e:
+                logger.warning(f"Azure Translation not available: {e}")
+                self.azure_translator = None
+        else:
+            logger.info("Translation service skipped (--skip-translation)")
             self.azure_translator = None
 
     @property
     def system_prompt(self) -> str:
         """Get grammar-specific system prompt."""
-        return GRAMMAR_SYSTEM_PROMPT
+        return MANDARIN_GRAMMAR_SYSTEM_PROMPT
 
     def parse_source(self, source_path: Union[str, Path]) -> List[Dict[str, Any]]:
         """Parse CSV file with grammar patterns.
@@ -148,50 +132,7 @@ class MandarinGrammarEnricher(BaseEnricher):
             FileNotFoundError: If source file doesn't exist
             ValueError: If CSV format is invalid
         """
-        path = Path(source_path)
-        if not path.exists():
-            raise FileNotFoundError(f"Source file not found: {source_path}")
-        
-        items = []
-        with open(path, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            
-            # Validate columns
-            expected_cols = {"类别", "类别名称", "细目", "语法内容"}
-            if not expected_cols.issubset(set(reader.fieldnames or [])):
-                raise ValueError(
-                    f"CSV must have columns: {expected_cols}. Found: {reader.fieldnames}"
-                )
-            
-            for row in reader:
-                grammar_type = row["类别"].strip()
-                category_name = row["类别名称"].strip()
-                detail = row["细目"].strip()
-                content = row["语法内容"].strip()
-                
-                # Split multi-item patterns by 、 or comma
-                patterns = re.split(r"[、,，]", content)
-                patterns = [p.strip() for p in patterns if p.strip()]
-                
-                # Create individual items for each pattern to avoid mega-items
-                for pattern in patterns:
-                    # Remove any parenthetical numbers or notes for target_item
-                    # e.g., "会 1" → "会", "（1）专用名量词：本" → "本"
-                    clean_pattern = re.sub(r"\s*\d+\s*$", "", pattern)  # Remove trailing numbers
-                    clean_pattern = re.sub(r"^（\d+）[^：]*：", "", clean_pattern)  # Remove prefix like "（1）专用名量词："
-                    clean_pattern = clean_pattern.strip()
-                    
-                    if clean_pattern:
-                        items.append({
-                            "type": grammar_type,
-                            "category_name": category_name,
-                            "detail": detail,
-                            "pattern": clean_pattern,
-                            "original_content": content,  # Keep for context
-                        })
-        
-        logger.info(f"Parsed {len(items)} grammar patterns from {source_path}")
-        return items
+        return parse_mandarin_grammar_csv(source_path)
 
     def detect_missing_fields(self, item: Dict[str, Any]) -> List[str]:
         """Detect fields that need enrichment.
@@ -257,7 +198,7 @@ class MandarinGrammarEnricher(BaseEnricher):
 
 **Required**:
 1. **Definition**: Explain the grammatical function and usage of THIS SPECIFIC pattern
-2. **Examples**: Provide 3-5 example sentences in Chinese characters ONLY (no pinyin, no English)
+2. **Examples**: Provide 2-3 example sentences in Chinese characters ONLY (no pinyin, no English)
 
 **Granularity Check**:
 - If the pattern seems to cover multiple distinct uses, focus on the PRIMARY use
@@ -332,6 +273,37 @@ Provide your response in the format:
         language = item.get("language", "zh")
         level = item.get("level", "HSK1")
         level_system = item.get("level_system", LevelSystem.HSK)
+        
+        # If skip_llm is True, generate minimal structure with UUID only
+        if self.skip_llm:
+            logger.info(f"Skipping LLM enrichment for grammar pattern '{pattern}' (--skip-llm mode)")
+            
+            # Get pinyin for the pattern
+            pattern_pinyin = get_mandarin_pinyin(pattern)
+            
+            # Create minimal item with UUID
+            minimal_item = LearningItem(
+                id=str(uuid4()),
+                language=language,
+                category=Category.GRAMMAR,
+                target_item=pattern,
+                definition=item.get("definition", ""),  # Empty or from source
+                examples=[],  # Empty examples
+                romanization=pattern_pinyin,
+                sense_gloss=None,
+                lemma=pattern,
+                pos=None,
+                aliases=[],
+                media_urls=[],
+                level_system=level_system,
+                level_min=level,
+                level_max=level,
+                created_at=datetime.now(UTC),
+                version="1.0.0",
+                source_file=str(item.get("source_file", "")),
+            )
+            
+            return minimal_item
         
         # Detect missing fields
         missing_fields = self.detect_missing_fields(item)

@@ -1,0 +1,32 @@
+{
+  "id": "vocab-001-nihao",
+  "language": "zh",
+  "category": "vocab",
+  "target_item": "你好",
+  "definition": "A common greeting meaning 'hello' or 'hi'",
+  "examples": [
+    {
+      "text": "你好！很高兴见到你。",
+      "translation": "Hello! Nice to meet you.",
+      "media_urls": []
+    },
+    {
+      "text": "早上见面时说你好。",
+      "translation": "Say hello when meeting in the morning.",
+      "media_urls": []
+    },
+    {
+      "text": "她向我微笑着说你好。",
+      "translation": "She smiled and said hello to me.",
+      "media_urls": []
+    }
+  ],
+  "romanization": "nǐhǎo",
+  "lemma": "你好",
+  "pos": "interjection",
+  "level_system": "hsk",
+  "level_min": "HSK1",
+  "level_max": "HSK1",
+  "created_at": "2026-01-28T12:00:00Z",
+  "version": "1.0.0"
+}

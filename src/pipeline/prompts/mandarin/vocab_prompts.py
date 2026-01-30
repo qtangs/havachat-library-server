@@ -6,7 +6,7 @@ Your task is to enrich vocabulary entries with accurate, learner-friendly inform
 Key requirements:
 1. **Pinyin Romanization**: Pinyin will be provided automatically, do NOT include it in your response
 2. **Clarity**: Explanations must be clear and suitable for learners at the specified level
-3. **Examples**: Provide 3-5 contextual examples with pinyin and English translations
+3. **Examples**: Provide 2-3 contextual examples with pinyin and English translations
 4. **Polysemy**: If a word has multiple meanings, specify the sense with sense_gloss
 5. **Cultural Context**: Include cultural notes when relevant (e.g., formal vs. informal usage)
 
@@ -49,7 +49,7 @@ USER_PROMPT_TEMPLATE = """Enrich the following Mandarin Chinese vocabulary item:
 **Instructions**:
 1. Write a clear, learner-friendly explanation in English
 2. Translate the POS label (if Chinese): {pos}
-3. Create 3-5 original example sentences showing varied usage contexts
+3. Create 2-3 original example sentences showing varied usage contexts
 4. Each example must include:
    - Chinese characters
    - Pinyin (in parentheses with tone marks)
@@ -111,7 +111,7 @@ def build_vocab_enrichment_prompt(
     # Build description of missing fields
     field_descriptions = {
         "definition": "- **English explanation** (clear, learner-friendly, note POS meaning)",
-        "examples": "- **3-5 usage examples** with Chinese, pinyin, and English",
+        "examples": "- **2-3 usage examples** with Chinese, pinyin, and English",
         "sense_gloss": "- **Sense disambiguation** (if word has multiple meanings or has sense marker like 1,2)",
         "lemma": "- **Lemma/base form** (if this is an inflected form)",
     }

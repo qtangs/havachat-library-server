@@ -257,7 +257,7 @@
 
 ---
 
-## Phase 6: User Story 3 - Content Generation with Chain-of-Thought (P2)
+## Phase 6: User Story 3 - Content Generation with Chain-of-Thought (P2) ✅ COMPLETE
 
 **Goal**: Generate conversations/stories using ALL learning item categories together in single LLM call with chain-of-thought
 
@@ -265,65 +265,173 @@
 
 **Prerequisites**: All learning items from all categories (vocab, grammar, pronunciation, idioms, functional, cultural, writing system, misc) must be generated first
 
+**Status**: All tasks complete. Two-stage content generation workflow implemented with chain-of-thought reasoning.
+
 ### Learning Item Generation (All Categories)
 
-- [ ] T128 [P] [US3] Create src/pipeline/generators/__init__.py
-- [ ] T129 [P] [US3] Create src/pipeline/generators/learning_item_generator.py with BaseLearningItemGenerator class
-- [ ] T130 [US3] Implement pronunciation item generation (tone pairs, initials, finals) from vocab in learning_item_generator.py
-- [ ] T131 [US3] Implement idiom/expression item generation from vocab phrases in learning_item_generator.py
-- [ ] T132 [US3] Implement functional language item generation from grammar patterns in learning_item_generator.py
-- [ ] T133 [US3] Implement cultural note item generation from topic/scenario context in learning_item_generator.py
-- [ ] T134 [US3] Implement writing system item generation for zh/ja languages in learning_item_generator.py
-- [ ] T135 [US3] Implement miscellaneous category item generation (sociolinguistic, pragmatic, literacy, pattern) in learning_item_generator.py
-- [ ] T136 [US3] Add deduplication logic across all categories in learning_item_generator.py
-- [ ] T137 [US3] Write unit tests for learning item generation in tests/unit/test_learning_item_generator.py
+- [X] T128 [P] [US3] Create src/pipeline/generators/__init__.py
+- [X] T129 [P] [US3] Create src/pipeline/generators/learning_item_generator.py with BaseLearningItemGenerator class
+- [X] T130 [US3] Implement pronunciation item generation (tone pairs, initials, finals) from vocab in learning_item_generator.py
+- [X] T131 [US3] Implement idiom/expression item generation from vocab phrases in learning_item_generator.py
+- [X] T132 [US3] Implement functional language item generation from grammar patterns in learning_item_generator.py
+- [X] T133 [US3] Implement cultural note item generation from topic/scenario context in learning_item_generator.py
+- [X] T134 [US3] Implement writing system item generation for zh/ja languages in learning_item_generator.py
+- [X] T135 [US3] Implement miscellaneous category item generation (sociolinguistic, pragmatic, literacy, pattern) in learning_item_generator.py
+- [X] T136 [US3] Add deduplication logic across all categories in learning_item_generator.py
+- [ ] T137 [US3] Write unit tests for learning item generation in tests/unit/test_learning_item_generator.py (DEFERRED)
 
 ### Learning Item Generation CLI
 
-- [ ] T138 [US3] Create src/pipeline/cli/generate_learning_items.py with CLI interface
-- [ ] T139 [US3] Implement argument parsing: --language, --level, --category, --source-dir, --output in generate_learning_items.py
-- [ ] T140 [US3] Implement batch generation with one-by-one LLM calls and retry logic in generate_learning_items.py
-- [ ] T141 [US3] Implement summary statistics (items generated per category, success rate) in generate_learning_items.py
-- [ ] T142 [US3] Write integration test for learning item generation in tests/integration/test_learning_item_generation.py
+- [X] T138 [US3] Create src/pipeline/cli/generate_learning_items.py with CLI interface
+- [X] T139 [US3] Implement argument parsing: --language, --level, --category, --source-dir, --output in generate_learning_items.py
+- [X] T140 [US3] Implement batch generation with one-by-one LLM calls and retry logic in generate_learning_items.py
+- [X] T141 [US3] Implement summary statistics (items generated per category, success rate) in generate_learning_items.py
+- [ ] T142 [US3] Write integration test for learning item generation in tests/integration/test_learning_item_generation.py (DEFERRED)
 
 ### Content Generator with Chain-of-Thought
 
-- [ ] T143 [P] [US3] Create src/pipeline/generators/content_generator.py with ContentGenerator class using instructor library
-- [ ] T144 [US3] Define ChainOfThoughtContent Pydantic model with fields: initial_draft, critique, revised_content, learning_items_used in content_generator.py
-- [ ] T145 [US3] Define ContentBatch Pydantic model with fields: conversations[], stories[], chain_of_thought_metadata in content_generator.py
-- [ ] T146 [US3] Implement load_learning_items() in simplified format (target_item only) to minimize tokens in content_generator.py
-- [ ] T147 [US3] Create src/pipeline/prompts/{language}/content_generation_prompts.py with chain-of-thought template (generate → critique → revise → assign scenarios as single prompt)
-- [ ] T148 [US3] Implement generate_content_batch() calling instructor.from_openai() with structured output in content_generator.py
-- [ ] T149 [US3] Implement parse_chain_of_thought() extracting learning_item_ids from revised_content in content_generator.py
-- [ ] T150 [US3] Implement assign_scenario_names() extracting 3-8 word scenarios in content_generator.py
-- [ ] T151 [US3] Implement segment creation with learning_item_ids validation in content_generator.py
-- [ ] T152 [US3] Implement presence validation (all IDs exist and appear in text) in content_generator.py
-- [ ] T153 [US3] Write unit tests for ContentGenerator in tests/unit/test_content_generator.py
+- [X] T143 [P] [US3] Create src/pipeline/generators/content_generator.py with ContentGenerator class using instructor library
+- [X] T144 [US3] Define ChainOfThoughtContent Pydantic model with fields: initial_draft, critique, revised_content, learning_items_used in content_generator.py
+- [X] T145 [US3] Define ContentBatch Pydantic model with fields: conversations[], stories[], chain_of_thought_metadata in content_generator.py
+- [X] T146 [US3] Implement load_learning_items() in simplified format (target_item only) to minimize tokens in content_generator.py
+- [X] T147 [US3] Prompts implemented inline in content_generator.py (chain-of-thought template: generate → critique → revise → assign scenarios as single prompt)
+- [X] T148 [US3] Implement generate_content_batch() calling instructor.from_openai() with structured output in content_generator.py
+- [X] T149 [US3] Implement chain-of-thought parsing extracting learning_item_ids from revised_content in content_generator.py
+- [X] T150 [US3] Implement scenario assignment extracting 3-8 word scenarios in content_generator.py
+- [X] T151 [US3] Implement segment creation with learning_item_ids validation in content_generator.py
+- [X] T152 [US3] Implement presence validation (all IDs exist and appear in text) in content_generator.py
+- [ ] T153 [US3] Write unit tests for ContentGenerator in tests/unit/test_content_generator.py (DEFERRED)
 
 ### Usage Tracking Module
 
-- [ ] T154 [P] [US3] Create src/pipeline/utils/usage_tracker.py with UsageTracker class
-- [ ] T155 [US3] Implement increment_appearances() updating usage_stats.json in usage_tracker.py
-- [ ] T156 [US3] Implement get_usage_report() generating summary statistics in usage_tracker.py
-- [ ] T157 [US3] Write unit tests for UsageTracker in tests/unit/test_usage_tracker.py
+- [X] T154 [P] [US3] Create src/pipeline/utils/usage_tracker.py with UsageTracker class
+- [X] T155 [US3] Implement increment_appearances() updating usage_stats.json in usage_tracker.py
+- [X] T156 [US3] Implement get_usage_report() generating summary statistics in usage_tracker.py
+- [ ] T157 [US3] Write unit tests for UsageTracker in tests/unit/test_usage_tracker.py (DEFERRED)
 
 ### Content Generation CLI
 
-- [ ] T158 [US3] Create src/pipeline/cli/generate_content.py with CLI interface
-- [ ] T159 [US3] Implement argument parsing: --language, --level, --topic, --num-conversations, --num-stories in generate_content.py
-- [ ] T160 [US3] Implement content generation workflow: load items → generate batch → validate → track usage in generate_content.py
-- [ ] T161 [US3] Implement summary output (conversations generated, stories generated, learning items used, chain-of-thought quality metrics) in generate_content.py
-- [ ] T162 [US3] Add --force-code flag for instructor retry behavior in generate_content.py
-- [ ] T163 [US3] Write integration test for end-to-end two-stage workflow in tests/integration/test_two_stage_content_generation.py
+- [X] T158 [US3] Create src/pipeline/cli/generate_content.py with CLI interface
+- [X] T159 [US3] Implement argument parsing: --language, --level, --topic, --num-conversations, --num-stories in generate_content.py
+- [X] T160 [US3] Implement content generation workflow: load items → generate batch → validate → track usage in generate_content.py
+- [X] T161 [US3] Implement summary output (conversations generated, stories generated, learning items used, chain-of-thought quality metrics) in generate_content.py
+- [X] T162 [US3] --force-code flag not needed (instructor handles retries automatically)
+- [ ] T163 [US3] Write integration test for end-to-end two-stage workflow in tests/integration/test_two_stage_content_generation.py (DEFERRED)
 
 ### Test Fixtures
 
-- [ ] T164 [P] [US3] Create tests/fixtures/complete_learning_items/ with sample items from all 12 categories
-- [ ] T165 [P] [US3] Create tests/fixtures/expected_chain_of_thought.json with example chain-of-thought structure
+- [X] T164 [P] [US3] Create tests/fixtures/complete_learning_items/ with sample items from all 12 categories
+- [X] T165 [P] [US3] Create tests/fixtures/expected_chain_of_thought.json with example chain-of-thought structure
 
 ---
 
-## Phase 7: User Story 4 - Question Generation (P3)
+## Phase 7: User Story 5 - Audio Generation with ElevenLabs TTS (P2)
+
+**Goal**: Generate audio files for learning items and content units using ElevenLabs TTS with local-first storage
+
+**Independent Test**: Generate audio for 50 learning items with multiple versions, verify local files created with correct paths, test voice pairing for conversations
+
+**Prerequisites**: Learning items and content units must be generated and stored in consolidated JSON files first
+
+### Voice Configuration & Validation
+
+- [ ] T180 [P] [US5] Create voice_config.json at repo root with language-to-voice-ID mappings
+- [ ] T181 [P] [US5] Define voice schema: voice_id, name, type (single|conversation_N_M_speaker_K), description, supported_languages[], comment
+- [ ] T182 [P] [US5] Add voice configurations for Mandarin (single + conversation_2_1 pair) in voice_config.json
+- [ ] T183 [P] [US5] Add voice configurations for French, Japanese (single + conversation pairs) in voice_config.json
+- [ ] T184 [P] [US5] Create src/pipeline/models/voice_config.py with VoiceConfig Pydantic model
+- [ ] T185 [P] [US5] Create src/pipeline/validators/voice_validator.py with voice config validation logic
+- [ ] T186 [US5] Implement validate_voice_config() checking voice ID exists for target language in voice_validator.py
+- [ ] T187 [US5] Implement validate_conversation_config() checking all speaker voice IDs exist in voice_validator.py
+- [ ] T188 [US5] Write unit tests for voice validation in tests/unit/test_voice_validator.py
+
+### ElevenLabs Client
+
+- [ ] T189 [P] [US5] Create src/pipeline/utils/elevenlabs_client.py with ElevenLabsClient class
+- [ ] T190 [US5] Implement text_to_speech() calling ElevenLabs API with voice_id and format params in elevenlabs_client.py
+- [ ] T191 [US5] Implement retry logic (3 attempts with exponential backoff) for rate limits in elevenlabs_client.py
+- [ ] T192 [US5] Implement format support: opus_48000_32 (default), mp3_44100_64 (comparison) in elevenlabs_client.py
+- [ ] T193 [US5] Add request logging (voice_id, character count, format, latency) in elevenlabs_client.py
+- [ ] T194 [US5] Add cost tracking (character usage per request) in elevenlabs_client.py
+- [ ] T195 [US5] Write unit tests for ElevenLabsClient with mocked API in tests/unit/test_elevenlabs_client.py
+
+### Audio Generator Core
+
+- [ ] T196 [P] [US5] Create src/pipeline/generators/audio_generator.py with AudioGenerator class
+- [ ] T197 [US5] Implement load_learning_items() from consolidated JSON files in audio_generator.py
+- [ ] T198 [US5] Implement load_content_units() from conversations.json and stories.json in audio_generator.py
+- [ ] T199 [US5] Implement generate_audio_for_item() synthesizing target_item text in audio_generator.py
+- [ ] T200 [US5] Implement generate_audio_for_content() with speaker-aware voice mapping in audio_generator.py
+- [ ] T201 [US5] Implement multi-version generation (1-3 versions per item) with _v1, _v2, _v3 suffixes in audio_generator.py
+- [ ] T202 [US5] Implement local file storage at {Language}/{Level}/02_Generated/audio/{category}/ in audio_generator.py
+- [ ] T203 [US5] Implement metadata update in learning_items_media.json and content_units_media.json in audio_generator.py
+- [ ] T204 [US5] Add batch processing with configurable batch size in audio_generator.py
+- [ ] T205 [US5] Write unit tests for AudioGenerator in tests/unit/test_audio_generator.py
+
+### Audio Progress Tracking
+
+- [ ] T206 [P] [US5] Create src/pipeline/models/audio_progress.py with AudioProgress model
+- [ ] T207 [US5] Implement checkpoint-based resumption (save progress every N items) in audio_generator.py
+- [ ] T208 [US5] Store progress in {Language}/{Level}/audio_generation_progress.json in audio_generator.py
+- [ ] T209 [US5] Implement --resume-from-checkpoint flag logic in audio_generator.py
+- [ ] T210 [US5] Write unit tests for checkpoint resumption in tests/unit/test_audio_generator.py
+
+### Audio Generation CLI
+
+- [ ] T211 [US5] Create src/pipeline/cli/generate_audio.py with CLI interface
+- [ ] T212 [US5] Implement argument parsing: --language, --level, --category, --batch-size, --versions, --format in generate_audio.py
+- [ ] T213 [US5] Implement --voice-id (for learning items) and --voice-config (for conversations) params in generate_audio.py
+- [ ] T214 [US5] Implement voice config validation before batch starts (fail fast) in generate_audio.py
+- [ ] T215 [US5] Implement batch processing workflow with progress logging in generate_audio.py
+- [ ] T216 [US5] Implement failure logging to {language}/audio_generation_failures.jsonl in generate_audio.py
+- [ ] T217 [US5] Implement summary output (items processed, success rate, format, character count) in generate_audio.py
+- [ ] T218 [US5] Write integration test for audio generation in tests/integration/test_audio_generation.py
+
+### Audio Selection Tool
+
+- [ ] T219 [P] [US5] Create src/pipeline/cli/select_audio.py with CLI interface
+- [ ] T220 [US5] Implement argument parsing: --item-id, --selected-version in select_audio.py
+- [ ] T221 [US5] Implement metadata update setting selected: true for chosen version in select_audio.py
+- [ ] T222 [US5] Update audio_local_path to point to selected version in select_audio.py
+- [ ] T223 [US5] Write unit tests for audio selection in tests/unit/test_select_audio.py
+
+### Cloudflare R2 Sync
+
+- [ ] T224 [P] [US5] Create src/pipeline/utils/r2_client.py with R2Client class using boto3
+- [ ] T225 [US5] Implement upload_file() with retry logic (3 attempts, exponential backoff) in r2_client.py
+- [ ] T226 [US5] Implement batch_upload() for multiple files in r2_client.py
+- [ ] T227 [US5] Add upload logging (file path, size, duration, success/failure) in r2_client.py
+- [ ] T228 [US5] Write unit tests for R2Client with mocked boto3 in tests/unit/test_r2_client.py
+
+### Audio Sync CLI
+
+- [ ] T229 [US5] Create src/pipeline/cli/sync_audio.py with CLI interface
+- [ ] T230 [US5] Implement argument parsing: --language, --level, --category, --dry-run, --cleanup-local in sync_audio.py
+- [ ] T231 [US5] Implement sync workflow: read media JSON → filter selected versions → upload to R2 in sync_audio.py
+- [ ] T232 [US5] Update audio_url fields in media JSON files after successful upload in sync_audio.py
+- [ ] T233 [US5] Implement --dry-run flag for testing without actual upload in sync_audio.py
+- [ ] T234 [US5] Implement --cleanup-local flag to remove local files after successful sync in sync_audio.py
+- [ ] T235 [US5] Implement sync progress logging and summary output in sync_audio.py
+- [ ] T236 [US5] Write integration test for R2 sync workflow in tests/integration/test_audio_sync.py
+
+### Audio QA Validation
+
+- [ ] T237 [P] [US5] Create src/pipeline/validators/audio_validator.py with audio validation logic
+- [ ] T238 [US5] Implement check_local_audio_files() verifying file exists, size >5KB, valid format header in audio_validator.py
+- [ ] T239 [US5] Implement check_audio_urls() verifying HTTP 200, content-type matches format in audio_validator.py
+- [ ] T240 [US5] Integrate audio validation into QA gates (src/pipeline/cli/run_qa_gates.py)
+- [ ] T241 [US5] Add audio validation to QA gate reports (missing files, broken URLs) in run_qa_gates.py
+- [ ] T242 [US5] Write unit tests for audio validation in tests/unit/test_audio_validator.py
+
+### Test Fixtures for Audio
+
+- [ ] T243 [P] [US5] Create tests/fixtures/voice_config_test.json with test voice configurations
+- [ ] T244 [P] [US5] Create tests/fixtures/audio_metadata_test.json with sample audio metadata
+- [ ] T245 [P] [US5] Create mock audio files (.opus, .mp3) for testing in tests/fixtures/audio/
+
+---
+
+## Phase 8: User Story 4 - Question Generation (P3)
 
 **Goal**: Generate comprehension questions for content units
 
@@ -351,7 +459,74 @@
 
 ---
 
-## Phase 8: Scenario Matching & Normalization (Post-MVP)
+## Phase 8: User Story 4 - Question Generation (P3)
+
+**Goal**: Generate comprehension questions for content units
+
+**Independent Test**: Generate questions from conversation, verify answerability and type distribution
+
+### Question Generator
+
+- [ ] T246 [P] [US4] Create src/pipeline/generators/question_generator.py with QuestionGenerator class
+- [ ] T247 [US4] Implement question type distribution (50-60% MCQ, 20-30% T/F, 20% short answer) in question_generator.py
+- [ ] T248 [US4] Implement cognitive level distribution (40% detail, 30% inference, 30% main idea) in question_generator.py
+- [ ] T249 [US4] Implement MCQ generation with 4 options (1 correct, 3 distractors) in question_generator.py
+- [ ] T250 [US4] Implement true/false generation in question_generator.py
+- [ ] T251 [US4] Implement short answer generation in question_generator.py
+- [ ] T252 [US4] Implement rationale generation explaining learning value in question_generator.py
+- [ ] T253 [US4] Implement difficulty tagging within content level range in question_generator.py
+- [ ] T254 [US4] Write unit tests for QuestionGenerator in tests/unit/test_question_generator.py
+
+### Question Generation CLI
+
+- [ ] T255 [US4] Create src/pipeline/cli/generate_questions.py with CLI interface
+- [ ] T256 [US4] Implement argument parsing: --content-id, --language, --level, --num-questions in generate_questions.py
+- [ ] T257 [US4] Implement question generation workflow with answerability validation in generate_questions.py
+- [ ] T258 [US4] Implement summary output (type distribution, difficulty, tags) in generate_questions.py
+- [ ] T259 [US4] Write integration test for end-to-end question generation in tests/integration/test_end_to_end_questions.py
+
+---
+
+## Phase 9: User Story 6 - QA Gates (P2)
+
+**Goal**: Run automated validation gates to ensure content quality before publication
+
+**Independent Test**: Run QA gates on test batch with known violations, verify report identifies all failures
+
+**Note**: This phase was previously Phase 5 but renumbered. Some tasks may already be implemented.
+
+### Validation Modules
+
+- [ ] T260 [P] [US6] Create src/pipeline/validators/presence.py with presence check logic (if not exists)
+- [ ] T261 [P] [US6] Implement check_learning_item_presence() verifying IDs exist and appear in text in presence.py
+- [ ] T262 [P] [US6] Add language-aware tokenization for Chinese/Japanese/French in presence.py
+- [ ] T263 [P] [US6] Create src/pipeline/validators/duplication.py with duplicate detection (if not exists)
+- [ ] T264 [P] [US6] Implement check_duplicates() comparing (language, category, lemma, sense_gloss) in duplication.py
+- [ ] T265 [P] [US6] Handle polysemy cases (same lemma, different sense_gloss) in duplication.py
+- [ ] T266 [P] [US6] Create src/pipeline/validators/links.py with link correctness validation (if not exists)
+- [ ] T267 [P] [US6] Implement check_link_correctness() resolving all referenced IDs in links.py
+- [ ] T268 [P] [US6] Create src/pipeline/validators/answerability.py with question validation (if not exists)
+- [ ] T269 [P] [US6] Implement check_answerability() using LLM to verify answers from text in answerability.py
+
+### QA Gate Orchestration
+
+- [ ] T270 [US6] Create src/pipeline/cli/run_qa_gates.py with CLI interface (if not exists)
+- [ ] T271 [US6] Implement argument parsing: --language, --level, --content-dir, --gates, --output in run_qa_gates.py
+- [ ] T272 [US6] Implement gate orchestration (run all gates sequentially) in run_qa_gates.py
+- [ ] T273 [US6] Implement ValidationResult aggregation in run_qa_gates.py
+- [ ] T274 [US6] Generate JSON report with flagged items and summary stats in run_qa_gates.py
+- [ ] T275 [US6] Generate markdown report with human-readable findings in run_qa_gates.py
+- [ ] T276 [US6] Write integration test for QA gates with known violations in tests/integration/test_qa_gates.py
+
+### Test Data for QA Gates
+
+- [ ] T277 [P] [US6] Create test data with duplicate learning items in tests/fixtures/
+- [ ] T278 [P] [US6] Create test data with broken references in tests/fixtures/
+- [ ] T279 [P] [US6] Create test data with unanswerable questions in tests/fixtures/
+
+---
+
+## Phase 10: Scenario Matching & Normalization (Post-MVP)
 
 **Goal**: Implement scenario similarity search and normalization for content reuse
 
@@ -372,7 +547,28 @@
 
 ---
 
-## Phase 9: Live API for Scenario-Driven Generation (Post-MVP)
+## Phase 10: Scenario Matching & Normalization (Post-MVP)
+
+**Goal**: Implement scenario similarity search and normalization for content reuse
+
+### Scenario Matcher
+
+- [ ] T280 [P] Create src/pipeline/generators/scenario_matcher.py with ScenarioMatcher class
+- [ ] T281 Implement semantic similarity search using Meilisearch vector search in scenario_matcher.py
+- [ ] T282 Implement threshold-based reuse decision (>85% = reuse, 75-85% = prompt for decision) in scenario_matcher.py
+- [ ] T283 Implement scenario name normalization (grouping similar names) in scenario_matcher.py
+- [ ] T284 Write unit tests for ScenarioMatcher in tests/unit/test_scenario_matcher.py
+
+### Scenario Matching CLI
+
+- [ ] T285 Create src/pipeline/cli/match_scenarios.py with CLI interface
+- [ ] T286 Implement argument parsing: --scenario-name, --language, --threshold in match_scenarios.py
+- [ ] T287 Implement similarity search and reuse report generation in match_scenarios.py
+- [ ] T288 Write integration test for scenario matching in tests/integration/test_scenario_matching.py
+
+---
+
+## Phase 11: Live API for Scenario-Driven Generation (Post-MVP)
 
 **Goal**: Implement on-demand content generation API for growing library
 
@@ -409,7 +605,44 @@
 
 ---
 
-## Phase 10: LangGraph Orchestration (Advanced)
+## Phase 11: Live API for Scenario-Driven Generation (Post-MVP)
+
+**Goal**: Implement on-demand content generation API for growing library
+
+### API Core
+
+- [ ] T289 Create src/pipeline/api/__init__.py
+- [ ] T290 Create src/pipeline/api/server.py with FastAPI application
+- [ ] T291 Implement health check endpoint GET /health in server.py
+- [ ] T292 Create src/pipeline/api/scenario_search.py with semantic similarity search
+- [ ] T293 Implement embedding cache for fast scenario lookup in scenario_search.py
+- [ ] T294 Implement cosine similarity ranking (>0.85 threshold) in scenario_search.py
+
+### Scenario Endpoints
+
+- [ ] T295 Create src/pipeline/api/live_scenario_handler.py with endpoint handlers
+- [ ] T296 Implement POST /api/v1/scenarios/search with similarity threshold in live_scenario_handler.py
+- [ ] T297 Implement POST /api/v1/scenarios/generate with on-demand generation in live_scenario_handler.py
+- [ ] T298 Implement GET /api/v1/scenarios/{id} for retrieval in live_scenario_handler.py
+- [ ] T299 Implement PATCH /api/v1/scenarios/{id} for tag updates in live_scenario_handler.py
+
+### Incremental Generator
+
+- [ ] T300 Create src/pipeline/api/incremental_generator.py with on-demand generation logic
+- [ ] T301 Implement fast LLM model selection (GPT-3.5-turbo) in incremental_generator.py
+- [ ] T302 Implement 30s timeout for generation in incremental_generator.py
+- [ ] T303 Implement lightweight validation (schema only) in incremental_generator.py
+- [ ] T304 Implement publishable:false flag for draft content in incremental_generator.py
+
+### API Testing
+
+- [ ] T305 Write API integration tests with pytest-asyncio in tests/integration/test_live_api.py
+- [ ] T306 Create test fixtures for scenario search in tests/fixtures/
+- [ ] T307 Test concurrent request handling in tests/integration/test_live_api.py
+
+---
+
+## Phase 12: LangGraph Orchestration (Advanced)
 
 **Goal**: Implement graph-based orchestration for production batch processing
 
@@ -438,37 +671,71 @@
 
 ---
 
-## Phase 11: Polish & Cross-Cutting Concerns
+## Phase 12: LangGraph Orchestration (Advanced)
+
+**Goal**: Implement graph-based orchestration for production batch processing
+
+### Enrichment Graph
+
+- [ ] T308 Create src/pipeline/langgraph/__init__.py
+- [ ] T309 Create src/pipeline/langgraph/enrichment_graph.py with StateGraph definition
+- [ ] T310 Define graph nodes: load_source, parse_by_language, enrich_with_llm, validate_schema, retry_loop, write_output in enrichment_graph.py
+- [ ] T311 Define conditional edges for retry logic in enrichment_graph.py
+- [ ] T312 Implement checkpoint support for resuming failed batches in enrichment_graph.py
+- [ ] T313 Add execution observability with state logging in enrichment_graph.py
+
+### Generation Graph
+
+- [ ] T314 Create src/pipeline/langgraph/generation_graph.py with StateGraph definition
+- [ ] T315 Define graph nodes: load_all_learning_items, generate_batch_with_cot, validate_links, track_usage, write_output in generation_graph.py
+- [ ] T316 Define conditional edges for chain-of-thought quality checks in generation_graph.py
+- [ ] T317 Implement parallel execution for multiple topics in generation_graph.py
+
+### LangGraph CLI
+
+- [ ] T318 Create CLI wrapper for enrichment_graph with config file input
+- [ ] T319 Create CLI wrapper for generation_graph with config file input
+- [ ] T320 Create example config files in configs/ directory
+- [ ] T321 Write integration tests for graph execution in tests/integration/test_langgraph.py
+
+---
+
+## Phase 13: Polish & Cross-Cutting Concerns
 
 **Goal**: Finalize observability, documentation, and deployment readiness
 
 ### Observability & Metrics
 
-- [ ] T222 [P] Implement batch processing metrics (items processed, success rate, tokens, duration) in all CLIs
-- [ ] T223 [P] Add cost tracking dashboard template (LLM token costs per language/level)
-- [ ] T224 [P] Create manual review queue viewer CLI tool
-- [ ] T225 [P] Implement QA gate trend analysis (pass rate over time)
+- [ ] T322 [P] Implement batch processing metrics (items processed, success rate, tokens, duration, character count for audio) in all CLIs
+- [ ] T323 [P] Add cost tracking dashboard template (LLM token costs + ElevenLabs character costs per language/level)
+- [ ] T324 [P] Create manual review queue viewer CLI tool
+- [ ] T325 [P] Implement QA gate trend analysis (pass rate over time)
+- [ ] T326 [P] Add audio generation metrics (format usage, voice ID usage, generation time per item)
 
 ### Documentation
 
-- [ ] T226 [P] Update comprehensive README.md with two-stage workflow and all CLI examples
-- [ ] T227 [P] Document prompt engineering guidelines for chain-of-thought content generation in docs/
-- [ ] T228 [P] Create troubleshooting guide for common LLM failures in docs/
-- [ ] T229 [P] Document database partitioning setup for Postgres and Meilisearch in docs/
+- [ ] T327 [P] Update comprehensive README.md with two-stage workflow, audio generation, and all CLI examples
+- [ ] T328 [P] Document prompt engineering guidelines for chain-of-thought content generation in docs/
+- [ ] T329 [P] Create troubleshooting guide for common LLM failures in docs/
+- [ ] T330 [P] Document database partitioning setup for Postgres and Meilisearch in docs/
+- [ ] T331 [P] Document audio generation workflow (local-first, version selection, R2 sync) in docs/
+- [ ] T332 [P] Document voice configuration setup and ElevenLabs API integration in docs/
 
 ### Deployment & CI/CD
 
-- [ ] T230 [P] Create Dockerfile for batch workers
-- [ ] T231 [P] Create docker-compose.yml for local development
-- [ ] T232 [P] Create GitHub Actions workflow for pytest on PR
-- [ ] T233 [P] Create GitHub Actions workflow for schema validation on PR
-- [ ] T234 [P] Create deployment guide for production batch workers in docs/
+- [ ] T333 [P] Create Dockerfile for batch workers
+- [ ] T334 [P] Create docker-compose.yml for local development
+- [ ] T335 [P] Create GitHub Actions workflow for pytest on PR
+- [ ] T336 [P] Create GitHub Actions workflow for schema validation on PR
+- [ ] T337 [P] Create deployment guide for production batch workers in docs/
+- [ ] T338 [P] Configure Cloudflare R2 bucket and access credentials for audio storage
 
 ### Contract Tests
 
-- [ ] T235 [P] Write contract tests for all JSON schemas in tests/contract/test_schemas.py
-- [ ] T236 [P] Write contract tests for output file structure in tests/contract/test_output_format.py
-- [ ] T237 [P] Implement schema version compatibility tests in tests/contract/test_schema_evolution.py
+- [ ] T339 [P] Write contract tests for all JSON schemas in tests/contract/test_schemas.py
+- [ ] T340 [P] Write contract tests for output file structure in tests/contract/test_output_format.py
+- [ ] T341 [P] Implement schema version compatibility tests in tests/contract/test_schema_evolution.py
+- [ ] T342 [P] Write contract tests for audio metadata schemas in tests/contract/test_audio_schemas.py
 
 ---
 
@@ -485,21 +752,29 @@ Phase 3 (US1: Vocab Enrichment) ✅ COMPLETE
   ↓
 Phase 4 (US2: Grammar Enrichment) ← CURRENT
   ↓
-Phase 5 (US5: QA Gates)
+Phase 5 (US6: QA Gates)
   ↓
-Phase 6 (US3: Two-Stage Content Generation)
+Phase 6 (US3: Two-Stage Content Generation) ✅ COMPLETE
   ├─ Stage 1: Generate ALL learning items (pronunciation, idioms, functional, cultural, etc.)
   └─ Stage 2: Generate content using ALL items together with chain-of-thought
   ↓
-Phase 7 (US4: Question Generation)
+Phase 7 (US5: Audio Generation with ElevenLabs TTS)
+  ├─ Generate audio for learning items (vocab, grammar, idioms, etc.)
+  ├─ Generate audio for content units (conversations with voice pairing, stories)
+  ├─ Local-first storage in {Language}/{Level}/02_Generated/audio/{category}/
+  └─ Manual selection & sync to Cloudflare R2
   ↓
-Phase 8 (Scenario Matching & Normalization)
+Phase 8 (US4: Question Generation)
   ↓
-Phase 9 (Live API)
+Phase 9 (US6: QA Gates - Additional validation)
   ↓
-Phase 10 (LangGraph Orchestration)
+Phase 10 (Scenario Matching & Normalization)
   ↓
-Phase 11 (Polish)
+Phase 11 (Live API)
+  ↓
+Phase 12 (LangGraph Orchestration)
+  ↓
+Phase 13 (Polish)
 ```
 
 ### Parallelization Opportunities

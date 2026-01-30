@@ -13,7 +13,6 @@ Cost reduction strategy:
 Expected cost savings: ~60-70% token reduction per item
 """
 
-import csv
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
@@ -25,14 +24,10 @@ from pydantic import BaseModel, Field
 from pypinyin import Style, pinyin
 
 from src.pipeline.enrichers.base import BaseEnricher
+from src.pipeline.parsers.source_parsers import parse_mandarin_vocab_tsv
 from src.pipeline.utils.azure_translation import AzureTranslationHelper
 from src.pipeline.utils.llm_client import LLMClient
-from src.pipeline.utils.romanization import (
-    clean_sense_marker,
-    extract_sense_marker,
-    get_mandarin_pinyin,
-    translate_chinese_pos,
-)
+from src.pipeline.utils.romanization import get_mandarin_pinyin
 from src.pipeline.validators.schema import Category, Example, LearningItem, LevelSystem
 
 logger = logging.getLogger(__name__)
@@ -47,8 +42,8 @@ class ChineseEnrichedVocab(BaseModel):
     )
     examples: List[str] = Field(
         ...,
-        min_length=3,
-        max_length=5,
+        min_length=2,
+        max_length=3,
         description="Example sentences in Chinese ONLY (no pinyin, no English translation). Example: '我去银行。'"
     )
     sense_gloss: Optional[str] = Field(
@@ -62,40 +57,27 @@ class ChineseEnrichedVocab(BaseModel):
 
 
 # Optimized system prompt - no pinyin or translation instructions
-OPTIMIZED_SYSTEM_PROMPT = """You are an expert Mandarin Chinese teacher specializing in vocabulary pedagogy.
-Your task is to enrich vocabulary entries with accurate, learner-friendly information.
-
-CRITICAL INSTRUCTIONS:
-1. **NO PINYIN**: Do NOT include pinyin/romanization in your response. It will be added automatically.
-2. **CHINESE ONLY EXAMPLES**: Provide examples in Chinese characters ONLY. Do NOT add pinyin or English translations.
-3. **Clarity**: Explanations must be clear and suitable for learners at the specified level.
-4. **Examples**: Provide 3-5 contextual example sentences using ONLY Chinese characters.
-5. **Polysemy**: If a word has multiple meanings, specify the sense gloss in sense_gloss.
-6. **Part of Speech**: Identify the part of speech (noun, verb, adjective, etc.).
-
-**Understanding Chinese POS (词性) Labels:**
-- 名 = noun, 动 = verb, 形 = adjective, 副 = adverb, 代 = pronoun
-- 数 = numeral, 量 = measure word, 介 = preposition, 助 = particle
-- 叹 = interjection, 连 = conjunction
-
-**Understanding Sense Markers:**
-Words with trailing numbers (e.g., 本1, 会1) indicate disambiguation.
-Remove the number, but note the specific sense gloss in sense_gloss.
-
-**Example Response Format:**
-{
-  "definition": "and; together with; with",
-  "examples": [
-    "我和你。",
-    "我和吃苹果。",
-    "他和看书。"
-  ],
-  "sense_gloss": "and/with",
-  "pos": "verb"
-}
-
-Remember: Chinese characters ONLY in examples. No pinyin. No English translations.
-"""
+class ChineseEnrichedVocab(BaseModel):
+    """Chinese vocab enrichment."""
+    
+    definition: str = Field(
+        ...,
+        description="Clear English definition suitable for learners, to be used in flashcards"
+    )
+    examples: List[str] = Field(
+        ...,
+        min_length=2,
+        max_length=3,
+        description="Example sentences in Chinese ONLY (no pinyin, no English translation). Example: '我去银行。'"
+    )
+    sense_gloss: Optional[str] = Field(
+        None,
+        description='Sense gloss for polysemous words, for example: "and/with" for 和1 (hé) (conjunction/preposition). Other sense glosses for "和" are "harmony" (noun) or "sum" (noun) in math.'
+    )
+    pos: Optional[str] = Field(
+        None, 
+        description="Part of speech: noun, verb, adjective, etc."
+    )
 
 
 class MandarinVocabEnricher(BaseEnricher):
@@ -115,6 +97,8 @@ class MandarinVocabEnricher(BaseEnricher):
         llm_client: Optional[LLMClient] = None,
         max_retries: int = 3,
         manual_review_dir: Optional[Union[str, Path]] = None,
+        skip_llm: bool = False,
+        skip_translation: bool = False,
     ):
         """Initialize Mandarin enricher with Azure Translation.
         
@@ -122,21 +106,27 @@ class MandarinVocabEnricher(BaseEnricher):
             llm_client: Optional LLM client for enrichment
             max_retries: Maximum retry attempts (default: 3)
             manual_review_dir: Directory for manual review queue
+            skip_llm: Skip LLM enrichment (default: False)
+            skip_translation: Skip translation service (default: False)
         """
-        super().__init__(llm_client, max_retries, manual_review_dir)
+        super().__init__(llm_client, max_retries, manual_review_dir, skip_llm, skip_translation)
         
-        # Initialize Azure Translation helper
-        try:
-            self.azure_translator = AzureTranslationHelper()
-            logger.info("Azure Translation initialized successfully")
-        except ValueError as e:
-            logger.warning(f"Azure Translation not available: {e}")
+        # Initialize Azure Translation helper unless skip_translation is True
+        if not skip_translation:
+            try:
+                self.azure_translator = AzureTranslationHelper()
+                logger.info("Azure Translation initialized successfully")
+            except ValueError as e:
+                logger.warning(f"Azure Translation not available: {e}")
+                self.azure_translator = None
+        else:
+            logger.info("Translation service skipped (--skip-translation)")
             self.azure_translator = None
 
     @property
     def system_prompt(self) -> str:
         """Get optimized Mandarin-specific system prompt."""
-        return OPTIMIZED_SYSTEM_PROMPT
+        return MANDARIN_VOCAB_SYSTEM_PROMPT
 
     def parse_source(self, source_path: Union[str, Path]) -> List[Dict[str, Any]]:
         """Parse TSV file with Word and Part of Speech columns.
@@ -151,65 +141,7 @@ class MandarinVocabEnricher(BaseEnricher):
             FileNotFoundError: If source file doesn't exist
             ValueError: If TSV format is invalid
         """
-        source_path = Path(source_path)
-
-        if not source_path.exists():
-            raise FileNotFoundError(f"Source file not found: {source_path}")
-
-        items = []
-
-        with open(source_path, "r", encoding="utf-8") as f:
-            # Skip BOM if present
-            first_line = f.readline()
-            if first_line.startswith("\ufeff"):
-                first_line = first_line[1:]
-
-            # Parse as TSV
-            f.seek(0)
-            reader = csv.DictReader(f, delimiter="\t")
-
-            for i, row in enumerate(reader, start=1):
-                # Handle various column name formats
-                word = (
-                    row.get("Word")
-                    or row.get("word")
-                    or row.get("WORD")
-                    or row.get("汉字")
-                )
-                pos = (
-                    row.get("Part of Speech")
-                    or row.get("POS")
-                    or row.get("pos")
-                    or row.get("词性")
-                )
-
-                if not word:
-                    logger.warning(f"Row {i} missing 'Word' column, skipping: {row}")
-                    continue
-
-                # Clean sense marker from word (e.g., "本1" → "本")
-                clean_word = clean_sense_marker(word.strip())
-                sense_marker = extract_sense_marker(word.strip())
-
-                # Translate Chinese POS to English if needed
-                english_pos = translate_chinese_pos(pos.strip()) if pos else None
-
-                items.append(
-                    {
-                        "target_item": clean_word,
-                        "pos": english_pos,
-                        "original_pos": pos.strip() if pos else None,
-                        "sense_marker": sense_marker,
-                        "source_row": i,
-                    }
-                )
-
-        logger.info(
-            f"Parsed {len(items)} items from {source_path}",
-            extra={"source": str(source_path), "item_count": len(items)},
-        )
-
-        return items
+        return parse_mandarin_vocab_tsv(source_path)
 
     def detect_missing_fields(self, item: Dict[str, Any]) -> List[str]:
         """Detect which fields need enrichment.
@@ -261,12 +193,51 @@ class MandarinVocabEnricher(BaseEnricher):
         Returns:
             LearningItem with all fields populated, or None if enrichment fails
         """
+        target_item = item.get("target_item", "")
+        
+        # If skip_llm is True, generate minimal structure with UUID only
+        if self.skip_llm:
+            logger.info(f"Skipping LLM enrichment for '{target_item}' (--skip-llm mode)")
+            
+            # Generate pinyin
+            romanization = get_mandarin_pinyin(target_item)
+            numeric_pinyin = self._get_numeric_pinyin(target_item)
+            traditional = self._get_traditional(target_item)
+            
+            # Build aliases array
+            aliases = []
+            if traditional and traditional != target_item:
+                aliases.append(traditional)
+            if numeric_pinyin and numeric_pinyin != romanization:
+                aliases.append(numeric_pinyin)
+            
+            # Create minimal item with UUID
+            minimal_item = LearningItem(
+                id=str(uuid4()),
+                language="zh",
+                category=Category.VOCAB,
+                target_item=target_item,
+                definition=item.get("definition", ""),  # Empty or from source
+                examples=[],  # Empty examples
+                sense_gloss=item.get("sense_gloss"),
+                romanization=romanization,
+                pos=item.get("pos"),
+                lemma=None,
+                aliases=aliases,
+                level_system=LevelSystem.HSK,
+                level_min=item.get("level_min", "HSK1"),
+                level_max=item.get("level_max", "HSK1"),
+                created_at=datetime.now(UTC),
+                version="1.0.0",
+                source_file=item.get("source_file"),
+            )
+            
+            return minimal_item
+        
         if not self.llm_client:
             logger.warning("LLM client not available, skipping enrichment")
             return None
 
-        target_item = item.get("target_item", "")
-        
         try:
             # Step 1: Get minimal LLM response (Chinese-only examples)
             missing_fields = self.detect_missing_fields(item)
@@ -307,7 +278,7 @@ class MandarinVocabEnricher(BaseEnricher):
                 logger.warning("Azure Translation not available, examples will have no translations")
                 example_translations = ["" for _ in llm_response.examples]
             
-            # Step 6: Format examples with pinyin and translations
+            # Step 6: Format examples with translations
             formatted_examples = self._format_examples(
                 llm_response.examples,
                 example_translations
@@ -386,7 +357,7 @@ class MandarinVocabEnricher(BaseEnricher):
 **Instructions**:
 1. Write a clear, learner-friendly explanation in English
 2. Confirm or correct the part of speech
-3. Create 3-5 original example sentences in CHINESE ONLY (no pinyin, no English)
+3. Create 2-3 original example sentences in CHINESE ONLY (no pinyin, no English)
 4. If the word has multiple meanings, specify which sense in sense_gloss
 
 **CRITICAL**: Examples must be Chinese characters ONLY. Example:
@@ -495,7 +466,7 @@ Remember: We will add pinyin and English translations automatically later.
         # Check examples
         if not (3 <= len(enriched_data.examples) <= 5):
             logger.warning(
-                f"Expected 3-5 examples, got {len(enriched_data.examples)} "
+                f"Expected 2-3 examples, got {len(enriched_data.examples)} "
                 f"for '{enriched_data.target_item}'"
             )
             return False
