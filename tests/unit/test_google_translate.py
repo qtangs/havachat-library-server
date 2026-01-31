@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.pipeline.utils.google_translate import GoogleTranslateHelper
+from src.havachat.utils.google_translate import GoogleTranslateHelper
 
 
 @pytest.fixture
@@ -20,7 +20,7 @@ def temp_cache_dir():
 @pytest.fixture
 def mock_translate_client():
     """Mock Google Translate client."""
-    with patch('src.pipeline.utils.google_translate.translate.Client') as mock_client:
+    with patch('src.havachat.utils.google_translate.translate.Client') as mock_client:
         yield mock_client
 
 

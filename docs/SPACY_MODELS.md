@@ -40,7 +40,7 @@ The dictionary system automatically selects the appropriate tokenizer based on t
 ### Example: Chinese Dictionary Lookup with jieba
 
 ```python
-from src.pipeline.utils.dictionary import DictionaryFactory
+from src.havachat.utils.dictionary import DictionaryFactory
 
 # Load dictionary (automatically uses jieba for Chinese)
 dictionary = DictionaryFactory.get_dictionary("zh")

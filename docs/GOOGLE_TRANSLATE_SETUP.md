@@ -46,7 +46,7 @@ GOOGLE_APPLICATION_CREDENTIALS=/path/to/your-service-account-key.json
 ### Python API
 
 ```python
-from pipeline.utils.google_translate import GoogleTranslateHelper
+from havachat.utils.google_translate import GoogleTranslateHelper
 
 # Initialize (automatically uses credentials from environment)
 translator = GoogleTranslateHelper()
@@ -69,7 +69,7 @@ print(f"Used: {stats['total_characters']} / {stats['monthly_limit']}")
 
 ```bash
 # Generate content with Google Translate
-python -m src.pipeline.cli.generate_content \
+python -m src.havachat.cli.generate_content \
     --language zh \
     --level HSK1 \
     --topic "Daily Life" \
@@ -90,7 +90,7 @@ When multiple translation services are enabled, the priority is:
 Example with fallback:
 ```bash
 # Try Google first, fall back to Azure, then LLM
-python -m src.pipeline.cli.generate_content \
+python -m src.havachat.cli.generate_content \
     --use-google-translation \
     --use-azure-translation \
     ... other args ...
@@ -132,7 +132,7 @@ data/cache/
 ## Monitoring Usage
 
 ```python
-from pipeline.utils.google_translate import GoogleTranslateHelper
+from havachat.utils.google_translate import GoogleTranslateHelper
 
 translator = GoogleTranslateHelper()
 
@@ -154,7 +154,7 @@ print(f"Language pairs: {summary['cache_stats']['language_pairs']}")
 ## Error Handling
 
 ```python
-from pipeline.utils.google_translate import GoogleTranslateHelper
+from havachat.utils.google_translate import GoogleTranslateHelper
 
 try:
     translator = GoogleTranslateHelper()

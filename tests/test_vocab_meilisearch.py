@@ -54,7 +54,7 @@ def run_enrichment(
     cmd = [
         sys.executable,
         "-m",
-        "src.pipeline.cli.enrich_vocab",
+        "src.havachat.cli.enrich_vocab",
         "--language",
         language,
         "--level",

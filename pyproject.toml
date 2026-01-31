@@ -3,7 +3,7 @@ name = "havachat-library-server"
 version = "0.1.0"
 description = "Havachat Library Server"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.13,<3.14"
 dependencies = [
     "azure-ai-translation-text>=1.0.1",
     "boto3>=1.35.0",

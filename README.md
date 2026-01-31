@@ -176,7 +176,7 @@ uv run black src/ tests/
 
 ```bash
 # TBD: CLI commands will be added in later phases
-# Example: python -m src.pipeline.enrichers.vocab.mandarin --input vocab.tsv
+# Example: python -m src.havachat.enrichers.vocab.mandarin --input vocab.tsv
 ```
 
 ## Key Features

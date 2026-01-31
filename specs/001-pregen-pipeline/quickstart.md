@@ -46,7 +46,7 @@ The system has two operational modes:
 
 ```bash
 # Example: Enrich Mandarin HSK1 vocabulary with parallel processing
-python -m src.pipeline.cli.enrich_vocab \
+python -m src.havachat.cli.enrich_vocab \
   --language zh \
   --level HSK1 \
   --input sources/mandarin/hsk1_vocab.tsv \
@@ -56,7 +56,7 @@ python -m src.pipeline.cli.enrich_vocab \
   --resume
 
 # Example: Enrich Japanese JLPT N5 vocabulary
-python -m src.pipeline.cli.enrich_vocab \
+python -m src.havachat.cli.enrich_vocab \
   --language ja \
   --level N5 \
   --input sources/japanese/jlpt_n5_vocab.json \
@@ -65,7 +65,7 @@ python -m src.pipeline.cli.enrich_vocab \
   --parallel 3
 
 # Example: Enrich French A1 vocabulary from TSV
-python -m src.pipeline.cli.enrich_vocab \
+python -m src.havachat.cli.enrich_vocab \
   --language fr \
   --level A1 \
   --input sources/french/a1_vocab.tsv \
@@ -133,7 +133,7 @@ Failed items saved to: output/zh/hsk1/failed_items.jsonl
 
 ```bash
 # Example: Enrich Mandarin HSK1 grammar
-python -m src.pipeline.cli.enrich_grammar \
+python -m src.havachat.cli.enrich_grammar \
   --language zh \
   --level HSK1 \
   --input sources/mandarin/hsk1_grammar.csv \
@@ -141,7 +141,7 @@ python -m src.pipeline.cli.enrich_grammar \
   --output $HAVACHAT_KNOWLEDGE_PATH/generated content/Mandarin/HSK1/grammar/
 
 # Example: Enrich French A1 grammar
-python -m src.pipeline.cli.enrich_grammar \
+python -m src.havachat.cli.enrich_grammar \
   --language fr \
   --level A1 \
   --input sources/french/a1_grammar.md \
@@ -174,7 +174,7 @@ Summary:
 
 ```bash
 # Example: Generate pronunciation learning items from Mandarin vocab
-python -m src.pipeline.cli.generate_other_categories \
+python -m src.havachat.cli.generate_other_categories \
   --language zh \
   --level HSK1 \
   --category pronunciation \
@@ -182,7 +182,7 @@ python -m src.pipeline.cli.generate_other_categories \
   --output $HAVACHAT_KNOWLEDGE_PATH/generated content/Mandarin/HSK1/pronunciation/
 
 # Example: Generate functional language items from French grammar
-python -m src.pipeline.cli.generate_other_categories \
+python -m src.havachat.cli.generate_other_categories \
   --language fr \
   --level A1 \
   --category functional \
@@ -190,7 +190,7 @@ python -m src.pipeline.cli.generate_other_categories \
   --output $HAVACHAT_KNOWLEDGE_PATH/generated content/French/A1/functional/
 
 # Example: Generate cultural notes from Japanese vocab
-python -m src.pipeline.cli.generate_other_categories \
+python -m src.havachat.cli.generate_other_categories \
   --language ja \
   --level N5 \
   --category cultural \
@@ -232,7 +232,7 @@ Summary:
 
 ```bash
 # Example: Generate Mandarin HSK2 conversation
-python -m src.pipeline.cli.generate_content \
+python -m src.havachat.cli.generate_content \
   --language zh \
   --level HSK2 \
   --type conversation \
@@ -242,7 +242,7 @@ python -m src.pipeline.cli.generate_content \
   --output $HAVACHAT_KNOWLEDGE_PATH/generated content/Mandarin/HSK2/conversations/
 
 # Example: Generate French A1 story
-python -m src.pipeline.cli.generate_content \
+python -m src.havachat.cli.generate_content \
   --language fr \
   --level A1 \
   --type story \
@@ -292,7 +292,7 @@ Validation:
 
 ```bash
 # Example: Generate questions for a conversation
-python -m src.pipeline.cli.generate_questions \
+python -m src.havachat.cli.generate_questions \
   --content-id b50e8400-e29b-41d4-a716-446655440000 \
   --language zh \
   --level HSK2 \
@@ -328,14 +328,14 @@ Answerability validation:
 
 ```bash
 # Example: Validate all French A1 content
-python -m src.pipeline.cli.run_qa_gates \
+python -m src.havachat.cli.run_qa_gates \
   --language fr \
   --level A1 \
   --content-dir $HAVACHAT_KNOWLEDGE_PATH/generated content/French/A1/ \
   --output $HAVACHAT_KNOWLEDGE_PATH/generated content/French/A1/qa_reports/
 
 # Validate specific content type
-python -m src.pipeline.cli.run_qa_gates \
+python -m src.havachat.cli.run_qa_gates \
   --language zh \
   --level HSK2 \
   --content-type conversations \
@@ -406,7 +406,7 @@ The live API accepts scenario descriptions and generates content on-demand, buil
 
 ```bash
 # Start the live API server
-python -m src.pipeline.api.server \
+python -m src.havachat.api.server \
   --host 0.0.0.0 \
   --port 8001 \
   --workers 4
@@ -588,11 +588,11 @@ For production batch processing, use LangGraph orchestration:
 
 ```bash
 # Run full enrichment pipeline with retries and checkpointing
-python -m src.pipeline.langgraph.enrichment_graph \
+python -m src.havachat.langgraph.enrichment_graph \
   --config configs/mandarin_hsk1_enrichment.json
 
 # Run full content generation pipeline
-python -m src.pipeline.langgraph.generation_graph \
+python -m src.havachat.langgraph.generation_graph \
   --config configs/french_a1_content_generation.json
 ```
 
@@ -639,7 +639,7 @@ If enrichment fails with validation errors:
 cat $HAVACHAT_KNOWLEDGE_PATH/generated content/Mandarin/HSK1/manual_review/vocab_failures.jsonl
 
 # Retry failed items with higher temperature
-python -m src.pipeline.cli.enrich_vocab \
+python -m src.havachat.cli.enrich_vocab \
   --input manual_review/vocab_failures.jsonl \
   --retry-mode \
   --temperature 0.9
@@ -649,12 +649,12 @@ python -m src.pipeline.cli.enrich_vocab \
 
 ```bash
 # Validate individual file against schema
-python -m src.pipeline.validators.schema \
+python -m src.havachat.validators.schema \
   --file French/A1/vocab/item-550e8400.json \
   --schema contracts/learning_item.schema.json
 
 # Auto-fix common issues (missing fields, type mismatches)
-python -m src.pipeline.validators.schema \
+python -m src.havachat.validators.schema \
   --file French/A1/vocab/item-550e8400.json \
   --auto-fix
 ```
@@ -663,12 +663,12 @@ python -m src.pipeline.validators.schema \
 
 ```bash
 # Process in parallel (8 workers)
-python -m src.pipeline.cli.enrich_vocab \
+python -m src.havachat.cli.enrich_vocab \
   --input hsk1_vocab.tsv \
   --workers 8
 
 # Use faster model for simple enrichment
-python -m src.pipeline.cli.enrich_vocab \
+python -m src.havachat.cli.enrich_vocab \
   --input hsk1_vocab.tsv \
   --model gpt-3.5-turbo  # Default: gpt-4
 

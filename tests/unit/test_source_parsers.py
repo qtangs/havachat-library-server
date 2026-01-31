@@ -3,7 +3,7 @@
 import pytest
 from pathlib import Path
 
-from pipeline.parsers.source_parsers import (
+from havachat.parsers.source_parsers import (
     parse_mandarin_vocab_tsv,
     parse_japanese_vocab_json,
     parse_french_vocab_tsv,

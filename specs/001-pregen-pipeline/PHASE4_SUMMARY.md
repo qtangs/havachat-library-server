@@ -50,7 +50,7 @@ Successfully implemented Phase 4 of the pre-generation pipeline, specifically th
 **Usage Example**:
 ```bash
 # Dry run
-python -m src.pipeline.cli.enrich_grammar \
+python -m src.havachat.cli.enrich_grammar \
     --language zh --level HSK1 \
     --input data/hsk1_grammar.csv \
     --enricher mandarin \
@@ -58,7 +58,7 @@ python -m src.pipeline.cli.enrich_grammar \
     --dry-run --max-items 5
 
 # Full enrichment with parallel processing
-python -m src.pipeline.cli.enrich_grammar \
+python -m src.havachat.cli.enrich_grammar \
     --language zh --level HSK1 \
     --input data/hsk1_grammar.csv \
     --enricher mandarin \
@@ -179,7 +179,7 @@ PYTHONPATH=src uv run python -m pytest tests/unit/test_mandarin_grammar_enricher
 PYTHONPATH=src uv run python -m pytest tests/integration/test_end_to_end_grammar.py -v
 
 # Dry-run CLI test
-PYTHONPATH=src uv run python -m src.pipeline.cli.enrich_grammar \
+PYTHONPATH=src uv run python -m src.havachat.cli.enrich_grammar \
     --language zh --level HSK1 \
     --input tests/fixtures/mandarin_grammar_sample.csv \
     --enricher mandarin \

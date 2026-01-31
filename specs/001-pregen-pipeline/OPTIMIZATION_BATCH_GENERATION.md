@@ -174,7 +174,7 @@ except Exception as e:
 
 ✅ Import test passed:
 ```bash
-$ PYTHONPATH=src uv run python -c "from pipeline.generators.learning_item_generator import BaseLearningItemGenerator; print('✓ Import successful')"
+$ PYTHONPATH=src uv run python -c "from havachat.generators.learning_item_generator import BaseLearningItemGenerator; print('✓ Import successful')"
 ✓ Import successful
 ```
 

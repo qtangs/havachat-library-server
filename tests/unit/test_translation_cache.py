@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from src.pipeline.utils.translation_cache import TranslationCache
+from src.havachat.utils.translation_cache import TranslationCache
 
 
 @pytest.fixture

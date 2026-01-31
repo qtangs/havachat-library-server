@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from src.pipeline.enrichers.grammar.mandarin import MandarinGrammarEnricher, ChineseGrammarEnriched
-from src.pipeline.validators.schema import Category, LevelSystem
+from src.havachat.enrichers.grammar.mandarin import MandarinGrammarEnricher, ChineseGrammarEnriched
+from src.havachat.validators.schema import Category, LevelSystem
 
 
 @pytest.fixture
@@ -129,7 +129,7 @@ def test_validate_output_valid():
     enricher = MandarinGrammarEnricher(llm_client=None)
     
     # Create mock enriched item
-    from src.pipeline.validators.schema import LearningItem, Example
+    from src.havachat.validators.schema import LearningItem, Example
     from datetime import datetime, UTC
     
     enriched = LearningItem(
@@ -161,7 +161,7 @@ def test_validate_output_wrong_category():
     """Test validation fails for wrong category."""
     enricher = MandarinGrammarEnricher(llm_client=None)
     
-    from src.pipeline.validators.schema import LearningItem, Example
+    from src.havachat.validators.schema import LearningItem, Example
     from datetime import datetime, UTC
     
     enriched = LearningItem(
@@ -193,7 +193,7 @@ def test_validate_output_mismatched_target():
     """Test validation fails for mismatched target_item."""
     enricher = MandarinGrammarEnricher(llm_client=None)
     
-    from src.pipeline.validators.schema import LearningItem, Example
+    from src.havachat.validators.schema import LearningItem, Example
     from datetime import datetime, UTC
     
     enriched = LearningItem(
@@ -225,7 +225,7 @@ def test_validate_output_insufficient_examples():
     """Test validation fails for insufficient examples."""
     enricher = MandarinGrammarEnricher(llm_client=None)
     
-    from src.pipeline.validators.schema import LearningItem, Example
+    from src.havachat.validators.schema import LearningItem, Example
     from datetime import datetime, UTC
     
     # This test verifies our validate_output logic
@@ -262,7 +262,7 @@ def test_validate_output_no_chinese_characters():
     """Test validation fails if examples don't contain Chinese."""
     enricher = MandarinGrammarEnricher(llm_client=None)
     
-    from src.pipeline.validators.schema import LearningItem, Example
+    from src.havachat.validators.schema import LearningItem, Example
     from datetime import datetime, UTC
     
     enriched = LearningItem(
@@ -301,7 +301,7 @@ def test_system_prompt():
     assert "mega-item" in prompt.lower()
 
 
-@patch('src.pipeline.enrichers.grammar.mandarin.AzureTranslationHelper')
+@patch('src.havachat.enrichers.grammar.mandarin.AzureTranslationHelper')
 def test_enricher_initialization_with_azure(mock_azure_class):
     """Test enricher initialization with Azure Translation."""
     mock_translator = MagicMock()
@@ -312,7 +312,7 @@ def test_enricher_initialization_with_azure(mock_azure_class):
     assert enricher.azure_translator is not None
 
 
-@patch('src.pipeline.enrichers.grammar.mandarin.AzureTranslationHelper')
+@patch('src.havachat.enrichers.grammar.mandarin.AzureTranslationHelper')
 def test_enricher_initialization_without_azure(mock_azure_class):
     """Test enricher initialization when Azure Translation fails."""
     mock_azure_class.side_effect = ValueError("No API key")

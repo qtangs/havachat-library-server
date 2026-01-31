@@ -202,9 +202,9 @@ All NEEDS CLARIFICATION items from Technical Context have been resolved through 
 
 **Workflow**:
 1. Implement enricher subclasses with LLM prompts
-2. Test with `python -m src.pipeline.cli.enrich_vocab --input test.tsv --output out/`
+2. Test with `python -m src.havachat.cli.enrich_vocab --input test.tsv --output out/`
 3. Add LangGraph orchestration in `enrichment_graph.py`
-4. Run full graph: `python -m src.pipeline.langgraph.enrichment_graph --config config.json`
+4. Run full graph: `python -m src.havachat.langgraph.enrichment_graph --config config.json`
 
 ## 11. Two-Tier Architecture: Batch + Live API
 
@@ -337,7 +337,7 @@ def system_prompt(self) -> str:
 **Implementation**:
 ```bash
 # Process 5 items in parallel
-python -m src.pipeline.cli.enrich_vocab \
+python -m src.havachat.cli.enrich_vocab \
   --language zh --level HSK1 \
   --input data.tsv --enricher mandarin \
   --output output.json \

@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pydantic import BaseModel, Field
 
-from src.pipeline.utils.llm_client import LLMClient
+from src.havachat.utils.llm_client import LLMClient
 
 
 class MockResponse(BaseModel):
@@ -17,8 +17,8 @@ class MockResponse(BaseModel):
 class TestLLMClient:
     """Test LLMClient with mocked API responses."""
 
-    @patch("src.pipeline.utils.llm_client.OpenAI")
-    @patch("src.pipeline.utils.llm_client.instructor.from_openai")
+    @patch("src.havachat.utils.llm_client.OpenAI")
+    @patch("src.havachat.utils.llm_client.instructor.from_openai")
     def test_client_initialization(self, mock_from_openai, mock_openai):
         """Test that LLMClient initializes correctly."""
         mock_instructor_client = MagicMock()
@@ -32,8 +32,8 @@ class TestLLMClient:
         mock_openai.assert_called_once_with(api_key="test-key")
         mock_from_openai.assert_called_once()
 
-    @patch("src.pipeline.utils.llm_client.OpenAI")
-    @patch("src.pipeline.utils.llm_client.instructor.from_openai")
+    @patch("src.havachat.utils.llm_client.OpenAI")
+    @patch("src.havachat.utils.llm_client.instructor.from_openai")
     def test_successful_generate(self, mock_from_openai, mock_openai):
         """Test successful structured response generation."""
         # Mock the Instructor client
@@ -55,8 +55,8 @@ class TestLLMClient:
         assert result.count == 2
         mock_instructor_client.chat.completions.create.assert_called_once()
 
-    @patch("src.pipeline.utils.llm_client.OpenAI")
-    @patch("src.pipeline.utils.llm_client.instructor.from_openai")
+    @patch("src.havachat.utils.llm_client.OpenAI")
+    @patch("src.havachat.utils.llm_client.instructor.from_openai")
     def test_generate_with_system_prompt(self, mock_from_openai, mock_openai):
         """Test generation with system prompt."""
         mock_instructor_client = MagicMock()
@@ -80,9 +80,9 @@ class TestLLMClient:
         assert messages[1]["role"] == "user"
         assert messages[1]["content"] == "User prompt"
 
-    @patch("src.pipeline.utils.llm_client.OpenAI")
-    @patch("src.pipeline.utils.llm_client.instructor.from_openai")
-    @patch("src.pipeline.utils.llm_client.time.sleep")  # Mock sleep to speed up test
+    @patch("src.havachat.utils.llm_client.OpenAI")
+    @patch("src.havachat.utils.llm_client.instructor.from_openai")
+    @patch("src.havachat.utils.llm_client.time.sleep")  # Mock sleep to speed up test
     def test_retry_on_failure(self, mock_sleep, mock_from_openai, mock_openai):
         """Test retry logic on API failure."""
         mock_instructor_client = MagicMock()
@@ -107,9 +107,9 @@ class TestLLMClient:
         # Verify sleep was called twice (after first two failures)
         assert mock_sleep.call_count == 2
 
-    @patch("src.pipeline.utils.llm_client.OpenAI")
-    @patch("src.pipeline.utils.llm_client.instructor.from_openai")
-    @patch("src.pipeline.utils.llm_client.time.sleep")
+    @patch("src.havachat.utils.llm_client.OpenAI")
+    @patch("src.havachat.utils.llm_client.instructor.from_openai")
+    @patch("src.havachat.utils.llm_client.time.sleep")
     def test_all_retries_fail(self, mock_sleep, mock_from_openai, mock_openai):
         """Test that exception is raised when all retries fail."""
         mock_instructor_client = MagicMock()
@@ -162,8 +162,8 @@ class TestLLMClient:
         assert client._calculate_backoff_delay(5) == 10.0  # Would be 16, capped at 10
         assert client._calculate_backoff_delay(10) == 10.0  # Would be 512, capped at 10
 
-    @patch("src.pipeline.utils.llm_client.OpenAI")
-    @patch("src.pipeline.utils.llm_client.instructor.from_openai")
+    @patch("src.havachat.utils.llm_client.OpenAI")
+    @patch("src.havachat.utils.llm_client.instructor.from_openai")
     def test_generate_with_max_tokens(self, mock_from_openai, mock_openai):
         """Test generation with max_tokens parameter."""
         mock_instructor_client = MagicMock()
@@ -181,8 +181,8 @@ class TestLLMClient:
         call_args = mock_instructor_client.chat.completions.create.call_args
         assert call_args.kwargs["max_tokens"] == 100
 
-    @patch("src.pipeline.utils.llm_client.OpenAI")
-    @patch("src.pipeline.utils.llm_client.instructor.from_openai")
+    @patch("src.havachat.utils.llm_client.OpenAI")
+    @patch("src.havachat.utils.llm_client.instructor.from_openai")
     def test_generate_with_custom_temperature(self, mock_from_openai, mock_openai):
         """Test generation with custom temperature."""
         mock_instructor_client = MagicMock()

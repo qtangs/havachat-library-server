@@ -129,7 +129,7 @@ For languages without character validation implemented (English, Spanish, etc.),
 When generating content using the CLI:
 
 ```bash
-python -m src.pipeline.cli.generate_content \
+python -m src.havachat.cli.generate_content \
     --language zh \
     --level HSK1 \
     --topic "Daily Life" \

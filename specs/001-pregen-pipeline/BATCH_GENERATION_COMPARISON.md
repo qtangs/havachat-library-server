@@ -244,7 +244,7 @@ If migrating existing loop-based generation to batch:
 
 5. ✅ **Test import and CLI**
    ```bash
-   python -c "from pipeline.generators import BaseLearningItemGenerator"
+   python -c "from havachat.generators import BaseLearningItemGenerator"
    python generate_learning_items.py --help
    ```
 

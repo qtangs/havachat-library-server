@@ -34,7 +34,7 @@ Cache files are stored in CSV format with one file per language pair (e.g., `tra
 The cache is automatically enabled when using `AzureTranslationHelper`:
 
 ```python
-from pipeline.utils.azure_translation import AzureTranslationHelper
+from havachat.utils.azure_translation import AzureTranslationHelper
 
 # Initialize with cache enabled (default)
 translator = AzureTranslationHelper(enable_cache=True, cache_ttl_days=30)
@@ -57,7 +57,7 @@ cached_translations = translator.translate_batch(
 #### Google Translate
 
 ```python
-from pipeline.utils.google_translate import GoogleTranslateHelper
+from havachat.utils.google_translate import GoogleTranslateHelper
 
 # Initialize with cache enabled (default)
 translator = GoogleTranslateHelper(enable_cache=True, cache_ttl_days=30)
@@ -96,7 +96,7 @@ translator = AzureTranslationHelper(enable_cache=True, cache_ttl_days=7)
 For advanced use cases, you can use the cache directly:
 
 ```python
-from pipeline.utils.translation_cache import TranslationCache
+from havachat.utils.translation_cache import TranslationCache
 
 # Initialize cache
 cache = TranslationCache(ttl_days=30, enabled=True)

@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from src.pipeline.enrichers.grammar.mandarin import MandarinGrammarEnricher
-from src.pipeline.validators.schema import LevelSystem
+from src.havachat.enrichers.grammar.mandarin import MandarinGrammarEnricher
+from src.havachat.validators.schema import LevelSystem
 
 
 @pytest.fixture
@@ -150,7 +150,7 @@ def test_live_enrichment_single_item(tmp_path):
     This test is skipped by default. Run with:
     pytest -v -m "not skipif" tests/integration/test_end_to_end_grammar.py
     """
-    from src.pipeline.utils.llm_client import LLMClient
+    from src.havachat.utils.llm_client import LLMClient
     
     # Create simple CSV
     csv_content = """类别,类别名称,细目,语法内容

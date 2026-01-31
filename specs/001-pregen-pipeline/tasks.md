@@ -820,20 +820,20 @@ Phase 13 (Polish)
 **Example MVP Command Sequence**:
 ```bash
 # Stage 1: Enrich vocab (COMPLETED)
-python -m src.pipeline.cli.enrich_vocab \
+python -m src.havachat.cli.enrich_vocab \
   --language zh --level HSK1 \
   --input sources/hsk1_vocab.tsv \
   --enricher mandarin \
   --parallel 5 --resume
 
 # Stage 2: Enrich grammar (NEXT)
-python -m src.pipeline.cli.enrich_grammar \
+python -m src.havachat.cli.enrich_grammar \
   --language zh --level HSK1 \
   --input sources/hsk1_grammar.csv \
   --enricher mandarin
 
 # Stage 3: Run QA gates
-python -m src.pipeline.cli.run_qa_gates \
+python -m src.havachat.cli.run_qa_gates \
   --language zh --level HSK1 \
   --content-dir ../havachat-knowledge/generated content/Mandarin/HSK1/
 ```
@@ -851,12 +851,12 @@ python -m src.pipeline.cli.run_qa_gates \
 **Example Two-Stage Command Sequence**:
 ```bash
 # Stage 1: Generate ALL learning items first
-python -m src.pipeline.cli.generate_learning_items \
+python -m src.havachat.cli.generate_learning_items \
   --language zh --level HSK1 \
   --category pronunciation \
   --source-dir ../havachat-knowledge/generated content/Mandarin/HSK1/vocab/
 
-python -m src.pipeline.cli.generate_learning_items \
+python -m src.havachat.cli.generate_learning_items \
   --language zh --level HSK1 \
   --category idiom \
   --source-dir ../havachat-knowledge/generated content/Mandarin/HSK1/vocab/
@@ -864,7 +864,7 @@ python -m src.pipeline.cli.generate_learning_items \
 # ... repeat for functional, cultural, writing_system, misc categories
 
 # Stage 2: Generate content using ALL learning items together
-python -m src.pipeline.cli.generate_content \
+python -m src.havachat.cli.generate_content \
   --language zh --level HSK1 \
   --topic "Food" \
   --num-conversations 5 \

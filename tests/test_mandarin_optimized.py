@@ -4,8 +4,8 @@ import json
 import os
 from pathlib import Path
 
-from src.pipeline.enrichers.vocab.mandarin_optimized import MandarinVocabEnricherOptimized
-from src.pipeline.utils.llm_client import LLMClient
+from src.havachat.enrichers.vocab.mandarin_optimized import MandarinVocabEnricherOptimized
+from src.havachat.utils.llm_client import LLMClient
 
 
 def test_optimized_enricher():

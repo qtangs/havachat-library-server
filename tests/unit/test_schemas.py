@@ -4,7 +4,7 @@ import pytest
 from datetime import datetime
 from pydantic import ValidationError
 
-from src.pipeline.validators.schema import (
+from src.havachat.validators.schema import (
     LevelSystem,
     Category,
     ContentType,

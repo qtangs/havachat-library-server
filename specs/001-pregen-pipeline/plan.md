@@ -219,12 +219,12 @@ Content generation happens AFTER all learning items have been generated for a gi
 
 ```bash
 # Stage 1: Generate all learning items first
-uv run python -m pipeline.cli.enrich_vocab --language zh --level hsk1 --source official_hsk1.tsv
-uv run python -m pipeline.cli.enrich_grammar --language zh --level hsk1 --source official_hsk1_grammar.csv
-uv run python -m pipeline.cli.generate_learning_items --language zh --level hsk1 --categories pronunciation,idioms,functional,cultural
+uv run python -m havachat.cli.enrich_vocab --language zh --level hsk1 --source official_hsk1.tsv
+uv run python -m havachat.cli.enrich_grammar --language zh --level hsk1 --source official_hsk1_grammar.csv
+uv run python -m havachat.cli.generate_learning_items --language zh --level hsk1 --categories pronunciation,idioms,functional,cultural
 
 # Stage 2: Generate content units per topic
-uv run python -m pipeline.cli.generate_content \
+uv run python -m havachat.cli.generate_content \
   --language zh \
   --level hsk1 \
   --topic "Food" \
@@ -233,7 +233,7 @@ uv run python -m pipeline.cli.generate_content \
   --output-dir ../havachat-knowledge/generated\ content/Mandarin/HSK1/
 
 # Repeat Stage 2 for each desired topic
-uv run python -m pipeline.cli.generate_content \
+uv run python -m havachat.cli.generate_content \
   --language zh \
   --level hsk1 \
   --topic "Meeting New People" \
@@ -243,7 +243,7 @@ uv run python -m pipeline.cli.generate_content \
 
 # Stage 3: Generate audio for learning items and content units
 # Generate audio for vocab items (single version, default opus format)
-uv run python -m pipeline.cli.generate_audio \
+uv run python -m havachat.cli.generate_audio \
   --language zh \
   --level hsk1 \
   --category vocab \
@@ -253,7 +253,7 @@ uv run python -m pipeline.cli.generate_audio \
   --output-dir ../havachat-knowledge/generated\ content/Mandarin/HSK1/02_Generated/audio/vocab/
 
 # Generate audio for conversations (voice pair for 2-speaker dialogues)
-uv run python -m pipeline.cli.generate_audio \
+uv run python -m havachat.cli.generate_audio \
   --language zh \
   --level hsk1 \
   --category conversations \
@@ -263,7 +263,7 @@ uv run python -m pipeline.cli.generate_audio \
   --output-dir ../havachat-knowledge/generated\ content/Mandarin/HSK1/02_Generated/audio/conversations/
 
 # Generate multiple versions for manual selection
-uv run python -m pipeline.cli.generate_audio \
+uv run python -m havachat.cli.generate_audio \
   --language zh \
   --level hsk1 \
   --category grammar \
@@ -272,12 +272,12 @@ uv run python -m pipeline.cli.generate_audio \
   --output-dir ../havachat-knowledge/generated\ content/Mandarin/HSK1/02_Generated/audio/grammar/
 
 # Select best version after manual review
-uv run python -m pipeline.cli.select_audio \
+uv run python -m havachat.cli.select_audio \
   --item-id abc123-def456 \
   --selected-version 2
 
 # Sync selected audio files to Cloudflare R2
-uv run python -m pipeline.cli.sync_audio \
+uv run python -m havachat.cli.sync_audio \
   --language zh \
   --level hsk1 \
   --category vocab \

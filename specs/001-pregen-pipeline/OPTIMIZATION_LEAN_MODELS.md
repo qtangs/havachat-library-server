@@ -343,7 +343,7 @@ This optimization mirrors the strategy used in enrichers:
 
 ✅ Import test passed:
 ```bash
-$ PYTHONPATH=src uv run python -c "from pipeline.generators.learning_item_generator import BaseLearningItemGenerator, LeanLearningItem, LeanLearningItemBatch; print('✓ Import successful - lean models working')"
+$ PYTHONPATH=src uv run python -c "from havachat.generators.learning_item_generator import BaseLearningItemGenerator, LeanLearningItem, LeanLearningItemBatch; print('✓ Import successful - lean models working')"
 ✓ Import successful - lean models working
 ```
 
@@ -419,4 +419,4 @@ if self.azure_translator:
 
 ---
 
-*This optimization makes Phase 6 more cost-efficient and aligns with the lean model approach used throughout the enrichment pipeline.* 🚀
+*This optimization makes Phase 6 more cost-efficient and aligns with the lean model approach used throughout the enrichment havachat.* 🚀

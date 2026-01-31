@@ -1,6 +1,6 @@
 """Test token tracking and usage summary in LLMClient."""
 
-from src.pipeline.utils.llm_client import LLMClient, TokenUsage
+from src.havachat.utils.llm_client import LLMClient, TokenUsage
 
 
 def test_token_tracking():

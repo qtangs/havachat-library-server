@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.pipeline.utils.romanization import (
+from src.havachat.utils.romanization import (
     clean_sense_marker,
     extract_sense_marker,
     get_japanese_romaji,
