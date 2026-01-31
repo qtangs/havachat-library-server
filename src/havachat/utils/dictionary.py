@@ -7,6 +7,7 @@ Uses spaCy for tokenization and POS tagging.
 """
 
 import logging
+import os
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Tuple
 
@@ -19,7 +20,49 @@ except ImportError:
     spacy = None
     Doc = None
 
+try:
+    import ctypes
+    from macdict.foundation import (
+        CFStringCreateWithBytes, CFStringEncodingUTF8, CFRange,
+        DCSCopyTextDefinition, objc, sel_name
+    )
+    HAS_MACDICT = True
+except ImportError:
+    HAS_MACDICT = False
+    ctypes = None
+
 logger = logging.getLogger(__name__)
+
+
+def macdict_lookup_word(word: str) -> Optional[str]:
+    """Look up word in macOS Dictionary.app.
+    
+    Fixed version that properly handles multibyte UTF-8 characters like Chinese.
+    """
+    if not HAS_MACDICT:
+        return None
+    
+    try:
+        word_bytes = word.encode('utf-8')
+        word_cfstring = CFStringCreateWithBytes(
+            None, word_bytes, len(word_bytes), CFStringEncodingUTF8, False)
+        
+        # Use character length, not byte length for CFRange
+        definition_nsstring = DCSCopyTextDefinition(
+            None, word_cfstring, CFRange(0, len(word)))
+        
+        if not definition_nsstring:
+            return None
+        
+        definition = ctypes.c_char_p(objc.objc_msgSend(
+            definition_nsstring, sel_name('UTF8String')))
+        
+        if definition.value:
+            return definition.value.decode('utf-8')
+    except Exception as e:
+        logger.debug(f"macdict lookup failed for '{word}': {e}")
+    
+    return None
 
 
 class Dictionary(ABC):
@@ -47,15 +90,19 @@ class Dictionary(ABC):
                 self.nlp = spacy.load(spacy_model)
                 logger.info(f"Loaded spaCy model: {spacy_model}")
             except OSError:
-                logger.warning(
+                error_msg = (
                     f"spaCy model '{spacy_model}' not found. "
-                    f"Install with: python -m spacy download {spacy_model}"
+                    f"Install with: PYTHONPATH=src uv run python -m spacy download {spacy_model}"
                 )
+                logger.error(error_msg)
+                raise RuntimeError(error_msg)
         else:
-            logger.warning(
+            error_msg = (
                 "spaCy not installed. Dictionary tokenization will not work. "
-                "Install with: pip install spacy"
+                "Install with: uv add spacy"
             )
+            logger.error(error_msg)
+            raise RuntimeError(error_msg)
     
     @abstractmethod
     def load_dictionary(self) -> None:
@@ -157,23 +204,41 @@ class Dictionary(ABC):
 class CCCEDICTDictionary(Dictionary):
     """CC-CEDICT dictionary for Mandarin Chinese.
     
-    Loads CC-CEDICT entries from the cc_cedict_parser module and provides
-    lookup for both simplified and traditional Chinese characters.
+    Loads dictionary entries from macOS Dictionary.app (via macdict) if available,
+    otherwise falls back to CC-CEDICT parser.
     Uses spaCy zh_core_web_sm model for tokenization.
     """
     
     def __init__(self):
         """Initialize CC-CEDICT dictionary for Mandarin Chinese."""
         super().__init__(language="zh", spacy_model="zh_core_web_sm")
+        self.use_macdict = False
         self.load_dictionary()
     
     def load_dictionary(self) -> None:
-        """Load CC-CEDICT dictionary entries.
+        """Load dictionary entries from macOS Dictionary or CC-CEDICT.
         
-        Creates a lookup dictionary mapping simplified/traditional Chinese to English.
+        Priority:
+        1. macOS Dictionary.app (via macdict) - better contextual definitions
+        2. CC-CEDICT - fallback for non-macOS or if macdict unavailable
         """
+        # Try macOS Dictionary first
+        if HAS_MACDICT:
+            try:
+                # Test if macdict works with Chinese (use a common word)
+                test_result = macdict_lookup_word("好")
+                if test_result:
+                    self.use_macdict = True
+                    logger.info("Using macOS Dictionary.app for Chinese lookups")
+                    return
+                else:
+                    logger.info("macOS Dictionary returned no results for Chinese, falling back to CC-CEDICT")
+            except Exception as e:
+                logger.info(f"macOS Dictionary error ({e}), falling back to CC-CEDICT")
+        
+        # Fall back to CC-CEDICT
         try:
-            from havachat.enrichers.vocab.chinese.cc_cedict_parser import cc_cedict
+            from src.havachat.enrichers.vocab.chinese.cc_cedict_parser import cc_cedict
             
             if not cc_cedict:
                 logger.warning("CC-CEDICT dictionary not loaded")
@@ -196,6 +261,72 @@ class CCCEDICTDictionary(Dictionary):
             logger.warning(f"Failed to import CC-CEDICT parser: {e}")
         except Exception as e:
             logger.warning(f"Failed to load CC-CEDICT dictionary: {e}")
+    
+    def tokenize_and_lookup(self, text: str) -> List[Tuple[str, str, Optional[str]]]:
+        """Tokenize text using spaCy and look up each word.
+        
+        If macdict is available, uses macOS Dictionary for lookups.
+        Otherwise uses CC-CEDICT lookup dictionary.
+        
+        Args:
+            text: Text to tokenize and look up
+        
+        Returns:
+            List of (word, pos, definition) tuples
+        """
+        if not self.nlp:
+            logger.warning(f"spaCy model not loaded for {self.language}")
+            return []
+        
+        # Parse text with spaCy
+        doc: Doc = self.nlp(text)
+        results = []
+        
+        for token in doc:
+            # Skip whitespace and punctuation
+            if token.is_space or token.is_punct:
+                continue
+            
+            # Use lemma for dictionary lookup (base form)
+            pos = token.pos_
+            
+            # Look up definition
+            if self.use_macdict and HAS_MACDICT:
+                # Use macOS Dictionary
+                try:
+                    definition = macdict_lookup_word(token.text)
+                    # Clean up the definition (remove HTML tags, limit length)
+                    if definition:
+                        # Extract just the first definition if multiple exist
+                        import re
+                        # Remove HTML tags
+                        definition = re.sub(r'<[^>]+>', '', definition)
+                        # Take first line/definition
+                        definition = definition.split('\n')[0].strip()
+                        # Limit length
+                        if len(definition) > 200:
+                            definition = definition[:197] + "..."
+                except Exception as e:
+                    logger.debug(f"macdict lookup failed for '{token.text}': {e}")
+                    definition = None
+            else:
+                # Use CC-CEDICT dictionary
+                lemma = token.lemma_
+                definition = self.lookup_dict.get(lemma) or self.lookup_dict.get(token.text)
+            
+            results.append((token.text, pos, definition))
+        
+        return results
+    
+    def size(self) -> int:
+        """Get the number of entries in the dictionary.
+        
+        Returns:
+            Number of entries (0 if using macdict)
+        """
+        if self.use_macdict:
+            return 0  # macdict is dynamic, no fixed size
+        return len(self.lookup_dict)
 
 
 class DictionaryFactory:
@@ -207,12 +338,21 @@ class DictionaryFactory:
     def get_dictionary(cls, language: str) -> Optional[Dictionary]:
         """Get or create a dictionary for the specified language.
         
+        Checks USE_DICTIONARY_LOOKUP environment variable. If false or not set,
+        returns None to disable dictionary lookups.
+        
         Args:
             language: ISO 639-1 language code (e.g., "zh", "ja", "fr")
         
         Returns:
-            Dictionary instance for the language, or None if not available
+            Dictionary instance for the language, or None if not available or disabled
         """
+        # Check if dictionary lookup is enabled
+        use_dictionary = os.getenv("USE_DICTIONARY_LOOKUP", "true").lower() == "true"
+        if not use_dictionary:
+            logger.info("Dictionary lookup disabled via USE_DICTIONARY_LOOKUP environment variable")
+            return None
+        
         # Return cached dictionary if available
         if language in cls._dictionaries:
             return cls._dictionaries[language]
@@ -223,9 +363,10 @@ class DictionaryFactory:
         if language == "zh":
             try:
                 dictionary = CCCEDICTDictionary()
-                logger.info(f"Created CC-CEDICT dictionary ({dictionary.size()} entries)")
+                source = "macOS Dictionary.app" if dictionary.use_macdict else f"CC-CEDICT ({dictionary.size()} entries)"
+                logger.info(f"Created Chinese dictionary using {source}")
             except Exception as e:
-                logger.warning(f"Failed to create CC-CEDICT dictionary: {e}")
+                logger.warning(f"Failed to create Chinese dictionary: {e}")
         
         # Add more language dictionaries here in the future:
         # elif language == "ja":

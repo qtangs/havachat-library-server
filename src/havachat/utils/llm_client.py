@@ -11,6 +11,7 @@ import time
 from typing import Any, Optional, Type, TypeVar
 
 import instructor
+from langfuse import observe
 from pydantic import BaseModel
 
 T = TypeVar("T", bound=BaseModel)
@@ -38,6 +39,7 @@ class LLMClient:
     - Token usage tracking and cost estimation
     - Request/response logging (prompt hash, tokens, latency)
     - Support for different OpenAI models
+    - Langfuse tracing for observability
     """
 
     def __init__(
@@ -47,6 +49,7 @@ class LLMClient:
         max_retries: int = 3,
         base_delay: float = 1.0,
         max_delay: float = 60.0,
+        enable_langfuse: bool = True,
     ):
         """Initialize LLM client with Instructor.
 
@@ -57,11 +60,13 @@ class LLMClient:
             max_retries: Maximum number of retry attempts (default: 3)
             base_delay: Base delay for exponential backoff in seconds (default: 1.0)
             max_delay: Maximum delay between retries in seconds (default: 60.0)
+            enable_langfuse: Enable Langfuse tracing (default: True, requires LANGFUSE_* env vars)
         """
         self.model = model or os.getenv("LLM_MODEL", "gpt-4o-mini")
         self.max_retries = max_retries
         self.base_delay = base_delay
         self.max_delay = max_delay
+        self.enable_langfuse = enable_langfuse
         
         # Token tracking
         self.total_usage = TokenUsage()
@@ -69,15 +74,31 @@ class LLMClient:
         # Detect provider based on model name
         self.provider = self._detect_provider(self.model)
 
-        # Initialize provider-specific client
+        # Initialize provider-specific client with Langfuse integration
         if self.provider == "openai":
-            from openai import OpenAI
-            client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
-            self.client = instructor.from_openai(client)
+            if enable_langfuse:
+                # Use Langfuse-wrapped OpenAI client for automatic tracing
+                from langfuse.openai import OpenAI
+                client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
+                logger.info("Langfuse tracing enabled for OpenAI")
+            else:
+                from openai import OpenAI
+                client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
+            # Patch with Instructor for structured outputs
+            self.client = instructor.patch(client)
+            
         elif self.provider == "anthropic":
-            from anthropic import Anthropic
-            client = Anthropic(api_key=api_key or os.getenv("ANTHROPIC_API_KEY"))
-            self.client = instructor.from_anthropic(client)
+            if enable_langfuse:
+                # Use Langfuse-wrapped Anthropic client for automatic tracing
+                from langfuse.anthropic import Anthropic
+                client = Anthropic(api_key=api_key or os.getenv("ANTHROPIC_API_KEY"))
+                logger.info("Langfuse tracing enabled for Anthropic")
+            else:
+                from anthropic import Anthropic
+                client = Anthropic(api_key=api_key or os.getenv("ANTHROPIC_API_KEY"))
+            # Patch with Instructor for structured outputs
+            self.client = instructor.patch(client, mode=instructor.Mode.ANTHROPIC_TOOLS)
+            
         elif self.provider == "gemini":
             import google.generativeai as genai
             api_key_to_use = api_key or os.getenv("GOOGLE_GENERATIVE_AI_API_KEY")
@@ -86,6 +107,8 @@ class LLMClient:
             genai.configure(api_key=api_key_to_use)
             client = genai.GenerativeModel(model_name=self.model)
             self.client = instructor.from_gemini(client=client, mode=instructor.Mode.GEMINI_JSON)
+            if enable_langfuse:
+                logger.warning("Langfuse tracing not yet supported for Gemini provider")
         else:
             raise ValueError(f"Unsupported model: {self.model}")
 
@@ -112,6 +135,7 @@ class LLMClient:
             logger.warning(f"Unknown model prefix '{model}', defaulting to OpenAI provider")
             return "openai"
 
+    @observe(as_type="generation")
     def generate(
         self,
         prompt: str,

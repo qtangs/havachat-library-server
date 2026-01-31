@@ -11,6 +11,7 @@ dependencies = [
     "google-cloud-translate>=3.0.0",
     "google-genai>=1.61.0",
     "loguru>=0.7.3",
+    "macdict>=0.1.4",
     "meilisearch>=0.40.0",
     "opencc>=1.2.0",
     "pip>=26.0",
@@ -35,6 +36,7 @@ langgraph = [
     "instructor>=1.0.0",
     "openai>=1.0.0",
     "anthropic>=0.40.0",
+    "langfuse>=2.0.0",
 ]
 
 pdf = [
