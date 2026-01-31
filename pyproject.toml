@@ -8,18 +8,21 @@ dependencies = [
     "azure-ai-translation-text>=1.0.1",
     "boto3>=1.35.0",
     "elevenlabs>=1.0.0",
+    "google-cloud-translate>=3.0.0",
     "loguru>=0.7.3",
     "meilisearch>=0.40.0",
     "opencc>=1.2.0",
     "pykakasi>=2.3.0",
     "pypinyin>=0.55.0",
     "python-dotenv>=1.2.1",
-    "tqdm>=4.67.1",
+    "spacy>=3.8.11",
 ]
 
 [project.optional-dependencies]
 dev = [
     "black>=24.8.0",
+    "sacrebleu>=2.6.0",
+    "tqdm>=4.67.1",
 ]
 
 langgraph = [
@@ -41,3 +44,6 @@ pdf = [
 test = [
     "pytest>=8.0.0",
 ]
+
+[project.scripts]
+init = "main:main"

@@ -78,9 +78,6 @@ class VoiceConfigValidator:
         
         # Check that we have conversation voices for each required gender
         for i, gender in enumerate(speaker_genders):
-            if gender not in ["male", "female"]:
-                return False, f"Speaker {i+1}: Invalid gender '{gender}', must be 'male' or 'female'"
-            
             voices = self.config.get_conversation_voices(self.language_code, gender)
             if not voices:
                 return False, (

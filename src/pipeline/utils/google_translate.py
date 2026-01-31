@@ -1,46 +1,71 @@
-"""Azure Text Translation utility for adding English translations to examples.
+"""Google Translate API utility for translation.
 
-Provides 2M free characters per month.
+Provides translation using Google Cloud Translation API.
+Free tier: First 500,000 characters per month are free.
+
+Default: Uses v3 (Advanced) API which provides better quality translations.
+Fallback: Can use v2 (Basic) API if v3 is not available.
 """
 
 import os
-from typing import List, Tuple
+from typing import List, Literal
 
-from azure.ai.translation.text import TextTranslationClient
-from azure.core.credentials import AzureKeyCredential
-from azure.core.exceptions import HttpResponseError
+from google.cloud import translate_v2 as translate_v2
+from google.cloud import translate_v3 as translate_v3
 from loguru import logger
 
-from pipeline.utils.translation_cache import TranslationCache
 
-
-class AzureTranslationHelper:
-    """Helper for Azure Text Translation API with character usage tracking."""
+class GoogleTranslateHelper:
+    """Helper for Google Cloud Translation API with character usage tracking."""
     
-    def __init__(self, enable_cache: bool = True, cache_ttl_days: int = 30):
-        """Initialize Azure Translation client with credentials from environment.
+    def __init__(
+        self, 
+        enable_cache: bool = True, 
+        cache_ttl_days: int = 30,
+        version: Literal["v2", "v3"] = "v3",
+        project_id: str = None,
+        location: str = "global"
+    ):
+        """Initialize Google Translate client with credentials from environment.
         
         Args:
             enable_cache: Whether to enable translation caching (default: True)
             cache_ttl_days: Cache time-to-live in days (default: 30 / 1 month)
+            version: API version to use - "v2" (Basic) or "v3" (Advanced) (default: "v3")
+            project_id: GCP project ID (required for v3, auto-detected if not provided)
+            location: Location for v3 API (default: "global")
+        
+        Raises:
+            ValueError: If credentials are not set or client initialization fails
         """
-        self.apikey = os.getenv("AZURE_TEXT_TRANSLATION_APIKEY")
-        self.region = os.getenv("AZURE_TEXT_TRANSLATION_REGION")
+        self.version = version
+        self.project_id = project_id or os.getenv("GOOGLE_CLOUD_PROJECT")
+        self.location = location
         
-        if not self.apikey or not self.region:
-            raise ValueError(
-                "Azure Translation credentials not set. Please set AZURE_TEXT_TRANSLATION_APIKEY "
-                "and AZURE_TEXT_TRANSLATION_REGION environment variables."
-            )
-        
-        credential = AzureKeyCredential(self.apikey)
-        self.client = TextTranslationClient(credential=credential, region=self.region)
+        try:
+            if version == "v3":
+                # V3 API (Advanced) - better quality translations
+                if not self.project_id:
+                    raise ValueError(
+                        "Project ID required for v3 API. Set GOOGLE_CLOUD_PROJECT environment variable "
+                        "or pass project_id parameter."
+                    )
+                self.client = translate_v3.TranslationServiceClient()
+                self.parent = f"projects/{self.project_id}/locations/{self.location}"
+                logger.info(f"Initialized Google Translate v3 (Advanced) for project: {self.project_id}")
+            else:
+                # V2 API (Basic) - simpler but older
+                self.client = translate_v2.Client()
+                logger.info("Initialized Google Translate v2 (Basic)")
+        except Exception as e:
+            raise ValueError(f"Failed to initialize Google Translate {version} client: {e}")
         
         # Character usage tracking
         self.total_characters = 0
-        self.monthly_limit = 2_000_000  # 2M free characters per month
+        self.monthly_limit = 500_000  # 500K free characters per month
         
         # Translation cache for cost savings
+        from src.pipeline.utils.translation_cache import TranslationCache
         self.cache = TranslationCache(enabled=enable_cache, ttl_days=cache_ttl_days)
     
     def translate_batch(
@@ -62,7 +87,6 @@ class AzureTranslationHelper:
             List of translated texts in the same order as input
         
         Raises:
-            HttpResponseError: If translation API request fails
             RuntimeError: If monthly character limit is exceeded
         """
         if not texts:
@@ -70,7 +94,7 @@ class AzureTranslationHelper:
         
         # Check cache for existing translations
         cached_translations, missing_indices = self.cache.get_batch(
-            texts, from_language, to_language, service="azure"
+            texts, from_language, to_language, service="google"
         )
         
         # If all translations are cached, return immediately
@@ -93,30 +117,48 @@ class AzureTranslationHelper:
                 f"Remaining: {remaining:,}, Requested: {char_count:,}"
             )
             raise RuntimeError(
-                f"Azure Translation monthly limit exceeded. "
+                f"Google Translate monthly limit exceeded. "
                 f"{remaining:,} characters remaining, but {char_count:,} requested."
             )
         
         try:
-            response = self.client.translate(
-                body=texts_to_translate,
-                from_language=from_language,
-                to_language=[to_language]
-            )
-            
-            # Extract translations
-            new_translations = []
-            for translation in response:
-                if translation.translations:
-                    new_translations.append(translation.translations[0].text)
-                else:
-                    logger.warning(f"No translation returned for text: {texts_to_translate[len(new_translations)]}")
-                    new_translations.append("")  # Empty string for failed translations
+            # Translate based on API version
+            if self.version == "v3":
+                # V3 API - batch translate with advanced features
+                response = self.client.translate_text(
+                    parent=self.parent,
+                    contents=texts_to_translate,
+                    source_language_code=from_language,
+                    target_language_code=to_language,
+                    mime_type="text/plain"
+                )
+                
+                # Extract translations from v3 response
+                new_translations = [
+                    translation.translated_text 
+                    for translation in response.translations
+                ]
+            else:
+                # V2 API - returns list of dicts with 'translatedText' key
+                results = self.client.translate(
+                    texts_to_translate,
+                    source_language=from_language,
+                    target_language=to_language
+                )
+                
+                # Extract translations from v2 response
+                new_translations = []
+                for result in results:
+                    if isinstance(result, dict) and 'translatedText' in result:
+                        new_translations.append(result['translatedText'])
+                    else:
+                        logger.warning(f"Unexpected result format: {result}")
+                        new_translations.append("")
             
             # Update character usage
             self.total_characters += char_count
             logger.debug(
-                f"Translated {len(texts_to_translate)} texts ({char_count:,} chars). "
+                f"Translated {len(texts_to_translate)} texts ({char_count:,} chars) using {self.version}. "
                 f"Total usage: {self.total_characters:,} / {self.monthly_limit:,} "
                 f"({(self.total_characters / self.monthly_limit * 100):.2f}%)"
             )
@@ -127,7 +169,7 @@ class AzureTranslationHelper:
                 new_translations, 
                 from_language, 
                 to_language, 
-                service="azure"
+                service="google"
             )
             
             # Merge cached and new translations
@@ -142,10 +184,8 @@ class AzureTranslationHelper:
             
             return final_translations
             
-        except HttpResponseError as e:
-            logger.error(f"Azure Translation API error: {e.error.code if e.error else 'Unknown'}")
-            if e.error:
-                logger.error(f"Message: {e.error.message}")
+        except Exception as e:
+            logger.error(f"Google Translate API error: {e}")
             raise
     
     def translate_single(
@@ -172,6 +212,7 @@ class AzureTranslationHelper:
         
         Returns:
             Dictionary with usage stats:
+            - api_version: API version being used (v2 or v3)
             - total_characters: Total characters translated
             - monthly_limit: Monthly character limit
             - remaining: Characters remaining
@@ -182,6 +223,7 @@ class AzureTranslationHelper:
         usage_percent = (self.total_characters / self.monthly_limit) * 100
         
         return {
+            "api_version": self.version,
             "total_characters": self.total_characters,
             "monthly_limit": self.monthly_limit,
             "remaining": remaining,
@@ -192,4 +234,4 @@ class AzureTranslationHelper:
     def reset_usage(self):
         """Reset character usage counter (for testing or new month)."""
         self.total_characters = 0
-        logger.info("Azure Translation usage counter reset")
+        logger.info("Google Translate usage counter reset")

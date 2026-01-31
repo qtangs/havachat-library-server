@@ -49,6 +49,9 @@ logs/
 .dmypy.json
 dmypy.json
 
+# Translation cache (persistent, long-term storage)
+data/cache/
+
 # Jupyter Notebooks
 .ipynb_checkpoints/
 *.ipynb

@@ -169,6 +169,11 @@ def main():
         help="Use Azure Translation API instead of LLM for segment translations",
     )
     parser.add_argument(
+        "--use-google-translation",
+        action="store_true",
+        help="Use Google Translate API instead of LLM for segment translations (highest priority)",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Print plan without generating content",
@@ -214,6 +219,7 @@ def main():
         level=args.level,
         llm_client=llm_client,
         use_azure_translation=args.use_azure_translation,
+        use_google_translation=args.use_google_translation,
     )
     
     # Initialize usage tracker if requested

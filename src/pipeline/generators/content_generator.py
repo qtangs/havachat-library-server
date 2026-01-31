@@ -28,7 +28,10 @@ from pydantic import BaseModel, Field
 from pipeline.parsers.source_parsers import load_source_file
 from pipeline.prompts.content_generator_prompts import build_content_generation_system_prompt
 from pipeline.utils.azure_translation import AzureTranslationHelper
+from pipeline.utils.dictionary import DictionaryFactory
+from pipeline.utils.google_translate import GoogleTranslateHelper
 from pipeline.utils.llm_client import LLMClient
+from pipeline.utils.translation import translate_texts
 from pipeline.validators.schema import (
     Category,
     ContentType,
@@ -118,13 +121,12 @@ class SegmentDraft(BaseModel):
 
 
 class RevisedSegmentDraft(BaseModel):
-    """Revised segment with learning items and translation (from LLM or Azure)."""
+    """Revised segment with learning items."""
     
     speaker: Optional[int] = Field(
         None, description="Speaker index (0-based, references speakers in overview)"
     )
     text: str = Field(..., description="Text in target language")
-    translation: str = Field(..., description="English translation of the text")
     learning_item_ids: List[str] = Field(
         ..., description="Short UUIDs (8 chars) of learning items in this segment"
     )
@@ -157,7 +159,7 @@ class Critique(BaseModel):
 
 
 class RevisedContent(BaseModel):
-    """Revised content after critique (includes translations)."""
+    """Revised content after critique."""
     
     segments: List[RevisedSegmentDraft]
     improvements_made: List[str] = Field(
@@ -232,6 +234,7 @@ class ContentGenerator:
         level: str,
         llm_client: Optional[LLMClient] = None,
         use_azure_translation: bool = False,
+        use_google_translation: bool = False,
     ):
         """Initialize content generator.
 
@@ -241,12 +244,14 @@ class ContentGenerator:
             level: Target level (A1, HSK1, N5, etc.)
             llm_client: Optional LLM client (creates default if None)
             use_azure_translation: Use Azure Translation instead of LLM (default: False)
+            use_google_translation: Use Google Translate instead of LLM (default: False)
         """
         self.language = language
         self.level_system = level_system
         self.level = level
         self.llm_client = llm_client or LLMClient()
         self.use_azure_translation = use_azure_translation
+        self.use_google_translation = use_google_translation
 
         # Storage for loaded learning items
         self.all_learning_items: Dict[str, LearningItem] = {}
@@ -255,13 +260,29 @@ class ContentGenerator:
         # UUID mapping: short (8 chars) -> full UUID
         self.short_to_full_uuid: Dict[str, str] = {}
         
+        # Language dictionary for translation reference
+        self.dictionary = DictionaryFactory.get_dictionary(self.language)
+        if self.dictionary:
+            logger.info(f"Loaded dictionary for {self.language} ({self.dictionary.size()} entries)")
+        
         # Storage for topics and scenarios
         self.topics: Dict[str, Topic] = {}  # name -> Topic
         self.scenarios: Dict[str, Scenario] = {}  # name -> Scenario
         self.topics_file: Optional[Path] = None
         self.scenarios_file: Optional[Path] = None
         
-        # Initialize Azure Translation helper only if requested
+        # Initialize Google Translate helper if requested (highest priority)
+        if use_google_translation:
+            try:
+                self.google_translator = GoogleTranslateHelper()
+                logger.info("Google Translate initialized for content generation")
+            except ValueError as e:
+                logger.warning(f"Google Translate not available: {e}")
+                self.google_translator = None
+        else:
+            self.google_translator = None
+        
+        # Initialize Azure Translation helper if requested
         if use_azure_translation:
             try:
                 self.azure_translator = AzureTranslationHelper()
@@ -270,8 +291,15 @@ class ContentGenerator:
                 logger.warning(f"Azure Translation not available: {e}")
                 self.azure_translator = None
         else:
-            logger.info("Using LLM for translations (default)")
             self.azure_translator = None
+        
+        # Log translation method
+        if use_google_translation and self.google_translator:
+            logger.info("Using Google Translate for translations")
+        elif use_azure_translation and self.azure_translator:
+            logger.info("Using Azure Translation for translations")
+        else:
+            logger.info("Using LLM for translations (default)")
 
     def load_topics_and_scenarios(self, output_dir: Path) -> None:
         """Load topics and scenarios from JSON files.
@@ -307,6 +335,7 @@ class ContentGenerator:
         else:
             logger.info(f"No existing scenarios file found at {self.scenarios_file}")
     
+
     def _save_topics_and_scenarios(self) -> None:
         """Save topics and scenarios to JSON files."""
         if not self.topics_file or not self.scenarios_file:
@@ -344,6 +373,7 @@ class ContentGenerator:
             topic = Topic(
                 id=str(uuid4()),
                 name=topic_name,
+                language=self.language,
             )
             self.topics[topic_name] = topic
             logger.info(f"Created new topic: {topic_name} (ID: {topic.id})")
@@ -362,6 +392,7 @@ class ContentGenerator:
             scenario = Scenario(
                 id=str(uuid4()),
                 name=scenario_name,
+                language=self.language,
             )
             self.scenarios[scenario_name] = scenario
             logger.info(f"Created new scenario: {scenario_name} (ID: {scenario.id})")
@@ -768,25 +799,19 @@ Remember:
 
             # Create ContentUnit segments with A/B/C speaker IDs
             segments = []
+            segment_texts = [seg_draft.text for seg_draft in revised.segments]
             
-            # If using Azure Translation, override LLM translations
-            if self.use_azure_translation and self.azure_translator:
-                segment_texts = [seg_draft.text for seg_draft in revised.segments]
-                
-                try:
-                    segment_translations = self.azure_translator.translate_batch(
-                        texts=segment_texts,
-                        from_language=self.language,
-                        to_language="en"
-                    )
-                    logger.debug(f"Azure Translation: translated {len(segment_translations)} segments for content {idx}")
-                except Exception as e:
-                    logger.error(f"Azure Translation failed for content {idx}: {e}, using LLM translations")
-                    # Fall back to LLM translations from seg_draft.translation
-                    segment_translations = [seg_draft.translation for seg_draft in revised.segments]
-            else:
-                # Use LLM translations (default)
-                segment_translations = [seg_draft.translation for seg_draft in revised.segments]
+            # Translate segments using common translation utility with dictionary
+            segment_translations = translate_texts(
+                texts=segment_texts,
+                from_language=self.language,
+                llm_client=self.llm_client,
+                azure_translator=self.azure_translator,
+                google_translator=self.google_translator if hasattr(self, 'google_translator') else None,
+                use_azure=self.use_azure_translation,
+                use_google=self.use_google_translation if hasattr(self, 'use_google_translation') else False,
+                dictionary=self.dictionary,
+            )
             
             # Create segments with translations
             for i, seg_draft in enumerate(revised.segments):

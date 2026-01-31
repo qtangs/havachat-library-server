@@ -57,6 +57,13 @@ class SegmentType(str, Enum):
     QUESTION = "question"
 
 
+class ContentStatus(str, Enum):
+    """Status of content unit."""
+
+    ACTIVE = "active"
+    FOR_REVIEW = "for_review"
+
+
 class QuestionType(str, Enum):
     """Type of comprehension question."""
 
@@ -327,6 +334,14 @@ class ContentUnit(BaseModel):
     has_questions: bool = Field(default=False)
     publishable: bool = Field(
         default=False, description="True if passed all QA gates"
+    )
+    status: ContentStatus = Field(
+        default=ContentStatus.ACTIVE,
+        description="Content validation status (active or for_review)"
+    )
+    validation_notes: Optional[List[str]] = Field(
+        default=None,
+        description="List of validation issues requiring review"
     )
 
     # Audit

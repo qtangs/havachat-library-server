@@ -38,7 +38,7 @@ def build_conversation_generation_system_prompt(
 
 Your task is to generate {content_description} that incorporate learning items from these categories: Vocabulary, Grammar patterns, Idioms and expressions and others.
 
-Notes: Use learning items from multiple categories naturally. Content, sentence length, and complexity should match {level} difficulty level. Make content engaging and realistic. There should be 6-8 dialogue turns for each conversation. The conversation should start and end naturally."""
+Notes: Use learning items from multiple categories naturally. Content, sentence length, and complexity should match {level} difficulty level. Make content engaging and realistic. There should be 6-8 dialogue turns for each conversation."""
 
 # https://elevenlabs.io/docs/overview/capabilities/text-to-speech/best-practices#enhancing-input
 audio_tag_prompt = """
@@ -109,7 +109,6 @@ You will follow a chain-of-thought process in FOUR steps:
    - Address identified issues
    - Enhance learning item coverage
    - Maintain natural flow
-   - For EACH revised segment, provide both the text in {language} AND its English translation
    - Explicitly list all learning item IDs used in revised version
 
 4. ASSIGN SCENARIOS: Give each piece a 3-8 word scenario name

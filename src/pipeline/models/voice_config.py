@@ -79,6 +79,6 @@ class VoiceConfigCollection(BaseModel):
         voices = [v for v in self.voices if v.is_conversation_voice()]
         if language:
             voices = [v for v in voices if language in v.supported_languages]
-        if gender:
+        if gender in ["male", "female"]:
             voices = [v for v in voices if v.gender == gender]
         return voices

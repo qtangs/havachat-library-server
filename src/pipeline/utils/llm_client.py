@@ -11,7 +11,6 @@ import time
 from typing import Any, Optional, Type, TypeVar
 
 import instructor
-from openai import OpenAI
 from pydantic import BaseModel
 
 T = TypeVar("T", bound=BaseModel)
@@ -26,6 +25,7 @@ class TokenUsage(BaseModel):
     completion_tokens: int = 0
     total_tokens: int = 0
     cached_tokens: int = 0  # Prompt cache hits
+    reasoning_tokens: int = 0  # Reasoning tokens (for o* and gpt-5* models)
 
 
 class LLMClient:
@@ -51,8 +51,9 @@ class LLMClient:
         """Initialize LLM client with Instructor.
 
         Args:
-            api_key: OpenAI API key (if None, uses OPENAI_API_KEY env var)
-            model: OpenAI model to use (if None, uses LLM_MODEL env var or defaults to gpt-4o-mini)
+            api_key: API key for the provider (if None, uses provider-specific env var)
+            model: Model to use (if None, uses LLM_MODEL env var or defaults to gpt-4o-mini)
+                   Supports: gpt-*, claude-*, gemini-*
             max_retries: Maximum number of retry attempts (default: 3)
             base_delay: Base delay for exponential backoff in seconds (default: 1.0)
             max_delay: Maximum delay between retries in seconds (default: 60.0)
@@ -65,13 +66,51 @@ class LLMClient:
         # Token tracking
         self.total_usage = TokenUsage()
 
-        # Initialize OpenAI client
-        client = OpenAI(api_key=api_key)
+        # Detect provider based on model name
+        self.provider = self._detect_provider(self.model)
 
-        # Wrap with Instructor for structured outputs
-        self.client = instructor.from_openai(client)
+        # Initialize provider-specific client
+        if self.provider == "openai":
+            from openai import OpenAI
+            client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
+            self.client = instructor.from_openai(client)
+        elif self.provider == "anthropic":
+            from anthropic import Anthropic
+            client = Anthropic(api_key=api_key or os.getenv("ANTHROPIC_API_KEY"))
+            self.client = instructor.from_anthropic(client)
+        elif self.provider == "gemini":
+            import google.generativeai as genai
+            api_key_to_use = api_key or os.getenv("GOOGLE_GENERATIVE_AI_API_KEY")
+            if not api_key_to_use:
+                raise ValueError("GOOGLE_GENERATIVE_AI_API_KEY environment variable is not set")
+            genai.configure(api_key=api_key_to_use)
+            client = genai.GenerativeModel(model_name=self.model)
+            self.client = instructor.from_gemini(client=client, mode=instructor.Mode.GEMINI_JSON)
+        else:
+            raise ValueError(f"Unsupported model: {self.model}")
 
-        logger.info(f"LLMClient initialized with model={self.model}, max_retries={max_retries}")
+        logger.info(f"LLMClient initialized with provider={self.provider}, model={self.model}, max_retries={max_retries}")
+
+    def _detect_provider(self, model: str) -> str:
+        """Detect LLM provider from model name.
+
+        Args:
+            model: Model name
+
+        Returns:
+            Provider name: 'openai', 'anthropic', or 'gemini'
+        """
+        model_lower = model.lower()
+        if model_lower.startswith("claude"):
+            return "anthropic"
+        elif model_lower.startswith("gemini"):
+            return "gemini"
+        elif model_lower.startswith(("gpt", "o1", "o3", "o4")):
+            return "openai"
+        else:
+            # Default to OpenAI for backward compatibility
+            logger.warning(f"Unknown model prefix '{model}', defaulting to OpenAI provider")
+            return "openai"
 
     def generate(
         self,
@@ -123,24 +162,52 @@ class LLMClient:
             try:
                 start_time = time.time()
 
-                # Prepare API parameters
+                # Prepare API parameters based on provider
                 api_params = {
-                    "model": self.model,
-                    "messages": messages,
                     "response_model": response_model,
-                    "temperature": temperature,
                 }
-                
-                # GPT-5 models use max_completion_tokens instead of max_tokens
-                # and only the default temperature (1) is supported
-                if self.model.startswith("gpt-5"):
-                    api_params["max_completion_tokens"] = max_tokens
-                    api_params["temperature"] = 1.0
-                else:
-                    api_params["max_tokens"] = max_tokens
 
-                # Use Instructor's structured output generation
-                response = self.client.chat.completions.create(**api_params)
+                if self.provider == "openai":
+                    api_params["model"] = self.model
+                    api_params["messages"] = messages
+                    api_params["temperature"] = temperature
+                    
+                    # GPT-5 and o* models use max_completion_tokens instead of max_tokens
+                    # and only the default temperature (1) is supported
+                    # Also set reasoning_effort to "low" for cost efficiency
+                    if self.model.startswith("gpt-5") or self.model.startswith("o"):
+                        api_params["max_completion_tokens"] = max_tokens
+                        api_params["temperature"] = 1.0
+                        api_params["reasoning_effort"] = "low"
+                    else:
+                        api_params["max_tokens"] = max_tokens
+                    
+                    # Use Instructor's structured output generation
+                    response = self.client.chat.completions.create(**api_params)
+                    
+                elif self.provider == "anthropic":
+                    api_params["model"] = self.model
+                    api_params["max_tokens"] = max_tokens
+                    api_params["temperature"] = temperature
+                    
+                    # Anthropic requires separate system and messages
+                    if system_prompt:
+                        api_params["system"] = system_prompt
+                        api_params["messages"] = [msg for msg in messages if msg["role"] != "system"]
+                    else:
+                        api_params["messages"] = messages
+                    
+                    response = self.client.messages.create(**api_params)
+                    
+                elif self.provider == "gemini":
+                    # Gemini with Instructor - uses generate_content under the hood
+                    # Instructor wraps the Gemini client to handle messages -> content conversion
+                    response = self.client.chat.completions.create(
+                        response_model=response_model,
+                        messages=messages,
+                        # temperature=temperature, # Gemini may not support temperature param
+                        # max_tokens=max_tokens, # Gemini may not support max_tokens param
+                    )
 
                 latency_ms = (time.time() - start_time) * 1000
 
@@ -207,14 +274,36 @@ class LLMClient:
         # Try to get usage from _raw_response attribute (Instructor stores it)
         if hasattr(response, "_raw_response") and hasattr(response._raw_response, "usage"):
             raw_usage = response._raw_response.usage
-            usage.prompt_tokens = getattr(raw_usage, "prompt_tokens", 0)
-            usage.completion_tokens = getattr(raw_usage, "completion_tokens", 0)
-            usage.total_tokens = getattr(raw_usage, "total_tokens", 0)
             
-            # Check for cached tokens (OpenAI returns this in usage)
-            if hasattr(raw_usage, "prompt_tokens_details"):
-                details = raw_usage.prompt_tokens_details
-                usage.cached_tokens = getattr(details, "cached_tokens", 0)
+            if self.provider == "openai":
+                usage.prompt_tokens = getattr(raw_usage, "prompt_tokens", 0)
+                usage.completion_tokens = getattr(raw_usage, "completion_tokens", 0)
+                usage.total_tokens = getattr(raw_usage, "total_tokens", 0)
+                
+                # Check for cached tokens (OpenAI returns this in usage)
+                if hasattr(raw_usage, "prompt_tokens_details"):
+                    details = raw_usage.prompt_tokens_details
+                    usage.cached_tokens = getattr(details, "cached_tokens", 0)
+                
+                # Check for reasoning tokens (o* and gpt-5* models)
+                if hasattr(raw_usage, "completion_tokens_details"):
+                    details = raw_usage.completion_tokens_details
+                    usage.reasoning_tokens = getattr(details, "reasoning_tokens", 0)
+                    
+            elif self.provider == "anthropic":
+                # Anthropic usage structure: input_tokens, output_tokens, cache_read_input_tokens
+                usage.prompt_tokens = getattr(raw_usage, "input_tokens", 0)
+                usage.completion_tokens = getattr(raw_usage, "output_tokens", 0)
+                usage.total_tokens = usage.prompt_tokens + usage.completion_tokens
+                usage.cached_tokens = getattr(raw_usage, "cache_read_input_tokens", 0)
+                
+            elif self.provider == "gemini":
+                # Gemini usage structure: prompt_token_count, candidates_token_count
+                usage.prompt_tokens = getattr(raw_usage, "prompt_token_count", 0)
+                usage.completion_tokens = getattr(raw_usage, "candidates_token_count", 0)
+                usage.total_tokens = getattr(raw_usage, "total_token_count", 
+                                            usage.prompt_tokens + usage.completion_tokens)
+                usage.cached_tokens = getattr(raw_usage, "cached_content_token_count", 0)
         
         return usage
     
@@ -228,6 +317,7 @@ class LLMClient:
         self.total_usage.completion_tokens += usage.completion_tokens
         self.total_usage.total_tokens += usage.total_tokens
         self.total_usage.cached_tokens += usage.cached_tokens
+        self.total_usage.reasoning_tokens += usage.reasoning_tokens
     
     def get_usage_summary(self) -> dict:
         """Get summary of total token usage.
@@ -261,6 +351,7 @@ class LLMClient:
             "completion_tokens": self.total_usage.completion_tokens,
             "total_tokens": self.total_usage.total_tokens,
             "cached_tokens": self.total_usage.cached_tokens,
+            "reasoning_tokens": self.total_usage.reasoning_tokens,
             "cache_hit_rate": (
                 f"{self.total_usage.cached_tokens / self.total_usage.prompt_tokens * 100:.1f}%"
                 if self.total_usage.prompt_tokens > 0 else "0.0%"
@@ -333,6 +424,7 @@ class LLMClient:
                 "completion": usage.completion_tokens,
                 "total": usage.total_tokens,
                 "cached": usage.cached_tokens,
+                "reasoning": usage.reasoning_tokens,
             }
 
         if error:

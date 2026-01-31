@@ -26,8 +26,10 @@ from pipeline.enrichers.base import BaseEnricher
 from pipeline.parsers.source_parsers import parse_mandarin_grammar_csv
 from pipeline.prompts.mandarin.grammar_prompts import MANDARIN_GRAMMAR_SYSTEM_PROMPT
 from pipeline.utils.azure_translation import AzureTranslationHelper
+from pipeline.utils.dictionary import DictionaryFactory
 from pipeline.utils.llm_client import LLMClient
 from pipeline.utils.romanization import get_mandarin_pinyin
+from pipeline.utils.translation import translate_texts
 from pipeline.validators.schema import Category, Example, LearningItem, LevelSystem
 
 logger = logging.getLogger(__name__)
@@ -93,6 +95,11 @@ class MandarinGrammarEnricher(BaseEnricher):
             skip_translation: Skip translation service (default: False)
         """
         super().__init__(llm_client, max_retries, manual_review_dir, skip_llm, skip_translation)
+        
+        # Initialize dictionary for translation reference
+        self.dictionary = DictionaryFactory.get_dictionary("zh")
+        if self.dictionary:
+            logger.info(f"Loaded dictionary for Mandarin ({self.dictionary.size()} entries)")
         
         # Initialize Azure Translation helper unless skip_translation is True
         if not skip_translation:
@@ -336,28 +343,26 @@ Provide your response in the format:
                 
                 # Process examples: Add pinyin and translations
                 processed_examples = []
-                for example_text in enriched_data.examples:
-                    # Get pinyin
-                    pinyin_text = get_mandarin_pinyin(example_text)
-                    
-                    # Get English translation
-                    if self.azure_translator:
-                        try:
-                            translation = self.azure_translator.translate_single(
-                                text=example_text,
-                                from_language="zh",
-                                to_language="en"
-                            )
-                        except Exception as e:
-                            logger.warning(f"Translation failed for '{example_text}': {e}")
-                            translation = "[Translation unavailable]"
-                    else:
-                        translation = "[Translation unavailable]"
-                    
+                # Get pinyin for all examples
+                example_pinyins = [get_mandarin_pinyin(ex) for ex in enriched_data.examples]
+                
+                # Translate all examples using common translation utility with dictionary
+                example_translations = translate_texts(
+                    texts=enriched_data.examples,
+                    from_language="zh",
+                    llm_client=self.llm_client,
+                    azure_translator=self.azure_translator,
+                    use_azure=self.skip_translation is False and self.azure_translator is not None,
+                    dictionary=self.dictionary,
+                )
+                
+                # Build Example objects
+                processed_examples = []
+                for example_text, translation in zip(enriched_data.examples, example_translations):
                     processed_examples.append(
                         Example(
                             text=example_text,
-                            translation=translation,
+                            translation=translation if translation else "[Translation unavailable]",
                             media_urls=[],
                         )
                     )

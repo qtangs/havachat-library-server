@@ -26,8 +26,10 @@ from pypinyin import Style, pinyin
 from src.pipeline.enrichers.base import BaseEnricher
 from src.pipeline.parsers.source_parsers import parse_mandarin_vocab_tsv
 from src.pipeline.utils.azure_translation import AzureTranslationHelper
+from src.pipeline.utils.dictionary import DictionaryFactory
 from src.pipeline.utils.llm_client import LLMClient
 from src.pipeline.utils.romanization import get_mandarin_pinyin
+from src.pipeline.utils.translation import translate_texts
 from src.pipeline.validators.schema import Category, Example, LearningItem, LevelSystem
 
 logger = logging.getLogger(__name__)
@@ -110,6 +112,11 @@ class MandarinVocabEnricher(BaseEnricher):
             skip_translation: Skip translation service (default: False)
         """
         super().__init__(llm_client, max_retries, manual_review_dir, skip_llm, skip_translation)
+        
+        # Initialize dictionary for translation reference
+        self.dictionary = DictionaryFactory.get_dictionary("zh")
+        if self.dictionary:
+            logger.info(f"Loaded dictionary for Mandarin ({self.dictionary.size()} entries)")
         
         # Initialize Azure Translation helper unless skip_translation is True
         if not skip_translation:
@@ -260,23 +267,15 @@ class MandarinVocabEnricher(BaseEnricher):
             # Step 4: Get traditional Chinese
             traditional = self._get_traditional(target_item)
             
-            # Step 5: Translate examples to English using Azure Translation
-            example_translations = []
-            if self.azure_translator:
-                try:
-                    example_translations = self.azure_translator.translate_batch(
-                        texts=llm_response.examples,
-                        from_language="zh",
-                        to_language="en"
-                    )
-                    logger.debug(f"Translated {len(example_translations)} examples")
-                except Exception as e:
-                    logger.error(f"Azure Translation failed: {e}")
-                    # Fall back to empty translations
-                    example_translations = ["" for _ in llm_response.examples]
-            else:
-                logger.warning("Azure Translation not available, examples will have no translations")
-                example_translations = ["" for _ in llm_response.examples]
+            # Step 5: Translate examples using common translation utility with dictionary
+            example_translations = translate_texts(
+                texts=llm_response.examples,
+                from_language="zh",
+                llm_client=self.llm_client,
+                azure_translator=self.azure_translator,
+                use_azure=self.skip_translation is False and self.azure_translator is not None,
+                dictionary=self.dictionary,
+            )
             
             # Step 6: Format examples with translations
             formatted_examples = self._format_examples(
@@ -292,6 +291,9 @@ class MandarinVocabEnricher(BaseEnricher):
                 aliases.append(numeric_pinyin)
             
             # Step 8: Assemble complete LearningItem
+                aliases.append(numeric_pinyin)
+            
+            # Step 9: Assemble complete LearningItem
             enriched_item = LearningItem(
                 id=str(uuid4()),
                 language="zh",
