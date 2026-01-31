@@ -84,7 +84,7 @@ else:
 
 ## Language Support
 
-### ✅ Chinese (Mandarin)
+### ✅ Chinese
 
 **Status:** Fully implemented
 
@@ -129,7 +129,7 @@ For languages without character validation implemented (English, Spanish, etc.),
 When generating content using the CLI:
 
 ```bash
-python -m src.havachat.cli.generate_content \
+python -m havachat.cli.generate_content \
     --language zh \
     --level HSK1 \
     --topic "Daily Life" \

@@ -2,7 +2,7 @@
 
 # Language name to ISO 639-1 code mapping
 LANGUAGE_NAME_TO_CODE = {
-    "mandarin": "zh",
+    "chinese": "zh",
     "chinese": "zh",
     "japanese": "ja",
     "french": "fr",
@@ -11,7 +11,7 @@ LANGUAGE_NAME_TO_CODE = {
 
 # ISO 639-1 code to language name mapping
 LANGUAGE_CODE_TO_NAME = {
-    "zh": "Mandarin",
+    "zh": "Chinese",
     "ja": "Japanese",
     "fr": "French",
     "en": "English",
@@ -22,7 +22,7 @@ def get_language_code(language_name_or_code: str) -> str:
     """Convert language name to ISO 639-1 code.
     
     Args:
-        language_name_or_code: Language name (e.g., "Mandarin") or code (e.g., "zh")
+        language_name_or_code: Language name (e.g., "Chinese") or code (e.g., "zh")
         
     Returns:
         ISO 639-1 language code (e.g., "zh")
@@ -53,7 +53,7 @@ def get_language_name(language_code: str) -> str:
         language_code: ISO 639-1 language code (e.g., "zh")
         
     Returns:
-        Language name (e.g., "Mandarin")
+        Language name (e.g., "Chinese")
         
     Raises:
         ValueError: If language code is not supported

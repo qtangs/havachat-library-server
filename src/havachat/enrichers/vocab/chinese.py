@@ -1,4 +1,4 @@
-"""Optimized Mandarin Chinese vocabulary enricher with cost reduction.
+"""Optimized Chinese vocabulary enricher with cost reduction.
 
 Cost reduction strategy:
 1. Use minimal LLM response model (only explanation, examples, sense_gloss, pos)
@@ -23,14 +23,14 @@ import opencc
 from pydantic import BaseModel, Field
 from pypinyin import Style, pinyin
 
-from src.havachat.enrichers.base import BaseEnricher
-from src.havachat.parsers.source_parsers import parse_mandarin_vocab_tsv
-from src.havachat.utils.azure_translation import AzureTranslationHelper
-from src.havachat.utils.dictionary import DictionaryFactory
-from src.havachat.utils.llm_client import LLMClient
-from src.havachat.utils.romanization import get_mandarin_pinyin
-from src.havachat.utils.translation import translate_texts
-from src.havachat.validators.schema import Category, Example, LearningItem, LevelSystem
+from havachat.enrichers.base import BaseEnricher
+from havachat.parsers.source_parsers import parse_chinese_vocab_tsv
+from havachat.utils.azure_translation import AzureTranslationHelper
+from havachat.utils.dictionary import DictionaryFactory
+from havachat.utils.llm_client import LLMClient
+from havachat.utils.romanization import get_chinese_pinyin
+from havachat.utils.translation import translate_texts
+from havachat.validators.schema import Category, Example, LearningItem, LevelSystem
 
 logger = logging.getLogger(__name__)
 
@@ -82,8 +82,8 @@ class ChineseEnrichedVocab(BaseModel):
     )
 
 
-class MandarinVocabEnricher(BaseEnricher):
-    """Optimized enricher for Mandarin vocabulary with cost reduction.
+class ChineseVocabEnricher(BaseEnricher):
+    """Optimized enricher for Chinese vocabulary with cost reduction.
 
     Expected input format: TSV with "Word\tPart of Speech" columns
     
@@ -102,7 +102,7 @@ class MandarinVocabEnricher(BaseEnricher):
         skip_llm: bool = False,
         skip_translation: bool = False,
     ):
-        """Initialize Mandarin enricher with Azure Translation.
+        """Initialize Chinese enricher with Azure Translation.
         
         Args:
             llm_client: Optional LLM client for enrichment
@@ -116,7 +116,7 @@ class MandarinVocabEnricher(BaseEnricher):
         # Initialize dictionary for translation reference
         self.dictionary = DictionaryFactory.get_dictionary("zh")
         if self.dictionary:
-            logger.info(f"Loaded dictionary for Mandarin ({self.dictionary.size()} entries)")
+            logger.info(f"Loaded dictionary for Chinese ({self.dictionary.size()} entries)")
         
         # Initialize Azure Translation helper unless skip_translation is True
         if not skip_translation:
@@ -132,7 +132,7 @@ class MandarinVocabEnricher(BaseEnricher):
 
     @property
     def system_prompt(self) -> str:
-        """Get optimized Mandarin-specific system prompt."""
+        """Get optimized Chinese-specific system prompt."""
         return MANDARIN_VOCAB_SYSTEM_PROMPT
 
     def parse_source(self, source_path: Union[str, Path]) -> List[Dict[str, Any]]:
@@ -148,12 +148,12 @@ class MandarinVocabEnricher(BaseEnricher):
             FileNotFoundError: If source file doesn't exist
             ValueError: If TSV format is invalid
         """
-        return parse_mandarin_vocab_tsv(source_path)
+        return parse_chinese_vocab_tsv(source_path)
 
     def detect_missing_fields(self, item: Dict[str, Any]) -> List[str]:
         """Detect which fields need enrichment.
 
-        For optimized Mandarin enricher:
+        For optimized Chinese enricher:
         - Always need: definition, examples (LLM)
         - Optionally need: sense_gloss (if polysemous), pos (if not provided)
         - Auto-generated: romanization, traditional, numeric_pinyin, translations
@@ -185,7 +185,7 @@ class MandarinVocabEnricher(BaseEnricher):
         return missing
 
     def enrich_item(self, item: Dict[str, Any]) -> Optional[LearningItem]:
-        """Enrich a single Mandarin vocabulary item using optimized strategy.
+        """Enrich a single Chinese vocabulary item using optimized strategy.
         
         Process:
         1. Get minimal LLM response (explanation, Chinese-only examples, sense_gloss, pos)
@@ -207,7 +207,7 @@ class MandarinVocabEnricher(BaseEnricher):
             logger.info(f"Skipping LLM enrichment for '{target_item}' (--skip-llm mode)")
             
             # Generate pinyin
-            romanization = get_mandarin_pinyin(target_item)
+            romanization = get_chinese_pinyin(target_item)
             numeric_pinyin = self._get_numeric_pinyin(target_item)
             traditional = self._get_traditional(target_item)
             
@@ -259,7 +259,7 @@ class MandarinVocabEnricher(BaseEnricher):
             logger.debug(f"LLM response for '{target_item}': {len(llm_response.examples)} examples")
             
             # Step 2: Generate pinyin with tone marks (default)
-            romanization = get_mandarin_pinyin(target_item)
+            romanization = get_chinese_pinyin(target_item)
             
             # Step 3: Generate numeric pinyin (ai4, ba4 ba5)
             numeric_pinyin = self._get_numeric_pinyin(target_item)
@@ -350,7 +350,7 @@ class MandarinVocabEnricher(BaseEnricher):
         level_min = item.get("level_min", "HSK1")
         level_max = item.get("level_max", level_min)
         
-        prompt = f"""Enrich the following Mandarin Chinese vocabulary item:
+        prompt = f"""Enrich the following Chinese vocabulary item:
 
 **Word**: {target_item}
 **Part of Speech**: {pos}
@@ -451,7 +451,7 @@ Remember: We will add pinyin and English translations automatically later.
         return target_item in polysemous_words
 
     def validate_output(self, item: Dict[str, Any], enriched_data: LearningItem) -> bool:
-        """Validate enriched Mandarin vocabulary item.
+        """Validate enriched Chinese vocabulary item.
         
         Args:
             item: Original item dictionary

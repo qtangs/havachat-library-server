@@ -185,14 +185,14 @@ Tracks learning item appearances across content:
 
 ```bash
 # Generate pronunciation items from vocab
-python -m src.havachat.cli.generate_learning_items \
+python -m havachat.cli.generate_learning_items \
   --language zh --level HSK1 \
   --category pronunciation \
-  --source-dir ../havachat-knowledge/generated\ content/Mandarin/HSK1/vocab/ \
+  --source-dir ../havachat-knowledge/generated\ content/Chinese/HSK1/vocab/ \
   --output output/learning_items/pronunciation/
 
 # Generate cultural items for a topic
-python -m src.havachat.cli.generate_learning_items \
+python -m havachat.cli.generate_learning_items \
   --language zh --level HSK1 \
   --category cultural \
   --topic "Food" \
@@ -200,10 +200,10 @@ python -m src.havachat.cli.generate_learning_items \
   --output output/learning_items/cultural/
 
 # Generate idioms from vocab/grammar
-python -m src.havachat.cli.generate_learning_items \
+python -m havachat.cli.generate_learning_items \
   --language zh --level HSK1 \
   --category idiom \
-  --source-dir ../havachat-knowledge/generated\ content/Mandarin/HSK1/ \
+  --source-dir ../havachat-knowledge/generated\ content/Chinese/HSK1/ \
   --output output/learning_items/idiom/
 ```
 
@@ -211,15 +211,15 @@ python -m src.havachat.cli.generate_learning_items \
 
 ```bash
 # Generate 5 conversations + 5 stories for Food topic
-python -m src.havachat.cli.generate_content \
+python -m havachat.cli.generate_content \
   --language zh --level HSK1 \
   --topic "Food" \
-  --learning-items-dir ../havachat-knowledge/generated\ content/Mandarin/HSK1/ \
+  --learning-items-dir ../havachat-knowledge/generated\ content/Chinese/HSK1/ \
   --output output/content/food/ \
   --track-usage
 
 # Generate more conversations than stories
-python -m src.havachat.cli.generate_content \
+python -m havachat.cli.generate_content \
   --language fr --level A1 \
   --topic "Travel" \
   --learning-items-dir ../havachat-knowledge/generated\ content/French/A1/ \

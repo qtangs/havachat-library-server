@@ -1,7 +1,7 @@
 """Romanization utilities for Chinese and Japanese.
 
 Provides automatic romanization using Python libraries instead of LLM:
-- Mandarin Chinese: pypinyin (pinyin with tone marks)
+- Chinese: pypinyin (pinyin with tone marks)
 - Japanese: pykakasi (romaji - Hepburn style)
 """
 
@@ -24,8 +24,8 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-def get_mandarin_pinyin(text: str, tone_marks: bool = True) -> str:
-    """Get pinyin romanization for Mandarin Chinese text.
+def get_chinese_pinyin(text: str, tone_marks: bool = True) -> str:
+    """Get pinyin romanization for Chinese text.
 
     Uses pypinyin library to convert Chinese characters to pinyin with tone marks.
 
@@ -37,9 +37,9 @@ def get_mandarin_pinyin(text: str, tone_marks: bool = True) -> str:
         Pinyin romanization with tone marks (e.g., "yínháng" for 银行)
 
     Example:
-        >>> get_mandarin_pinyin("银行")
+        >>> get_chinese_pinyin("银行")
         'yínháng'
-        >>> get_mandarin_pinyin("学校")
+        >>> get_chinese_pinyin("学校")
         'xuéxiào'
     """
     if not PYPINYIN_AVAILABLE:

@@ -6,10 +6,13 @@ All models include validation rules and JSON schema generation for contract test
 
 from datetime import UTC, datetime
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+if TYPE_CHECKING:
+    from src.models.llm_judge_evaluation import LLMJudgeEvaluation
 
 
 # ============================================================================
@@ -343,6 +346,10 @@ class ContentUnit(BaseModel):
         default=None,
         description="List of validation issues requiring review"
     )
+    llm_judge_evaluation: Optional["LLMJudgeEvaluation"] = Field(
+        default=None,
+        description="LLM quality evaluation results"
+    )
 
     # Audit
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
@@ -367,10 +374,10 @@ class ContentUnit(BaseModel):
     def validate_audio_timestamps(self) -> "ContentUnit":
         """If has_audio=true, all segments must have timestamps."""
         if self.has_audio:
-            for segment in self.segments:
+            for idx, segment in enumerate(self.segments):
                 if segment.start_time_ms is None or segment.end_time_ms is None:
                     raise ValueError(
-                        f"Segment {segment.segment_id} missing timestamps (has_audio=true)"
+                        f"Segment at index {idx} missing timestamps (has_audio=true)"
                     )
         return self
 
@@ -705,3 +712,14 @@ class ValidationReport(BaseModel):
             }
         }
     }
+
+
+# Rebuild ContentUnit model after LLMJudgeEvaluation is fully defined
+# This resolves forward reference issues
+try:
+    from src.models.llm_judge_evaluation import LLMJudgeEvaluation
+    ContentUnit.model_rebuild()
+except ImportError:
+    # If LLMJudgeEvaluation is not available, ContentUnit can still be used
+    # but llm_judge_evaluation field will remain optional
+    pass

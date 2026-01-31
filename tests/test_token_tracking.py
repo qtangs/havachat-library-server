@@ -1,12 +1,13 @@
 """Test token tracking and usage summary in LLMClient."""
 
-from src.havachat.utils.llm_client import LLMClient, TokenUsage
+from havachat.utils.llm_client import LLMClient, TokenUsage
 
 
 def test_token_tracking():
     """Test token usage tracking and cost calculation."""
     # Use dummy API key for testing (won't make actual API calls)
-    client = LLMClient(api_key="sk-test-dummy-key-for-testing")
+    # Explicitly set model to avoid env var override
+    client = LLMClient(api_key="sk-test-dummy-key-for-testing", model="gpt-4o-mini")
     
     # Simulate some usage
     client.total_usage.prompt_tokens = 1000

@@ -2,35 +2,35 @@
 
 import pytest
 
-from src.havachat.utils.romanization import (
+from havachat.utils.romanization import (
     clean_sense_marker,
     extract_sense_marker,
     get_japanese_romaji,
-    get_mandarin_pinyin,
+    get_chinese_pinyin,
     translate_chinese_pos,
 )
 
 
-class TestMandarinPinyin:
-    """Tests for Mandarin pinyin generation."""
+class TestChinesePinyin:
+    """Tests for Chinese pinyin generation."""
 
     def test_basic_words(self):
         """Test pinyin generation for common words."""
-        assert get_mandarin_pinyin("银行") == "yínháng"
-        assert get_mandarin_pinyin("学校") == "xuéxiào"
-        assert get_mandarin_pinyin("学习") == "xuéxí"
+        assert get_chinese_pinyin("银行") == "yínháng"
+        assert get_chinese_pinyin("学校") == "xuéxiào"
+        assert get_chinese_pinyin("学习") == "xuéxí"
 
     def test_single_characters(self):
         """Test pinyin generation for single characters."""
-        assert get_mandarin_pinyin("爱") == "ài"
-        assert get_mandarin_pinyin("点") == "diǎn"
-        assert get_mandarin_pinyin("本") == "běn"
-        assert get_mandarin_pinyin("会") == "huì"
-        assert get_mandarin_pinyin("和") == "hé"
+        assert get_chinese_pinyin("爱") == "ài"
+        assert get_chinese_pinyin("点") == "diǎn"
+        assert get_chinese_pinyin("本") == "běn"
+        assert get_chinese_pinyin("会") == "huì"
+        assert get_chinese_pinyin("和") == "hé"
 
     def test_tone_marks(self):
         """Test that tone marks are correctly included."""
-        result = get_mandarin_pinyin("中国")
+        result = get_chinese_pinyin("中国")
         assert "ō" in result or "ó" in result or "ǒ" in result or "ò" in result
 
 

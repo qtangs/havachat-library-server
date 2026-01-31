@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from src.havachat.enrichers.grammar.mandarin import MandarinGrammarEnricher
-from src.havachat.validators.schema import LevelSystem
+from havachat.enrichers.grammar.chinese import ChineseGrammarEnricher
+from havachat.validators.schema import LevelSystem
 
 
 @pytest.fixture
@@ -33,7 +33,7 @@ def output_dir(tmp_path):
 def test_end_to_end_grammar_enrichment_dry_run(sample_grammar_csv, output_dir):
     """Test end-to-end grammar enrichment in dry-run mode."""
     # Initialize enricher without LLM client (dry-run)
-    enricher = MandarinGrammarEnricher(llm_client=None)
+    enricher = ChineseGrammarEnricher(llm_client=None)
     
     # Parse source
     items = enricher.parse_source(sample_grammar_csv)
@@ -77,7 +77,7 @@ def test_grammar_csv_format_variations(tmp_path):
     csv_file = tmp_path / "variations.csv"
     csv_file.write_text(csv_content, encoding="utf-8")
     
-    enricher = MandarinGrammarEnricher(llm_client=None)
+    enricher = ChineseGrammarEnricher(llm_client=None)
     items = enricher.parse_source(csv_file)
     
     # Check pattern cleaning
@@ -103,7 +103,7 @@ def test_granularity_validation(tmp_path):
     csv_file = tmp_path / "multi_item.csv"
     csv_file.write_text(csv_content, encoding="utf-8")
     
-    enricher = MandarinGrammarEnricher(llm_client=None)
+    enricher = ChineseGrammarEnricher(llm_client=None)
     items = enricher.parse_source(csv_file)
     
     # Should split into 9 individual items
@@ -130,7 +130,7 @@ def test_empty_detail_field(tmp_path):
     csv_file = tmp_path / "empty_detail.csv"
     csv_file.write_text(csv_content, encoding="utf-8")
     
-    enricher = MandarinGrammarEnricher(llm_client=None)
+    enricher = ChineseGrammarEnricher(llm_client=None)
     items = enricher.parse_source(csv_file)
     
     assert len(items) == 2
@@ -150,7 +150,7 @@ def test_live_enrichment_single_item(tmp_path):
     This test is skipped by default. Run with:
     pytest -v -m "not skipif" tests/integration/test_end_to_end_grammar.py
     """
-    from src.havachat.utils.llm_client import LLMClient
+    from havachat.utils.llm_client import LLMClient
     
     # Create simple CSV
     csv_content = """类别,类别名称,细目,语法内容
@@ -161,7 +161,7 @@ def test_live_enrichment_single_item(tmp_path):
     
     # Initialize with real LLM client
     llm_client = LLMClient()
-    enricher = MandarinGrammarEnricher(
+    enricher = ChineseGrammarEnricher(
         llm_client=llm_client,
         manual_review_dir=tmp_path / "manual_review"
     )

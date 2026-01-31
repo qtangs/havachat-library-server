@@ -1,17 +1,17 @@
 """CLI for grammar enrichment.
 
 Usage:
-    python -m src.havachat.cli.enrich_grammar \
+    python -m havachat.cli.enrich_grammar \
         --language zh \
         --level HSK1 \
-        --input data/mandarin_hsk1_grammar.csv \
-        --enricher mandarin \
-        --output output/mandarin/hsk1/grammar.json \
+        --input data/chinese_hsk1_grammar.csv \
+        --enricher chinese \
+        --output output/chinese/hsk1/grammar.json \
         --max-items 10 \
         --dry-run
 
 Supports:
-- Mandarin Chinese (--enricher mandarin, CSV input)
+- Chinese (--enricher chinese, CSV input)
 
 Features:
 - Parallel processing with ThreadPoolExecutor
@@ -33,11 +33,11 @@ from typing import Optional
 from dotenv import load_dotenv
 from tqdm import tqdm
 
-from src.havachat.enrichers.grammar import MandarinGrammarEnricher
-from src.havachat.utils.file_io import write_json
-from src.havachat.utils.llm_client import LLMClient
-from src.havachat.utils.logging_config import configure_logging
-from src.havachat.validators.schema import LevelSystem
+from havachat.enrichers.grammar import ChineseGrammarEnricher
+from havachat.utils.file_io import write_json
+from havachat.utils.llm_client import LLMClient
+from havachat.utils.logging_config import configure_logging
+from havachat.validators.schema import LevelSystem
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ load_dotenv()
 
 # Enricher-language validation mapping
 ENRICHER_LANGUAGE_MAP = {
-    "mandarin": "zh",
+    "chinese": "zh",
 }
 
 
@@ -56,34 +56,34 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Enrich Mandarin HSK1 grammar
-  python -m src.havachat.cli.enrich_grammar \\
+  # Enrich Chinese HSK1 grammar
+  python -m havachat.cli.enrich_grammar \\
       --language zh --level HSK1 \\
       --input data/hsk1_grammar.csv \\
-      --enricher mandarin \\
+      --enricher chinese \\
       --output output/zh/hsk1/grammar.json
 
   # Dry run with 5 items
-  python -m src.havachat.cli.enrich_grammar \\
+  python -m havachat.cli.enrich_grammar \\
       --language zh --level HSK1 \\
       --input data/hsk1_grammar.csv \\
-      --enricher mandarin \\
+      --enricher chinese \\
       --output output/zh/hsk1/grammar.json \\
       --dry-run --max-items 5
 
   # Parallel processing with 5 workers
-  python -m src.havachat.cli.enrich_grammar \\
+  python -m havachat.cli.enrich_grammar \\
       --language zh --level HSK1 \\
       --input data/hsk1_grammar.csv \\
-      --enricher mandarin \\
+      --enricher chinese \\
       --output output/zh/hsk1/grammar.json \\
       --parallel 5
 
   # Resume from checkpoint
-  python -m src.havachat.cli.enrich_grammar \\
+  python -m havachat.cli.enrich_grammar \\
       --language zh --level HSK1 \\
       --input data/hsk1_grammar.csv \\
-      --enricher mandarin \\
+      --enricher chinese \\
       --output output/zh/hsk1/grammar.json \\
       --resume
         """,
@@ -93,7 +93,7 @@ Examples:
         "--language",
         required=True,
         choices=["zh"],
-        help="Target language (ISO 639-1): zh=Mandarin",
+        help="Target language (ISO 639-1): zh=Chinese",
     )
     parser.add_argument(
         "--level",
@@ -104,13 +104,13 @@ Examples:
         "--input",
         required=True,
         type=Path,
-        help="Input file path (CSV for Mandarin)",
+        help="Input file path (CSV for Chinese)",
     )
     parser.add_argument(
         "--enricher",
         required=True,
-        choices=["mandarin"],
-        help="Enricher type: mandarin",
+        choices=["chinese"],
+        help="Enricher type: chinese",
     )
     parser.add_argument(
         "--output",
@@ -170,7 +170,7 @@ def validate_enricher_language(enricher: str, language: str) -> None:
     """Validate enricher-language compatibility.
     
     Args:
-        enricher: Enricher type (e.g., "mandarin")
+        enricher: Enricher type (e.g., "chinese")
         language: Language code (e.g., "zh")
         
     Raises:
@@ -270,8 +270,8 @@ def main():
     # Initialize enricher
     manual_review_dir = args.manual_review_dir or Path("./manual_review/grammar")
     
-    if args.enricher == "mandarin":
-        enricher = MandarinGrammarEnricher(
+    if args.enricher == "chinese":
+        enricher = ChineseGrammarEnricher(
             llm_client=llm_client,
             max_retries=3,
             manual_review_dir=manual_review_dir,

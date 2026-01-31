@@ -7,13 +7,13 @@ items from various source file formats (TSV, CSV, JSON) for different languages.
 from havachat.parsers.source_parsers import (
     parse_french_vocab_tsv,
     parse_japanese_vocab_json,
-    parse_mandarin_grammar_csv,
-    parse_mandarin_vocab_tsv,
+    parse_chinese_grammar_csv,
+    parse_chinese_vocab_tsv,
 )
 
 __all__ = [
-    "parse_mandarin_vocab_tsv",
+    "parse_chinese_vocab_tsv",
     "parse_japanese_vocab_json",
     "parse_french_vocab_tsv",
-    "parse_mandarin_grammar_csv",
+    "parse_chinese_grammar_csv",
 ]

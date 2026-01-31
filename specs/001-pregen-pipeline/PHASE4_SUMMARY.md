@@ -1,20 +1,20 @@
-# Phase 4 Implementation Summary: Mandarin Grammar Enrichment
+# Phase 4 Implementation Summary: Chinese Grammar Enrichment
 
 **Date**: 2026-01-28  
 **Feature**: Pre-generation Pipeline - Grammar Enrichment  
-**Status**: ✅ COMPLETE (Mandarin only)
+**Status**: ✅ COMPLETE (Chinese only)
 
 ## Overview
 
-Successfully implemented Phase 4 of the pre-generation pipeline, specifically the Mandarin Grammar Enricher and Grammar Enrichment CLI. Japanese and French grammar enrichers are deferred for future work.
+Successfully implemented Phase 4 of the pre-generation pipeline, specifically the Chinese Grammar Enricher and Grammar Enrichment CLI. Japanese and French grammar enrichers are deferred for future work.
 
 ## Completed Tasks
 
-### Mandarin Grammar Enricher (T077-T085)
+### Chinese Grammar Enricher (T077-T085)
 
 **Files Created**:
 - `src/pipeline/enrichers/grammar/__init__.py` - Grammar enricher module initialization
-- `src/pipeline/enrichers/grammar/mandarin.py` - Full Mandarin grammar enricher implementation
+- `src/pipeline/enrichers/grammar/chinese.py` - Full Chinese grammar enricher implementation
 
 **Key Features**:
 1. **CSV Parser**: Parses official Chinese grammar lists with format "类别,类别名称,细目,语法内容"
@@ -50,18 +50,18 @@ Successfully implemented Phase 4 of the pre-generation pipeline, specifically th
 **Usage Example**:
 ```bash
 # Dry run
-python -m src.havachat.cli.enrich_grammar \
+python -m havachat.cli.enrich_grammar \
     --language zh --level HSK1 \
     --input data/hsk1_grammar.csv \
-    --enricher mandarin \
+    --enricher chinese \
     --output output/zh/hsk1/grammar.json \
     --dry-run --max-items 5
 
 # Full enrichment with parallel processing
-python -m src.havachat.cli.enrich_grammar \
+python -m havachat.cli.enrich_grammar \
     --language zh --level HSK1 \
     --input data/hsk1_grammar.csv \
-    --enricher mandarin \
+    --enricher chinese \
     --output output/zh/hsk1/grammar.json \
     --parallel 5
 ```
@@ -145,7 +145,7 @@ python -m src.havachat.cli.enrich_grammar \
 
 ## Known Limitations
 
-1. **Single Language**: Only Mandarin implemented (Japanese and French deferred)
+1. **Single Language**: Only Chinese implemented (Japanese and French deferred)
 2. **CSV Format Only**: Currently only supports official Chinese CSV format
 3. **No Live API Test**: Integration test with real LLM requires manual API key setup
 4. **Azure Translation Required**: Falls back to "[Translation unavailable]" if Azure Translation not configured
@@ -179,10 +179,10 @@ PYTHONPATH=src uv run python -m pytest tests/unit/test_mandarin_grammar_enricher
 PYTHONPATH=src uv run python -m pytest tests/integration/test_end_to_end_grammar.py -v
 
 # Dry-run CLI test
-PYTHONPATH=src uv run python -m src.havachat.cli.enrich_grammar \
+PYTHONPATH=src uv run python -m havachat.cli.enrich_grammar \
     --language zh --level HSK1 \
     --input tests/fixtures/mandarin_grammar_sample.csv \
-    --enricher mandarin \
+    --enricher chinese \
     --output /tmp/test_grammar.json \
     --dry-run --max-items 5
 ```

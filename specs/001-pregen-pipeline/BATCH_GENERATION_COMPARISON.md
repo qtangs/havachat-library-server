@@ -156,7 +156,7 @@ This simple model enables structured batch output with instructor library.
 
 ## Real-World Example
 
-**Scenario:** Generate learning items for Mandarin HSK1 (200 vocab, 50 grammar items)
+**Scenario:** Generate learning items for Chinese HSK1 (200 vocab, 50 grammar items)
 
 ### Before (Loop-Based):
 ```

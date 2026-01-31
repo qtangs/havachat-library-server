@@ -1,6 +1,6 @@
 """Optimized Japanese vocabulary enricher with cost reduction.
 
-Cost reduction strategy (same as Mandarin):
+Cost reduction strategy (same as Chinese):
 1. Use minimal LLM response model (only explanation, examples, pos)
 2. Examples are Japanese-only (no romaji or translations in LLM response)
 3. Use Azure Translation API for English translations (2M free chars/month)
@@ -22,11 +22,11 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 from pykakasi import kakasi
 
-from src.havachat.enrichers.base import BaseEnricher
-from src.havachat.utils.azure_translation import AzureTranslationHelper
-from src.havachat.utils.llm_client import LLMClient
-from src.havachat.utils.romanization import get_japanese_romaji
-from src.havachat.validators.schema import Category, Example, LearningItem, LevelSystem
+from havachat.enrichers.base import BaseEnricher
+from havachat.utils.azure_translation import AzureTranslationHelper
+from havachat.utils.llm_client import LLMClient
+from havachat.utils.romanization import get_japanese_romaji
+from havachat.validators.schema import Category, Example, LearningItem, LevelSystem
 
 logger = logging.getLogger(__name__)
 

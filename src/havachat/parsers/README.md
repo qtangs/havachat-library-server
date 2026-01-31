@@ -14,7 +14,7 @@ The parsers have now been centralized in `src/pipeline/parsers/source_parsers.py
 
 ## Supported Formats
 
-### Mandarin Vocabulary (TSV)
+### Chinese Vocabulary (TSV)
 **Format:** `Word\tPart of Speech`
 
 ```tsv
@@ -30,7 +30,7 @@ Word    Part of Speech
 - Translates Chinese POS tags to English
 - Handles compound POS (e.g., "量、（名）" → "measure word/noun")
 
-**Parser:** `parse_mandarin_vocab_tsv(source_path)`
+**Parser:** `parse_chinese_vocab_tsv(source_path)`
 
 ### Japanese Vocabulary (JSON)
 **Format:** JSON array or object with `vocabulary` key
@@ -70,7 +70,7 @@ Bonjour. / Bonsoir.     Saluer
 
 **Parser:** `parse_french_vocab_tsv(source_path)`
 
-### Mandarin Grammar (CSV)
+### Chinese Grammar (CSV)
 **Format:** `类别,类别名称,细目,语法内容`
 
 ```csv
@@ -85,7 +85,7 @@ Bonjour. / Bonsoir.     Saluer
 - Preserves original content for context
 - Prevents "mega-items" by creating individual entries
 
-**Parser:** `parse_mandarin_grammar_csv(source_path)`
+**Parser:** `parse_chinese_grammar_csv(source_path)`
 
 ## Usage
 
@@ -93,14 +93,14 @@ Bonjour. / Bonsoir.     Saluer
 
 ```python
 from havachat.parsers.source_parsers import (
-    parse_mandarin_vocab_tsv,
+    parse_chinese_vocab_tsv,
     parse_japanese_vocab_json,
     parse_french_vocab_tsv,
-    parse_mandarin_grammar_csv,
+    parse_chinese_grammar_csv,
 )
 
-# Parse Mandarin vocab
-items = parse_mandarin_vocab_tsv("data/mandarin_vocab_hsk1.tsv")
+# Parse Chinese vocab
+items = parse_chinese_vocab_tsv("data/chinese_vocab_hsk1.tsv")
 # Returns: [{"target_item": "唱", "pos": "verb", "sense_marker": "", ...}, ...]
 
 # Parse Japanese vocab
@@ -124,11 +124,11 @@ items = load_source_file("data/vocab.json", language="ja", content_type="vocab")
 Enrichers now delegate to centralized parsers:
 
 ```python
-from havachat.parsers.source_parsers import parse_mandarin_vocab_tsv
+from havachat.parsers.source_parsers import parse_chinese_vocab_tsv
 
-class MandarinVocabEnricher(BaseEnricher):
+class ChineseVocabEnricher(BaseEnricher):
     def parse_source(self, source_path):
-        return parse_mandarin_vocab_tsv(source_path)
+        return parse_chinese_vocab_tsv(source_path)
 ```
 
 ### In CLI Tools
@@ -137,16 +137,16 @@ The `generate_learning_items.py` CLI now supports loading from original source f
 
 ```bash
 # Load from original TSV file (not enriched JSON)
-python -m src.havachat.cli.generate_learning_items \
+python -m havachat.cli.generate_learning_items \
     --language zh --level HSK1 \
     --category pronunciation \
     --source-type original \
-    --source-file data/mandarin_vocab_hsk1.tsv \
+    --source-file data/chinese_vocab_hsk1.tsv \
     --content-type vocab \
     --output output/pronunciation/
 
 # Load from enriched JSON directory (old behavior)
-python -m src.havachat.cli.generate_learning_items \
+python -m havachat.cli.generate_learning_items \
     --language zh --level HSK1 \
     --category pronunciation \
     --source-type enriched \
@@ -162,7 +162,7 @@ All parsers return a list of dictionaries with normalized field names:
 {
     "target_item": str,        # The word/phrase/pattern
     "pos": str,                # Part of speech (if applicable)
-    "sense_marker": str,       # Sense marker for disambiguation (Mandarin)
+    "sense_marker": str,       # Sense marker for disambiguation (Chinese)
     "romanization": str,       # Romanization/romaji (if applicable)
     "level_min": str,          # Minimum proficiency level
     "level_max": str,          # Maximum proficiency level
@@ -181,14 +181,14 @@ Comprehensive tests are available in `tests/unit/test_source_parsers.py`:
 PYTHONPATH=src uv run python -m pytest tests/unit/test_source_parsers.py -v
 
 # Run specific test class
-PYTHONPATH=src uv run python -m pytest tests/unit/test_source_parsers.py::TestMandarinVocabParser -v
+PYTHONPATH=src uv run python -m pytest tests/unit/test_source_parsers.py::TestChineseVocabParser -v
 ```
 
 Test fixtures are located in `tests/fixtures/`:
-- `mandarin_vocab_sample.tsv`
+- `chinese_vocab_sample.tsv`
 - `japanese_vocab_sample.json`
 - `french_vocab_sample.tsv`
-- `mandarin_grammar_sample.csv`
+- `chinese_grammar_sample.csv`
 
 ## Adding New Parsers
 
@@ -206,10 +206,10 @@ To add support for a new language or format:
    ```python
    def load_source_file(source_path, language, content_type):
        parsers = {
-           ("zh", "vocab"): parse_mandarin_vocab_tsv,
+           ("zh", "vocab"): parse_chinese_vocab_tsv,
            ("ja", "vocab"): parse_japanese_vocab_json,
            ("fr", "vocab"): parse_french_vocab_tsv,
-           ("zh", "grammar"): parse_mandarin_grammar_csv,
+           ("zh", "grammar"): parse_chinese_grammar_csv,
            ("es", "vocab"): parse_spanish_vocab_json,  # Add here
        }
        # ...
@@ -218,10 +218,10 @@ To add support for a new language or format:
 3. **Export from `__init__.py`**:
    ```python
    from havachat.parsers.source_parsers import (
-       parse_mandarin_vocab_tsv,
+       parse_chinese_vocab_tsv,
        parse_japanese_vocab_json,
        parse_french_vocab_tsv,
-       parse_mandarin_grammar_csv,
+       parse_chinese_grammar_csv,
        parse_spanish_vocab_json,  # Add here
    )
    ```
@@ -256,10 +256,10 @@ def parse_source(self, source_path):
 
 **After:**
 ```python
-from havachat.parsers.source_parsers import parse_mandarin_vocab_tsv
+from havachat.parsers.source_parsers import parse_chinese_vocab_tsv
 
 def parse_source(self, source_path):
-    return parse_mandarin_vocab_tsv(source_path)
+    return parse_chinese_vocab_tsv(source_path)
 ```
 
 ### For CLI Tools

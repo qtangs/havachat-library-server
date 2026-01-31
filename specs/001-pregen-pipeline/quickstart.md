@@ -45,18 +45,18 @@ The system has two operational modes:
 **Output**: JSON files in `havachat-knowledge/generated content/{language}/{level}/vocab/`
 
 ```bash
-# Example: Enrich Mandarin HSK1 vocabulary with parallel processing
-python -m src.havachat.cli.enrich_vocab \
+# Example: Enrich Chinese HSK1 vocabulary with parallel processing
+python -m havachat.cli.enrich_vocab \
   --language zh \
   --level HSK1 \
-  --input sources/mandarin/hsk1_vocab.tsv \
-  --enricher mandarin \
-  --output $HAVACHAT_KNOWLEDGE_PATH/generated content/Mandarin/HSK1/vocab/ \
+  --input sources/chinese/hsk1_vocab.tsv \
+  --enricher chinese \
+  --output $HAVACHAT_KNOWLEDGE_PATH/generated content/Chinese/HSK1/vocab/ \
   --parallel 5 \
   --resume
 
 # Example: Enrich Japanese JLPT N5 vocabulary
-python -m src.havachat.cli.enrich_vocab \
+python -m havachat.cli.enrich_vocab \
   --language ja \
   --level N5 \
   --input sources/japanese/jlpt_n5_vocab.json \
@@ -65,7 +65,7 @@ python -m src.havachat.cli.enrich_vocab \
   --parallel 3
 
 # Example: Enrich French A1 vocabulary from TSV
-python -m src.havachat.cli.enrich_vocab \
+python -m havachat.cli.enrich_vocab \
   --language fr \
   --level A1 \
   --input sources/french/a1_vocab.tsv \
@@ -78,7 +78,7 @@ python -m src.havachat.cli.enrich_vocab \
 - `--language`: ISO 639-1 code (zh, ja, fr, en, es)
 - `--level`: Proficiency level (HSK1-6, N5-N1, A1-C1)
 - `--input`: Path to source file (TSV/CSV/JSON)
-- `--enricher`: Language-specific enricher (mandarin, japanese, french)
+- `--enricher`: Language-specific enricher (chinese, japanese, french)
 - `--output`: Directory for output JSON files
 - `--parallel N`: Process N items in parallel (default: 1) - **NEW**
 - `--resume`: Resume from checkpoint if interrupted - **NEW**
@@ -117,7 +117,7 @@ Failed items saved to: output/zh/hsk1/failed_items.jsonl
 ```
 
 **Performance Improvements**:
-- Auto-romanization: Mandarin uses `pypinyin`, Japanese uses `pykakasi` (~30 tokens saved per item)
+- Auto-romanization: Chinese uses `pypinyin`, Japanese uses `pykakasi` (~30 tokens saved per item)
 - Language-specific models: Only required fields validated (~20 tokens saved per item)
 - Prompt caching: OpenAI automatic caching for system messages >1024 tokens (~350 tokens saved per item)
 - **Total savings**: ~400 tokens/item = 54% cost reduction
@@ -132,16 +132,16 @@ Failed items saved to: output/zh/hsk1/failed_items.jsonl
 **Output**: JSON files in `havachat-knowledge/generated content/{language}/{level}/grammar/`
 
 ```bash
-# Example: Enrich Mandarin HSK1 grammar
-python -m src.havachat.cli.enrich_grammar \
+# Example: Enrich Chinese HSK1 grammar
+python -m havachat.cli.enrich_grammar \
   --language zh \
   --level HSK1 \
-  --input sources/mandarin/hsk1_grammar.csv \
-  --enricher mandarin \
-  --output $HAVACHAT_KNOWLEDGE_PATH/generated content/Mandarin/HSK1/grammar/
+  --input sources/chinese/hsk1_grammar.csv \
+  --enricher chinese \
+  --output $HAVACHAT_KNOWLEDGE_PATH/generated content/Chinese/HSK1/grammar/
 
 # Example: Enrich French A1 grammar
-python -m src.havachat.cli.enrich_grammar \
+python -m havachat.cli.enrich_grammar \
   --language fr \
   --level A1 \
   --input sources/french/a1_grammar.md \
@@ -173,16 +173,16 @@ Summary:
 **Output**: JSON files in `havachat-knowledge/generated content/{language}/{level}/{category}/`
 
 ```bash
-# Example: Generate pronunciation learning items from Mandarin vocab
-python -m src.havachat.cli.generate_other_categories \
+# Example: Generate pronunciation learning items from Chinese vocab
+python -m havachat.cli.generate_other_categories \
   --language zh \
   --level HSK1 \
   --category pronunciation \
-  --source-items $HAVACHAT_KNOWLEDGE_PATH/generated content/Mandarin/HSK1/vocab/ \
-  --output $HAVACHAT_KNOWLEDGE_PATH/generated content/Mandarin/HSK1/pronunciation/
+  --source-items $HAVACHAT_KNOWLEDGE_PATH/generated content/Chinese/HSK1/vocab/ \
+  --output $HAVACHAT_KNOWLEDGE_PATH/generated content/Chinese/HSK1/pronunciation/
 
 # Example: Generate functional language items from French grammar
-python -m src.havachat.cli.generate_other_categories \
+python -m havachat.cli.generate_other_categories \
   --language fr \
   --level A1 \
   --category functional \
@@ -190,7 +190,7 @@ python -m src.havachat.cli.generate_other_categories \
   --output $HAVACHAT_KNOWLEDGE_PATH/generated content/French/A1/functional/
 
 # Example: Generate cultural notes from Japanese vocab
-python -m src.havachat.cli.generate_other_categories \
+python -m havachat.cli.generate_other_categories \
   --language ja \
   --level N5 \
   --category cultural \
@@ -206,7 +206,7 @@ python -m src.havachat.cli.generate_other_categories \
 
 **Expected Output**:
 ```
-Analyzing 485 vocab items from Mandarin/HSK1/vocab/...
+Analyzing 485 vocab items from Chinese/HSK1/vocab/...
 Generating pronunciation learning items...
 
 Generated items:
@@ -231,18 +231,18 @@ Summary:
 **Output**: JSON files in `havachat-knowledge/generated content/{language}/{level}/conversations/` or `stories/`
 
 ```bash
-# Example: Generate Mandarin HSK2 conversation
-python -m src.havachat.cli.generate_content \
+# Example: Generate Chinese HSK2 conversation
+python -m havachat.cli.generate_content \
   --language zh \
   --level HSK2 \
   --type conversation \
   --topic "ordering food" \
   --scenario "casual restaurant" \
   --turns 8 \
-  --output $HAVACHAT_KNOWLEDGE_PATH/generated content/Mandarin/HSK2/conversations/
+  --output $HAVACHAT_KNOWLEDGE_PATH/generated content/Chinese/HSK2/conversations/
 
 # Example: Generate French A1 story
-python -m src.havachat.cli.generate_content \
+python -m havachat.cli.generate_content \
   --language fr \
   --level A1 \
   --type story \
@@ -292,12 +292,12 @@ Validation:
 
 ```bash
 # Example: Generate questions for a conversation
-python -m src.havachat.cli.generate_questions \
+python -m havachat.cli.generate_questions \
   --content-id b50e8400-e29b-41d4-a716-446655440000 \
   --language zh \
   --level HSK2 \
   --num-questions 6 \
-  --output $HAVACHAT_KNOWLEDGE_PATH/generated content/Mandarin/HSK2/questions/
+  --output $HAVACHAT_KNOWLEDGE_PATH/generated content/Chinese/HSK2/questions/
 ```
 
 **Options**:
@@ -328,19 +328,19 @@ Answerability validation:
 
 ```bash
 # Example: Validate all French A1 content
-python -m src.havachat.cli.run_qa_gates \
+python -m havachat.cli.run_qa_gates \
   --language fr \
   --level A1 \
   --content-dir $HAVACHAT_KNOWLEDGE_PATH/generated content/French/A1/ \
   --output $HAVACHAT_KNOWLEDGE_PATH/generated content/French/A1/qa_reports/
 
 # Validate specific content type
-python -m src.havachat.cli.run_qa_gates \
+python -m havachat.cli.run_qa_gates \
   --language zh \
   --level HSK2 \
   --content-type conversations \
-  --content-dir $HAVACHAT_KNOWLEDGE_PATH/generated content/Mandarin/HSK2/conversations/ \
-  --output $HAVACHAT_KNOWLEDGE_PATH/generated content/Mandarin/HSK2/qa_reports/
+  --content-dir $HAVACHAT_KNOWLEDGE_PATH/generated content/Chinese/HSK2/conversations/ \
+  --output $HAVACHAT_KNOWLEDGE_PATH/generated content/Chinese/HSK2/qa_reports/
 ```
 
 **Options**:
@@ -406,7 +406,7 @@ The live API accepts scenario descriptions and generates content on-demand, buil
 
 ```bash
 # Start the live API server
-python -m src.havachat.api.server \
+python -m havachat.api.server \
   --host 0.0.0.0 \
   --port 8001 \
   --workers 4
@@ -588,11 +588,11 @@ For production batch processing, use LangGraph orchestration:
 
 ```bash
 # Run full enrichment pipeline with retries and checkpointing
-python -m src.havachat.langgraph.enrichment_graph \
+python -m havachat.langgraph.enrichment_graph \
   --config configs/mandarin_hsk1_enrichment.json
 
 # Run full content generation pipeline
-python -m src.havachat.langgraph.generation_graph \
+python -m havachat.langgraph.generation_graph \
   --config configs/french_a1_content_generation.json
 ```
 
@@ -603,14 +603,14 @@ python -m src.havachat.langgraph.generation_graph \
   "level": "HSK1",
   "stages": {
     "vocab": {
-      "input": "sources/mandarin/hsk1_vocab.tsv",
-      "enricher": "mandarin",
-      "output": "../havachat-knowledge/generated content/Mandarin/HSK1/vocab/"
+      "input": "sources/chinese/hsk1_vocab.tsv",
+      "enricher": "chinese",
+      "output": "../havachat-knowledge/generated content/Chinese/HSK1/vocab/"
     },
     "grammar": {
-      "input": "sources/mandarin/hsk1_grammar.csv",
-      "enricher": "mandarin",
-      "output": "../havachat-knowledge/generated content/Mandarin/HSK1/grammar/"
+      "input": "sources/chinese/hsk1_grammar.csv",
+      "enricher": "chinese",
+      "output": "../havachat-knowledge/generated content/Chinese/HSK1/grammar/"
     }
   },
   "llm": {
@@ -636,10 +636,10 @@ If enrichment fails with validation errors:
 
 ```bash
 # Check manual review queue
-cat $HAVACHAT_KNOWLEDGE_PATH/generated content/Mandarin/HSK1/manual_review/vocab_failures.jsonl
+cat $HAVACHAT_KNOWLEDGE_PATH/generated content/Chinese/HSK1/manual_review/vocab_failures.jsonl
 
 # Retry failed items with higher temperature
-python -m src.havachat.cli.enrich_vocab \
+python -m havachat.cli.enrich_vocab \
   --input manual_review/vocab_failures.jsonl \
   --retry-mode \
   --temperature 0.9
@@ -649,12 +649,12 @@ python -m src.havachat.cli.enrich_vocab \
 
 ```bash
 # Validate individual file against schema
-python -m src.havachat.validators.schema \
+python -m havachat.validators.schema \
   --file French/A1/vocab/item-550e8400.json \
   --schema contracts/learning_item.schema.json
 
 # Auto-fix common issues (missing fields, type mismatches)
-python -m src.havachat.validators.schema \
+python -m havachat.validators.schema \
   --file French/A1/vocab/item-550e8400.json \
   --auto-fix
 ```
@@ -663,12 +663,12 @@ python -m src.havachat.validators.schema \
 
 ```bash
 # Process in parallel (8 workers)
-python -m src.havachat.cli.enrich_vocab \
+python -m havachat.cli.enrich_vocab \
   --input hsk1_vocab.tsv \
   --workers 8
 
 # Use faster model for simple enrichment
-python -m src.havachat.cli.enrich_vocab \
+python -m havachat.cli.enrich_vocab \
   --input hsk1_vocab.tsv \
   --model gpt-3.5-turbo  # Default: gpt-4
 

@@ -1,4 +1,4 @@
-"""Prompts for Mandarin Chinese enrichment."""
+"""Prompts for Chinese enrichment."""
 
 from .vocab_prompts import (
     SYSTEM_PROMPT,

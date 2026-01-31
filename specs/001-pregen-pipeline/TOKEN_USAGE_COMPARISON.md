@@ -112,7 +112,7 @@ Savings: 120 tokens per item (60% reduction) ✨
 
 ## Batch Generation Example
 
-**Scenario:** Generate 10 pronunciation items for Mandarin HSK1
+**Scenario:** Generate 10 pronunciation items for Chinese HSK1
 
 ### Full Model Approach (Before)
 

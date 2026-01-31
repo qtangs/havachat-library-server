@@ -11,10 +11,10 @@ The script uses generated_content_info.json in the learning-items-dir to discove
 and correctly parse learning item files (both original TSV/CSV and enriched JSON).
 
 Usage:
-    python -m src.havachat.cli.generate_content \\
+    python -m havachat.cli.generate_content \\
         --language zh --level HSK1 \\
         --topic "Food" \\
-        --learning-items-dir ../havachat-knowledge/generated\\ content/Mandarin/HSK1/ \\
+        --learning-items-dir ../havachat-knowledge/generated\\ content/Chinese/HSK1/ \\
         --output output/content/ \\
         --type both \\
         --num-conversations 5 \\
@@ -34,16 +34,16 @@ Args:
 
 Examples:
     # Generate both conversations and stories for Food topic
-    python -m src.havachat.cli.generate_content \\
+    python -m havachat.cli.generate_content \\
         --language zh --level HSK1 \\
         --topic "Food" \\
-        --learning-items-dir ../havachat-knowledge/generated\\ content/Mandarin/HSK1/ \\
+        --learning-items-dir ../havachat-knowledge/generated\\ content/Chinese/HSK1/ \\
         --output output/content/food/ \\
         --type both \\
         --track-usage
 
     # Generate only conversations (no stories)
-    python -m src.havachat.cli.generate_content \\
+    python -m havachat.cli.generate_content \\
         --language fr --level A1 \\
         --topic "Travel" \\
         --learning-items-dir ../havachat-knowledge/generated\\ content/French/A1/ \\
@@ -52,7 +52,7 @@ Examples:
         --num-conversations 10
 
     # Generate only stories (no conversations)
-    python -m src.havachat.cli.generate_content \\
+    python -m havachat.cli.generate_content \\
         --language ja --level N5 \\
         --topic "Daily Life" \\
         --learning-items-dir ../havachat-knowledge/generated\\ content/Japanese/N5/ \\
@@ -65,6 +65,7 @@ import argparse
 from dotenv import load_dotenv
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -72,6 +73,9 @@ from havachat.generators.content_generator import ContentGenerator
 from havachat.utils.llm_client import LLMClient
 from havachat.utils.usage_tracker import UsageTracker
 from havachat.validators.schema import LevelSystem
+from src.pipeline.validators.llm_judge import LLMJudge
+from src.pipeline.utils.notion_client import NotionClient, NotionSchemaError
+from src.pipeline.utils.notion_mapping_manager import NotionMappingManager
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -179,6 +183,18 @@ def main():
         help="Print plan without generating content",
     )
     
+    parser.add_argument(
+        "--enable-notion",
+        action="store_true",
+        help="Enable LLM judge evaluation and Notion push after generation",
+    )
+    
+    parser.add_argument(
+        "--skip-judge",
+        action="store_true",
+        help="Skip LLM judge evaluation (use with --enable-notion to push without evaluation)",
+    )
+    
     args = parser.parse_args()
     
     # Validation
@@ -213,6 +229,11 @@ def main():
     
     # Initialize components
     llm_client = LLMClient()
+    
+    # Initialize separate LLM client for judge with dedicated model
+    llm_judge_model = os.getenv("LLM_JUDGE_MODEL", "gpt-4")
+    llm_judge_client = LLMClient(model=llm_judge_model)
+    
     generator = ContentGenerator(
         language=args.language,
         level_system=level_system,
@@ -239,7 +260,7 @@ def main():
         
         if num_items == 0:
             logger.error("No learning items found. Generate learning items first.")
-            logger.error("Use: python -m src.havachat.cli.generate_learning_items")
+            logger.error("Use: python -m havachat.cli.generate_learning_items")
             sys.exit(1)
         
         logger.info(f"Loaded {num_items} learning items from all categories")
@@ -274,9 +295,170 @@ def main():
                 )
             logger.info(f"Saved chain-of-thought to: {cot_file}")
         
+        # Stage 3: LLM Judge Evaluation and Notion Push (if enabled)
+        if args.enable_notion and not args.skip_judge:
+            logger.info("\n" + "=" * 80)
+            logger.info("STAGE 3: LLM Quality Judge Evaluation")
+            logger.info("=" * 80)
+            logger.info(f"Using LLM Judge model: {llm_judge_model}")
+            
+            llm_judge = LLMJudge(llm_client=llm_judge_client)
+            
+            # Evaluate conversations
+            for conversation in batch.conversations:
+                logger.info(f"Evaluating conversation: {conversation.title}")
+                
+                # Format segments as text
+                text = "\n".join([
+                    f"{seg.speaker}: {seg.text}"
+                    for seg in conversation.segments
+                ])
+                
+                evaluation = llm_judge.evaluate_conversation(
+                    content_id=conversation.id,
+                    text=text,
+                    language=args.language,
+                    level=args.level,
+                    content_type="conversation"
+                )
+                
+                # Store evaluation in content unit
+                conversation.llm_judge_evaluation = evaluation
+                
+                logger.info(
+                    f"  Average score: {evaluation.average_score():.1f}/10 - "
+                    f"Recommendation: {evaluation.overall_recommendation}"
+                )
+                
+            # Evaluate stories
+            for story in batch.stories:
+                logger.info(f"Evaluating story: {story.title}")
+                
+                # Format segments as text
+                text = "\n".join([seg.text for seg in story.segments])
+                
+                evaluation = llm_judge.evaluate_conversation(
+                    content_id=story.id,
+                    text=text,
+                    language=args.language,
+                    level=args.level,
+                    content_type="story"
+                )
+                
+                # Store evaluation in content unit
+                story.llm_judge_evaluation = evaluation
+                
+                logger.info(
+                    f"  Average score: {evaluation.average_score():.1f}/10 - "
+                    f"Recommendation: {evaluation.overall_recommendation}"
+                )
+        
+        # Stage 4: Push to Notion (if enabled)
+        if args.enable_notion:
+            logger.info("\n" + "=" * 80)
+            logger.info("STAGE 4: Pushing to Notion")
+            logger.info("=" * 80)
+            
+            # Get Notion credentials
+            notion_token = os.getenv("NOTION_API_TOKEN")
+            database_id = os.getenv("NOTION_DATABASE_ID")
+            
+            if not notion_token or not database_id:
+                logger.warning(
+                    "Notion credentials not found. Set NOTION_API_TOKEN and "
+                    "NOTION_DATABASE_ID environment variables to enable Notion push."
+                )
+            else:
+                try:
+                    notion_client = NotionClient(
+                        api_token=notion_token,
+                        database_id=database_id
+                    )
+                    notion_client.validate_database_schema()
+                    mapping_manager = NotionMappingManager()
+                    
+                    # Push conversations
+                    for conversation in batch.conversations:
+                        try:
+                            # Skip if already pushed
+                            if mapping_manager.get_notion_page_id(conversation.id):
+                                logger.info(f"Already in Notion: {conversation.title}")
+                                continue
+                                
+                            notion_page_id = notion_client.push_conversation(
+                                content_id=conversation.id,
+                                content_type="conversation",
+                                title=conversation.title,
+                                description=conversation.description or "",
+                                topic=conversation.topic_name,
+                                scenario=conversation.scenario_name,
+                                segments=[seg.model_dump() for seg in conversation.segments],
+                                llm_evaluation=conversation.llm_judge_evaluation,
+                                language=args.language,
+                                level=args.level
+                            )
+                            
+                            # Add mapping
+                            mapping_manager.add_mapping(
+                                content_id=conversation.id,
+                                notion_page_id=notion_page_id,
+                                language=args.language,
+                                level=args.level,
+                                content_type="conversation",
+                                title=conversation.title
+                            )
+                            
+                            logger.info(f"Pushed to Notion: {conversation.title}")
+                            
+                        except Exception as e:
+                            logger.error(f"Failed to push {conversation.title}: {e}")
+                    
+                    # Push stories
+                    for story in batch.stories:
+                        try:
+                            # Skip if already pushed
+                            if mapping_manager.get_notion_page_id(story.id):
+                                logger.info(f"Already in Notion: {story.title}")
+                                continue
+                                
+                            notion_page_id = notion_client.push_conversation(
+                                content_id=story.id,
+                                content_type="story",
+                                title=story.title,
+                                description=story.description or "",
+                                topic=story.topic_name,
+                                scenario=story.scenario_name,
+                                segments=[seg.model_dump() for seg in story.segments],
+                                llm_evaluation=story.llm_judge_evaluation,
+                                language=args.language,
+                                level=args.level
+                            )
+                            
+                            # Add mapping
+                            mapping_manager.add_mapping(
+                                content_id=story.id,
+                                notion_page_id=notion_page_id,
+                                language=args.language,
+                                level=args.level,
+                                content_type="story",
+                                title=story.title
+                            )
+                            
+                            logger.info(f"Pushed to Notion: {story.title}")
+                            
+                        except Exception as e:
+                            logger.error(f"Failed to push {story.title}: {e}")
+                            
+                    logger.info("Notion push completed")
+                    
+                except NotionSchemaError as e:
+                    logger.error(f"Notion schema validation failed: {e}")
+                except Exception as e:
+                    logger.error(f"Notion push failed: {e}")
+        
         # Save content units
         logger.info("\n" + "=" * 80)
-        logger.info("STAGE 3: Saving Content")
+        logger.info("STAGE 5: Saving Content")
         logger.info("=" * 80)
         
         for conversation in batch.conversations:

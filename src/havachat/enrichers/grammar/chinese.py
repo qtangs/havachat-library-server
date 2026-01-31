@@ -1,4 +1,4 @@
-"""Mandarin Chinese grammar enricher.
+"""Chinese grammar enricher.
 
 This enricher processes official Chinese grammar lists from CSV files with the format:
 类别,类别名称,细目,语法内容
@@ -23,12 +23,12 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from havachat.enrichers.base import BaseEnricher
-from havachat.parsers.source_parsers import parse_mandarin_grammar_csv
-from havachat.prompts.mandarin.grammar_prompts import MANDARIN_GRAMMAR_SYSTEM_PROMPT
+from havachat.parsers.source_parsers import parse_chinese_grammar_csv
+from havachat.prompts.chinese.grammar_prompts import MANDARIN_GRAMMAR_SYSTEM_PROMPT
 from havachat.utils.azure_translation import AzureTranslationHelper
 from havachat.utils.dictionary import DictionaryFactory
 from havachat.utils.llm_client import LLMClient
-from havachat.utils.romanization import get_mandarin_pinyin
+from havachat.utils.romanization import get_chinese_pinyin
 from havachat.utils.translation import translate_texts
 from havachat.validators.schema import Category, Example, LearningItem, LevelSystem
 
@@ -65,8 +65,8 @@ class ChineseGrammarEnriched(BaseModel):
     )
 
 
-class MandarinGrammarEnricher(BaseEnricher):
-    """Enricher for Mandarin grammar patterns from official CSV lists.
+class ChineseGrammarEnricher(BaseEnricher):
+    """Enricher for Chinese grammar patterns from official CSV lists.
     
     Expected input format: CSV with columns "类别,类别名称,细目,语法内容"
     
@@ -85,7 +85,7 @@ class MandarinGrammarEnricher(BaseEnricher):
         skip_llm: bool = False,
         skip_translation: bool = False,
     ):
-        """Initialize Mandarin grammar enricher.
+        """Initialize Chinese grammar enricher.
         
         Args:
             llm_client: Optional LLM client for enrichment
@@ -99,7 +99,7 @@ class MandarinGrammarEnricher(BaseEnricher):
         # Initialize dictionary for translation reference
         self.dictionary = DictionaryFactory.get_dictionary("zh")
         if self.dictionary:
-            logger.info(f"Loaded dictionary for Mandarin ({self.dictionary.size()} entries)")
+            logger.info(f"Loaded dictionary for Chinese ({self.dictionary.size()} entries)")
         
         # Initialize Azure Translation helper unless skip_translation is True
         if not skip_translation:
@@ -139,7 +139,7 @@ class MandarinGrammarEnricher(BaseEnricher):
             FileNotFoundError: If source file doesn't exist
             ValueError: If CSV format is invalid
         """
-        return parse_mandarin_grammar_csv(source_path)
+        return parse_chinese_grammar_csv(source_path)
 
     def detect_missing_fields(self, item: Dict[str, Any]) -> List[str]:
         """Detect fields that need enrichment.
@@ -188,7 +188,7 @@ class MandarinGrammarEnricher(BaseEnricher):
         detail = item["detail"]
         original_content = item.get("original_content", pattern)
         
-        prompt = f"""Enrich the following Mandarin grammar pattern:
+        prompt = f"""Enrich the following Chinese grammar pattern:
 
 **Grammar Pattern**: {pattern}
 **Type**: {grammar_type} > {category_name}"""
@@ -286,7 +286,7 @@ Provide your response in the format:
             logger.info(f"Skipping LLM enrichment for grammar pattern '{pattern}' (--skip-llm mode)")
             
             # Get pinyin for the pattern
-            pattern_pinyin = get_mandarin_pinyin(pattern)
+            pattern_pinyin = get_chinese_pinyin(pattern)
             
             # Create minimal item with UUID
             minimal_item = LearningItem(
@@ -344,7 +344,7 @@ Provide your response in the format:
                 # Process examples: Add pinyin and translations
                 processed_examples = []
                 # Get pinyin for all examples
-                example_pinyins = [get_mandarin_pinyin(ex) for ex in enriched_data.examples]
+                example_pinyins = [get_chinese_pinyin(ex) for ex in enriched_data.examples]
                 
                 # Translate all examples using common translation utility with dictionary
                 example_translations = translate_texts(
@@ -368,7 +368,7 @@ Provide your response in the format:
                     )
                 
                 # Get pinyin for the pattern
-                pattern_pinyin = get_mandarin_pinyin(pattern)
+                pattern_pinyin = get_chinese_pinyin(pattern)
                 
                 # Build LearningItem
                 learning_item = LearningItem(

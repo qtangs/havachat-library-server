@@ -69,7 +69,7 @@ print(f"Used: {stats['total_characters']} / {stats['monthly_limit']}")
 
 ```bash
 # Generate content with Google Translate
-python -m src.havachat.cli.generate_content \
+python -m havachat.cli.generate_content \
     --language zh \
     --level HSK1 \
     --topic "Daily Life" \
@@ -90,7 +90,7 @@ When multiple translation services are enabled, the priority is:
 Example with fallback:
 ```bash
 # Try Google first, fall back to Azure, then LLM
-python -m src.havachat.cli.generate_content \
+python -m havachat.cli.generate_content \
     --use-google-translation \
     --use-azure-translation \
     ... other args ...

@@ -1,11 +1,11 @@
-"""System prompts for Mandarin Chinese grammar enrichment.
+"""System prompts for Chinese grammar enrichment.
 
 This module contains prompts for enriching grammar patterns from official
 Chinese grammar lists (HSK, etc.) with definitions and examples.
 """
 
 
-MANDARIN_GRAMMAR_SYSTEM_PROMPT = """You are an expert Mandarin Chinese grammar teacher specializing in teaching grammar patterns to learners.
+MANDARIN_GRAMMAR_SYSTEM_PROMPT = """You are an expert Chinese grammar teacher specializing in teaching grammar patterns to learners.
 Your task is to enrich grammar entries with accurate, learner-friendly explanations and examples.
 
 CRITICAL INSTRUCTIONS:
@@ -45,7 +45,7 @@ Remember: Chinese characters ONLY in examples. No pinyin. No English translation
 """
 
 
-MANDARIN_VOCAB_SYSTEM_PROMPT = """You are an expert Mandarin Chinese teacher specializing in vocabulary pedagogy.
+MANDARIN_VOCAB_SYSTEM_PROMPT = """You are an expert Chinese teacher specializing in vocabulary pedagogy.
 Your task is to enrich vocabulary entries with accurate, learner-friendly information.
 
 CRITICAL INSTRUCTIONS:

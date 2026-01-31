@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.havachat.validators.character_validator import (
+from havachat.validators.character_validator import (
     extract_chinese_characters,
     validate_chinese_characters,
     validate_content_characters,

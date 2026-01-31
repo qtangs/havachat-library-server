@@ -106,13 +106,14 @@ src/
 │   │   ├── __init__.py
 │   │   ├── schema_validator.py
 │   │   ├── qa_gates.py                 # All QA gates (presence, duplication, links, answerability)
+│   │   ├── llm_judge.py                # LLM quality judge (6-dimension evaluation)
 │   │   └── language_validators.py      # Language-specific rules
 │   ├── prompts/
 │   │   ├── japanese/
 │   │   │   ├── vocab_enrichment_prompts.py
 │   │   │   ├── grammar_enrichment_prompts.py
 │   │   │   └── content_generation_prompts.py  # Chain-of-thought template
-│   │   ├── mandarin/
+│   │   ├── chinese/
 │   │   ├── french/
 │   │   ├── english/
 │   │   └── spanish/
@@ -126,7 +127,8 @@ src/
 │   │   ├── generate_audio.py            # Audio generation with ElevenLabs
 │   │   ├── select_audio.py              # Select best version from multi-version generation
 │   │   ├── sync_audio.py                # Sync local audio to Cloudflare R2
-│   │   └── run_qa_gates.py
+│   │   ├── run_qa_gates.py
+│   │   └── notion_sync.py               # Notion push/sync CLI (push, check-notion, regenerate-audio)
 │   └── utils/
 │       ├── __init__.py
 │       ├── file_utils.py
@@ -134,6 +136,7 @@ src/
 │       ├── elevenlabs_client.py         # ElevenLabs TTS API client with retry logic
 │       ├── r2_client.py                 # Cloudflare R2 storage client
 │       ├── usage_tracker.py             # Track learning item appearances
+│       ├── notion_client.py             # Notion API client, schema validation, push/sync logic
 │       └── logging_config.py
 ├── models/
 │   ├── __init__.py
@@ -142,7 +145,10 @@ src/
 │   ├── question.py
 │   ├── audio_metadata.py               # Audio version tracking
 │   ├── voice_config.py                 # Voice ID mapping
-│   └── validation_report.py
+│   ├── validation_report.py
+│   ├── llm_judge_evaluation.py         # LLM judge evaluation schema
+│   ├── notion_mapping.py               # Notion mapping entity
+│   └── notion_push_queue.py            # Notion push queue entity
 └── constants.py
 
 tests/
@@ -181,6 +187,31 @@ No constitutional violations. All complexity is essential:
 ---
 
 ## Content Generation Workflow (Simplified Approach)
+**Stage 3: LLM Quality Judge & Notion Push**
+- After content generation, run LLM quality judge on each conversation/story. Judge outputs 6-dimension evaluation (naturalness, level appropriateness, grammatical correctness, vocabulary diversity, cultural accuracy, engagement) with explanations and overall recommendation (proceed/review).
+- Immediately push conversation/story details and LLM judge output to Notion database (Type, Title, Description, Topic, Scenario, Script, Translation, Audio, LLM Comment, Human Comment, Status). Status is set to "Not started".
+- Human reviewers operate in Notion, updating Status to "Ready for Audio", "Rejected", etc.
+- CLI (`notion_sync.py --check-notion`) processes Notion status changes: generates audio for "Ready for Audio", uploads audio to Notion, updates Status to "OK"; for "Rejected", updates local JSON status and usage stats.
+- CLI (`notion_sync.py --regenerate-audio --title=...`) supports audio regeneration by title, searching both Notion and local files, handling duplicate titles with disambiguation.
+
+### CLI Interface
+```bash
+# Stage 3: LLM Quality Judge & Notion Integration
+uv run python -m havachat.cli.run_qa_gates \
+  --language zh \
+  --level hsk1 \
+  --category conversations \
+  --input ../havachat-knowledge/generated\ content/Chinese/HSK1/conversations.json \
+  --judge --push-to-notion
+
+# Notion sync: process status changes (audio generation, rejection)
+uv run python -m havachat.cli.notion_sync \
+  --check-notion
+
+# Audio regeneration by title (Notion + local)
+uv run python -m havachat.cli.notion_sync \
+  --regenerate-audio --title "Shopping at the Supermarket"
+```
 
 **Critical Design Decision:**
 
@@ -230,7 +261,7 @@ uv run python -m havachat.cli.generate_content \
   --topic "Food" \
   --num-conversations 5 \
   --num-stories 5 \
-  --output-dir ../havachat-knowledge/generated\ content/Mandarin/HSK1/
+  --output-dir ../havachat-knowledge/generated\ content/Chinese/HSK1/
 
 # Repeat Stage 2 for each desired topic
 uv run python -m havachat.cli.generate_content \
@@ -239,7 +270,7 @@ uv run python -m havachat.cli.generate_content \
   --topic "Meeting New People" \
   --num-conversations 5 \
   --num-stories 5 \
-  --output-dir ../havachat-knowledge/generated\ content/Mandarin/HSK1/
+  --output-dir ../havachat-knowledge/generated\ content/Chinese/HSK1/
 
 # Stage 3: Generate audio for learning items and content units
 # Generate audio for vocab items (single version, default opus format)
@@ -250,7 +281,7 @@ uv run python -m havachat.cli.generate_audio \
   --batch-size 50 \
   --versions 1 \
   --voice-id 21m00Tcm4TlvDq8ikWAM \
-  --output-dir ../havachat-knowledge/generated\ content/Mandarin/HSK1/02_Generated/audio/vocab/
+  --output-dir ../havachat-knowledge/generated\ content/Chinese/HSK1/02_Generated/audio/vocab/
 
 # Generate audio for conversations (voice pair for 2-speaker dialogues)
 uv run python -m havachat.cli.generate_audio \
@@ -260,7 +291,7 @@ uv run python -m havachat.cli.generate_audio \
   --batch-size 20 \
   --versions 1 \
   --voice-config conversation_2_1 \
-  --output-dir ../havachat-knowledge/generated\ content/Mandarin/HSK1/02_Generated/audio/conversations/
+  --output-dir ../havachat-knowledge/generated\ content/Chinese/HSK1/02_Generated/audio/conversations/
 
 # Generate multiple versions for manual selection
 uv run python -m havachat.cli.generate_audio \
@@ -269,7 +300,7 @@ uv run python -m havachat.cli.generate_audio \
   --category grammar \
   --versions 3 \
   --voice-id 21m00Tcm4TlvDq8ikWAM \
-  --output-dir ../havachat-knowledge/generated\ content/Mandarin/HSK1/02_Generated/audio/grammar/
+  --output-dir ../havachat-knowledge/generated\ content/Chinese/HSK1/02_Generated/audio/grammar/
 
 # Select best version after manual review
 uv run python -m havachat.cli.select_audio \
@@ -308,6 +339,10 @@ After LLM generates content and lists which items are present:
 - If presence check fails, add to manual review queue
 
 ### Updated Functional Requirements
+**FR-029-JUDGE**: After content generation, LLM judge MUST evaluate each conversation/story across 6 dimensions (naturalness, level appropriateness, grammatical correctness, vocabulary diversity, cultural accuracy, engagement), outputting scores, explanations, and overall recommendation (proceed/review)
+**FR-030-NOTION**: System MUST push conversation/story details and LLM judge output to Notion database immediately after judge completes, with all required fields and LLM Comment (JSON string)
+**FR-031-NOTION**: Notion sync CLI MUST process status changes (Ready for Audio, Rejected), generate audio, update Notion Audio field and Status, and update local JSON status and usage stats for rejections
+**FR-032-NOTION**: Audio regeneration by title MUST search both Notion and local files, handle duplicate titles, and update both Notion and local files
 
 **FR-022-SIMPLIFIED**: Content generation MUST happen in two stages: (1) Generate all learning items for all categories first, (2) Generate content units per topic using ALL learning items together
 

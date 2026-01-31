@@ -4,7 +4,7 @@ This script tests different translation engines (LLM vs Azure Translation)
 against a set of difficult Chinese phrases with expected translations.
 
 Usage:
-    python -m src.havachat.cli.test_translation_quality \
+    python -m havachat.cli.test_translation_quality \
         --test-file "path/to/test_cases.md" \
         --output-report "translation_quality_report.json"
 
@@ -33,11 +33,11 @@ except ImportError:
     print("ERROR: sacrebleu not installed. Install with: pip install sacrebleu")
     sys.exit(1)
 
-from src.havachat.utils.azure_translation import AzureTranslationHelper
-from src.havachat.utils.dictionary import DictionaryFactory
-from src.havachat.utils.google_translate import GoogleTranslateHelper
-from src.havachat.utils.llm_client import LLMClient
-from src.havachat.utils.translation import translate_texts
+from havachat.utils.azure_translation import AzureTranslationHelper
+from havachat.utils.dictionary import DictionaryFactory
+from havachat.utils.google_translate import GoogleTranslateHelper
+from havachat.utils.llm_client import LLMClient
+from havachat.utils.translation import translate_texts
 
 logging.basicConfig(
     level=logging.INFO,
@@ -366,7 +366,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example:
-  python -m src.havachat.cli.test_translation_quality \\
+  python -m havachat.cli.test_translation_quality \\
       --test-file "path/to/test_cases.md" \\
       --output-report "translation_quality_report.json"
         """

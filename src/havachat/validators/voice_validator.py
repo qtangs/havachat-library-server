@@ -5,7 +5,7 @@ import random
 from pathlib import Path
 from typing import Dict, List
 
-from src.havachat.models.voice_config import VoiceConfig, VoiceConfigCollection
+from havachat.models.voice_config import VoiceConfig, VoiceConfigCollection
 
 
 class VoiceConfigValidator:
@@ -109,6 +109,7 @@ class VoiceConfigValidator:
         """Get conversation voice mapping for speakers with specified genders.
         
         Randomly selects conversation voices matching each speaker's gender.
+        Ensures each speaker gets a distinct voice (no voice used twice).
         
         Args:
             speaker_genders: List of genders for each speaker (e.g., ['female', 'male'])
@@ -121,14 +122,25 @@ class VoiceConfigValidator:
         
         voice_mapping = {}
         speaker_ids = [chr(65 + i) for i in range(len(speaker_genders))]  # A, B, C, ...
+        used_voice_ids = set()
         
         for speaker_id, gender in zip(speaker_ids, speaker_genders):
             # Get all conversation voices for this gender
             voices = self.config.get_conversation_voices(self.language_code, gender)
             if voices:
+                # Filter out already-used voices
+                available_voices = [v for v in voices if v.voice_id not in used_voice_ids]
+                if not available_voices:
+                    # If all voices of this gender are used, allow reuse but log warning
+                    available_voices = voices
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"All {gender} voices already used, reusing a voice for speaker {speaker_id}")
+                
                 # Randomly select one
-                selected_voice = random.choice(voices)
+                selected_voice = random.choice(available_voices)
                 voice_mapping[speaker_id] = selected_voice.voice_id
+                used_voice_ids.add(selected_voice.voice_id)
         
         return voice_mapping
     

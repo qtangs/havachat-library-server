@@ -73,8 +73,8 @@ Generate audio for learning items or content units using language names or ISO c
 
 ```bash
 # Generate audio for vocabulary items (using language name)
-uv run python -m src.havachat.cli.generate_audio \
-  --language Mandarin \
+uv run python -m havachat.cli.generate_audio \
+  --language Chinese \
   --level HSK1 \
   --item-type learning_item \
   --category vocab \
@@ -82,7 +82,7 @@ uv run python -m src.havachat.cli.generate_audio \
   --format opus
 
 # Generate audio using language code
-uv run python -m src.havachat.cli.generate_audio \
+uv run python -m havachat.cli.generate_audio \
   --language zh \
   --level HSK1 \
   --item-type learning_item \
@@ -91,7 +91,7 @@ uv run python -m src.havachat.cli.generate_audio \
   --format opus
 
 # Generate audio for conversations (automatic voice assignment by gender)
-uv run python -m src.havachat.cli.generate_audio \
+uv run python -m havachat.cli.generate_audio \
   --language zh \
   --level HSK1 \
   --item-type content_unit \
@@ -101,7 +101,7 @@ uv run python -m src.havachat.cli.generate_audio \
 ```
 
 **Options**:
-- `--language`: Language name or ISO 639-1 code (Mandarin/zh, French/fr, Japanese/ja)
+- `--language`: Language name or ISO 639-1 code (Chinese/zh, French/fr, Japanese/ja)
 - `--level`: Proficiency level (HSK1, A1, N5)
 - `--item-type`: `learning_item` or `content_unit`
 - `--category`: Filter by category (vocab, grammar, idiom, etc.)
@@ -124,7 +124,7 @@ If you generated multiple versions, manually select the best one:
 
 ```bash
 # For learning items
-uv run python -m src.havachat.cli.select_audio \
+uv run python -m havachat.cli.select_audio \
   --language zh \
   --level HSK1 \
   --item-type learning_item \
@@ -132,7 +132,7 @@ uv run python -m src.havachat.cli.select_audio \
   --version 2
 
 # For content unit segments
-uv run python -m src.havachat.cli.select_audio \
+uv run python -m havachat.cli.select_audio \
   --language zh \
   --level HSK1 \
   --item-type content_unit \
@@ -147,7 +147,7 @@ Upload audio files to R2 storage and update metadata with public URLs:
 
 ```bash
 # Dry run (preview without uploading)
-uv run python -m src.havachat.cli.sync_audio \
+uv run python -m havachat.cli.sync_audio \
   --language zh \
   --level HSK1 \
   --item-type all \
@@ -155,14 +155,14 @@ uv run python -m src.havachat.cli.sync_audio \
   --dry-run
 
 # Actual sync (selected versions only)
-uv run python -m src.havachat.cli.sync_audio \
+uv run python -m havachat.cli.sync_audio \
   --language zh \
   --level HSK1 \
   --item-type all \
   --selected-only
 
 # Sync and cleanup local files
-uv run python -m src.havachat.cli.sync_audio \
+uv run python -m havachat.cli.sync_audio \
   --language zh \
   --level HSK1 \
   --item-type all \
@@ -186,7 +186,7 @@ uv run python -m src.havachat.cli.sync_audio \
 
 ```
 havachat-knowledge/generated content/
-└── Mandarin/
+└── Chinese/
     └── HSK1/
         └── 02_Generated/
             ├── vocab_enriched.json
@@ -292,8 +292,8 @@ Audio generation supports checkpoint-based resumption:
 2. If generation is interrupted, use `--resume` to continue:
 
 ```bash
-uv run python -m src.havachat.cli.generate_audio \
-  --language Mandarin \
+uv run python -m havachat.cli.generate_audio \
+  --language Chinese \
   --level HSK1 \
   --item-type learning_item \
   --resume
@@ -350,7 +350,7 @@ uv run python -m src.havachat.cli.generate_audio \
 # Process all languages
 for lang in zh ja fr; do
   for level in HSK1 N5 A1; do
-    uv run python -m src.havachat.cli.generate_audio \
+    uv run python -m havachat.cli.generate_audio \
       --language $lang \
       --level $level \
       --item-type learning_item \
@@ -363,7 +363,7 @@ done
 
 ```bash
 # Process 100 items at a time
-uv run python -m src.havachat.cli.generate_audio \
+uv run python -m havachat.cli.generate_audio \
   --language zh \
   --level HSK1 \
   --item-type learning_item \
@@ -374,7 +374,7 @@ uv run python -m src.havachat.cli.generate_audio \
 
 ```bash
 # 1. Generate 3 versions
-uv run python -m src.havachat.cli.generate_audio \
+uv run python -m havachat.cli.generate_audio \
   --language zh \
   --level HSK1 \
   --item-type learning_item \
@@ -384,7 +384,7 @@ uv run python -m src.havachat.cli.generate_audio \
 # 2. Manually review audio files and select best version
 # 3. Use select_audio.py to mark selection
 # 4. Sync only selected versions
-uv run python -m src.havachat.cli.sync_audio \
+uv run python -m havachat.cli.sync_audio \
   --language zh \
   --level HSK1 \
   --item-type learning_item \

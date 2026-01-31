@@ -5,7 +5,7 @@ vocab/grammar lists: pronunciation, idioms, functional language, cultural notes,
 writing system, and miscellaneous linguistic features.
 """
 
-from src.havachat.validators.schema import Category
+from havachat.validators.schema import Category
 
 
 def get_pronunciation_system_prompt() -> str:

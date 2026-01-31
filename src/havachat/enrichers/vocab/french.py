@@ -1,6 +1,6 @@
 """Optimized French vocabulary enricher with cost reduction.
 
-Cost reduction strategy (same as Mandarin/Japanese):
+Cost reduction strategy (same as Chinese/Japanese):
 1. Use minimal LLM response model (only explanation, examples)
 2. Examples are French-only (no English translations in LLM response)
 3. Use Azure Translation API for English translations (2M free chars/month)
@@ -19,11 +19,11 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from src.havachat.enrichers.base import BaseEnricher
-from src.havachat.parsers.source_parsers import parse_french_vocab_tsv
-from src.havachat.utils.azure_translation import AzureTranslationHelper
-from src.havachat.utils.llm_client import LLMClient
-from src.havachat.validators.schema import Category, Example, LearningItem, LevelSystem
+from havachat.enrichers.base import BaseEnricher
+from havachat.parsers.source_parsers import parse_french_vocab_tsv
+from havachat.utils.azure_translation import AzureTranslationHelper
+from havachat.utils.llm_client import LLMClient
+from havachat.validators.schema import Category, Example, LearningItem, LevelSystem
 
 logger = logging.getLogger(__name__)
 

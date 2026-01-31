@@ -15,9 +15,11 @@ dependencies = [
     "meilisearch>=0.40.0",
     "opencc>=1.2.0",
     "pip>=26.0",
+    "pydub>=0.25.1",
     "pykakasi>=2.3.0",
     "pypinyin>=0.55.0",
     "python-dotenv>=1.2.1",
+    "requests>=2.31.0",
     "spacy>=3.8.11",
 ]
 

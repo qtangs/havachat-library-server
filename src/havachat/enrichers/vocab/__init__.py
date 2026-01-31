@@ -1,11 +1,11 @@
 """Vocabulary enrichers for different languages."""
 
-from .mandarin import MandarinVocabEnricher
+from .chinese import ChineseVocabEnricher
 from .japanese import JapaneseVocabEnricher
 from .french import FrenchVocabEnricher
 
 __all__ = [
-    "MandarinVocabEnricher",
+    "ChineseVocabEnricher",
     "JapaneseVocabEnricher",
     "FrenchVocabEnricher",
 ]

@@ -65,7 +65,7 @@ class GoogleTranslateHelper:
         self.monthly_limit = 500_000  # 500K free characters per month
         
         # Translation cache for cost savings
-        from src.havachat.utils.translation_cache import TranslationCache
+        from havachat.utils.translation_cache import TranslationCache
         self.cache = TranslationCache(enabled=enable_cache, ttl_days=cache_ttl_days)
     
     def translate_batch(

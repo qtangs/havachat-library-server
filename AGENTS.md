@@ -2,3 +2,4 @@
 - Use `uv run python -m pytest` for unit test
 - Any updates to docs should be done in `specs/<feature>` folder
 - Ensure generated code are compilable
+- Update file directly if you can, avoid command line as much as possible

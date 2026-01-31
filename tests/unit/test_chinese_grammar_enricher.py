@@ -1,4 +1,4 @@
-"""Unit tests for Mandarin grammar enricher."""
+"""Unit tests for Chinese grammar enricher."""
 
 import json
 from pathlib import Path
@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from src.havachat.enrichers.grammar.mandarin import MandarinGrammarEnricher, ChineseGrammarEnriched
-from src.havachat.validators.schema import Category, LevelSystem
+from havachat.enrichers.grammar.chinese import ChineseGrammarEnricher, ChineseGrammarEnriched
+from havachat.validators.schema import Category, LevelSystem
 
 
 @pytest.fixture
@@ -40,7 +40,7 @@ def mock_azure_translator():
 
 def test_parse_source_valid_csv(sample_csv_path):
     """Test parsing valid CSV file."""
-    enricher = MandarinGrammarEnricher(llm_client=None)
+    enricher = ChineseGrammarEnricher(llm_client=None)
     items = enricher.parse_source(sample_csv_path)
     
     # Should split multi-item patterns
@@ -64,7 +64,7 @@ def test_parse_source_valid_csv(sample_csv_path):
 
 def test_parse_source_file_not_found():
     """Test parsing non-existent file."""
-    enricher = MandarinGrammarEnricher(llm_client=None)
+    enricher = ChineseGrammarEnricher(llm_client=None)
     
     with pytest.raises(FileNotFoundError):
         enricher.parse_source("nonexistent.csv")
@@ -78,7 +78,7 @@ value1,value2,value3
     csv_file = tmp_path / "invalid.csv"
     csv_file.write_text(csv_content, encoding="utf-8")
     
-    enricher = MandarinGrammarEnricher(llm_client=None)
+    enricher = ChineseGrammarEnricher(llm_client=None)
     
     with pytest.raises(ValueError, match="CSV must have columns"):
         enricher.parse_source(csv_file)
@@ -86,7 +86,7 @@ value1,value2,value3
 
 def test_detect_missing_fields():
     """Test detecting missing fields in grammar items."""
-    enricher = MandarinGrammarEnricher(llm_client=None)
+    enricher = ChineseGrammarEnricher(llm_client=None)
     
     # Item without definition or examples
     item = {"pattern": "会", "type": "词类"}
@@ -103,7 +103,7 @@ def test_detect_missing_fields():
 
 def test_build_prompt():
     """Test building enrichment prompt."""
-    enricher = MandarinGrammarEnricher(llm_client=None)
+    enricher = ChineseGrammarEnricher(llm_client=None)
     
     item = {
         "pattern": "会",
@@ -126,10 +126,10 @@ def test_build_prompt():
 
 def test_validate_output_valid():
     """Test validating a valid enriched item."""
-    enricher = MandarinGrammarEnricher(llm_client=None)
+    enricher = ChineseGrammarEnricher(llm_client=None)
     
     # Create mock enriched item
-    from src.havachat.validators.schema import LearningItem, Example
+    from havachat.validators.schema import LearningItem, Example
     from datetime import datetime, UTC
     
     enriched = LearningItem(
@@ -159,9 +159,9 @@ def test_validate_output_valid():
 
 def test_validate_output_wrong_category():
     """Test validation fails for wrong category."""
-    enricher = MandarinGrammarEnricher(llm_client=None)
+    enricher = ChineseGrammarEnricher(llm_client=None)
     
-    from src.havachat.validators.schema import LearningItem, Example
+    from havachat.validators.schema import LearningItem, Example
     from datetime import datetime, UTC
     
     enriched = LearningItem(
@@ -191,9 +191,9 @@ def test_validate_output_wrong_category():
 
 def test_validate_output_mismatched_target():
     """Test validation fails for mismatched target_item."""
-    enricher = MandarinGrammarEnricher(llm_client=None)
+    enricher = ChineseGrammarEnricher(llm_client=None)
     
-    from src.havachat.validators.schema import LearningItem, Example
+    from havachat.validators.schema import LearningItem, Example
     from datetime import datetime, UTC
     
     enriched = LearningItem(
@@ -223,9 +223,9 @@ def test_validate_output_mismatched_target():
 
 def test_validate_output_insufficient_examples():
     """Test validation fails for insufficient examples."""
-    enricher = MandarinGrammarEnricher(llm_client=None)
+    enricher = ChineseGrammarEnricher(llm_client=None)
     
-    from src.havachat.validators.schema import LearningItem, Example
+    from havachat.validators.schema import LearningItem, Example
     from datetime import datetime, UTC
     
     # This test verifies our validate_output logic
@@ -260,9 +260,9 @@ def test_validate_output_insufficient_examples():
 
 def test_validate_output_no_chinese_characters():
     """Test validation fails if examples don't contain Chinese."""
-    enricher = MandarinGrammarEnricher(llm_client=None)
+    enricher = ChineseGrammarEnricher(llm_client=None)
     
-    from src.havachat.validators.schema import LearningItem, Example
+    from havachat.validators.schema import LearningItem, Example
     from datetime import datetime, UTC
     
     enriched = LearningItem(
@@ -292,39 +292,39 @@ def test_validate_output_no_chinese_characters():
 
 def test_system_prompt():
     """Test system prompt property."""
-    enricher = MandarinGrammarEnricher(llm_client=None)
+    enricher = ChineseGrammarEnricher(llm_client=None)
     prompt = enricher.system_prompt
     
-    assert "Mandarin Chinese grammar teacher" in prompt
+    assert "Chinese grammar teacher" in prompt
     assert "NO PINYIN" in prompt
     assert "CHINESE ONLY EXAMPLES" in prompt
     assert "mega-item" in prompt.lower()
 
 
-@patch('src.havachat.enrichers.grammar.mandarin.AzureTranslationHelper')
+@patch('havachat.enrichers.grammar.chinese.AzureTranslationHelper')
 def test_enricher_initialization_with_azure(mock_azure_class):
     """Test enricher initialization with Azure Translation."""
     mock_translator = MagicMock()
     mock_azure_class.return_value = mock_translator
     
-    enricher = MandarinGrammarEnricher(llm_client=None)
+    enricher = ChineseGrammarEnricher(llm_client=None)
     
     assert enricher.azure_translator is not None
 
 
-@patch('src.havachat.enrichers.grammar.mandarin.AzureTranslationHelper')
+@patch('havachat.enrichers.grammar.chinese.AzureTranslationHelper')
 def test_enricher_initialization_without_azure(mock_azure_class):
     """Test enricher initialization when Azure Translation fails."""
     mock_azure_class.side_effect = ValueError("No API key")
     
-    enricher = MandarinGrammarEnricher(llm_client=None)
+    enricher = ChineseGrammarEnricher(llm_client=None)
     
     assert enricher.azure_translator is None
 
 
 def test_pattern_cleaning():
     """Test that patterns are cleaned correctly."""
-    enricher = MandarinGrammarEnricher(llm_client=None)
+    enricher = ChineseGrammarEnricher(llm_client=None)
     
     csv_content = """类别,类别名称,细目,语法内容
 词类,副词,否定副词,不、没（有）、不要
@@ -356,7 +356,7 @@ def test_pattern_cleaning():
 
 def test_enrich_dry_run():
     """Test enrichment in dry-run mode."""
-    enricher = MandarinGrammarEnricher(llm_client=None)
+    enricher = ChineseGrammarEnricher(llm_client=None)
     
     item = {
         "pattern": "会",

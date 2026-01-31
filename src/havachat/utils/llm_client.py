@@ -352,6 +352,7 @@ class LLMClient:
         # Cost estimates (per 1M tokens)
         # https://openai.com/api/pricing/
         costs = {
+            "gpt-4o-mini": {"input": 0.15, "output": 0.60, "cached": 0.075},
             "gpt-4.1-nano": {"input": 0.1, "output": 0.4, "cached": 0.025},
             "gpt-4.1-mini": {"input": 0.4, "output": 1.6, "cached": 0.1},
             "gpt-4.1": {"input": 2, "output": 8, "cached": 0.5},

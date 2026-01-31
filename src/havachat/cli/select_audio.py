@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 
 from src.libs.logging_helper import setup_logging
-from src.havachat.models.audio_metadata import ContentUnitAudio, LearningItemAudio
-from src.havachat.utils.language_utils import get_language_code, get_language_name
+from havachat.models.audio_metadata import ContentUnitAudio, LearningItemAudio
+from havachat.utils.language_utils import get_language_code, get_language_name
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ def parse_args():
     parser.add_argument(
         "--language",
         required=True,
-        help="Language name or ISO 639-1 code (e.g., 'Mandarin' or 'zh', 'French' or 'fr')"
+        help="Language name or ISO 639-1 code (e.g., 'Chinese' or 'zh', 'French' or 'fr')"
     )
     parser.add_argument(
         "--level",

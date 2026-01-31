@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Literal
 
 from elevenlabs.client import ElevenLabs
+from pydub import AudioSegment
 
 logger = logging.getLogger(__name__)
 
@@ -166,14 +167,16 @@ class ElevenLabsClient:
     def text_to_dialogue(
         self,
         dialogue_inputs: list[dict[str, str]],
+        voice_mapping: dict[str, str],
         output_path: str | Path,
         audio_format: Literal["opus", "mp3"] = "opus",
         model_id: str = "eleven_v3"
     ) -> tuple[bool, dict]:
-        """Generate dialogue from text-voice pairs using ElevenLabs Text-to-Dialogue API.
+        """Generate dialogue from text-speaker pairs using ElevenLabs Text-to-Dialogue API.
         
         Args:
-            dialogue_inputs: List of dicts with 'text' and 'voice_id' keys
+            dialogue_inputs: List of dicts with 'text' and 'speaker' keys (speaker is A/B/C/...)
+            voice_mapping: Dict mapping speaker IDs to voice IDs (e.g., {'A': 'voice_123', 'B': 'voice_456'})
             output_path: Path to save the audio file
             audio_format: Audio format (opus or mp3)
             model_id: ElevenLabs model ID
@@ -196,14 +199,16 @@ class ElevenLabsClient:
             "latency_ms": 0,
             "file_size_bytes": 0,
             "duration_ms": None,
-            "num_speakers": len(set(inp["voice_id"] for inp in dialogue_inputs))
+            "num_speakers": len(voice_mapping)
         }
         
-        # Clean voice IDs (remove provider prefix)
+        # Map speakers to voice IDs and clean voice IDs (remove provider prefix)
         cleaned_inputs = [
             {
                 "text": inp["text"],
-                "voice_id": inp["voice_id"].split('/')[-1] if '/' in inp["voice_id"] else inp["voice_id"]
+                "voice_id": voice_mapping[inp["speaker"]].split('/')[-1] 
+                            if '/' in voice_mapping[inp["speaker"]] 
+                            else voice_mapping[inp["speaker"]]
             }
             for inp in dialogue_inputs
         ]
@@ -235,6 +240,15 @@ class ElevenLabsClient:
                 
                 latency_ms = int((time.time() - start_time) * 1000)
                 file_size = output_path.stat().st_size
+                
+                # Calculate audio duration
+                try:
+                    audio = AudioSegment.from_file(output_path, format=audio_format)
+                    duration_ms = len(audio)  # pydub returns duration in milliseconds
+                    metadata["duration_ms"] = duration_ms
+                except Exception as e:
+                    logger.warning(f"Could not determine audio duration: {e}")
+                    metadata["duration_ms"] = None
                 
                 metadata["latency_ms"] = latency_ms
                 metadata["file_size_bytes"] = file_size

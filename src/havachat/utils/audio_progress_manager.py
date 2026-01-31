@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import List
 from uuid import uuid4
 
-from src.havachat.models.audio_progress import (
+from havachat.models.audio_progress import (
     AudioGenerationProgress,
     AudioProgressItem,
 )

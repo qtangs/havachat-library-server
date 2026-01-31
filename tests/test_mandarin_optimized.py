@@ -1,15 +1,15 @@
-"""Test the optimized Mandarin enricher with cost reduction strategy."""
+"""Test the optimized Chinese enricher with cost reduction strategy."""
 
 import json
 import os
 from pathlib import Path
 
-from src.havachat.enrichers.vocab.mandarin_optimized import MandarinVocabEnricherOptimized
-from src.havachat.utils.llm_client import LLMClient
+from havachat.enrichers.vocab.chinese import ChineseVocabEnricher
+from havachat.utils.llm_client import LLMClient
 
 
 def test_optimized_enricher():
-    """Test optimized Mandarin enricher with sample data."""
+    """Test optimized Chinese enricher with sample data."""
     
     # Check for required environment variables
     required_vars = [
@@ -26,7 +26,7 @@ def test_optimized_enricher():
     
     # Initialize clients
     llm_client = LLMClient()
-    enricher = MandarinVocabEnricherOptimized(llm_client=llm_client)
+    enricher = ChineseVocabEnricher(llm_client=llm_client)
     
     # Test item
     test_item = {
@@ -54,7 +54,7 @@ def test_optimized_enricher():
         
         # Display the result
         result_dict = result.model_dump()
-        print(json.dumps(result_dict, indent=2, ensure_ascii=False))
+        print(json.dumps(result_dict, indent=2, ensure_ascii=False, default=str))
         
         print("\n" + "-" * 80)
         print("KEY OBSERVATIONS")
@@ -93,7 +93,7 @@ def test_optimized_enricher():
         print(f"Total tokens: {llm_usage['total_tokens']:,}")
         print(f"Cached tokens: {llm_usage['cached_tokens']:,}")
         print(f"Cache hit rate: {llm_usage['cache_hit_rate']}")
-        print(f"Estimated cost: ${llm_usage['estimated_cost']:.6f}")
+        print(f"Estimated cost: ${llm_usage['estimated_cost_usd']:.6f}")
         
         print("\n" + "=" * 80)
         print("TEST COMPLETED SUCCESSFULLY")

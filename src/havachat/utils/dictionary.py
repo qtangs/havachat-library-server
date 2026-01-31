@@ -1,6 +1,6 @@
 """Generic dictionary lookup interface for translation reference.
 
-Provides a base class for language-specific dictionaries (e.g., CC-CEDICT for Mandarin,
+Provides a base class for language-specific dictionaries (e.g., CC-CEDICT for Chinese,
 EDICT for Japanese) that can be used as reference material for LLM translation.
 
 Uses spaCy for tokenization and POS tagging.
@@ -202,7 +202,7 @@ class Dictionary(ABC):
 
 
 class CCCEDICTDictionary(Dictionary):
-    """CC-CEDICT dictionary for Mandarin Chinese.
+    """CC-CEDICT dictionary for Chinese.
     
     Loads dictionary entries from macOS Dictionary.app (via macdict) if available,
     otherwise falls back to CC-CEDICT parser.
@@ -210,7 +210,7 @@ class CCCEDICTDictionary(Dictionary):
     """
     
     def __init__(self):
-        """Initialize CC-CEDICT dictionary for Mandarin Chinese."""
+        """Initialize CC-CEDICT dictionary for Chinese."""
         super().__init__(language="zh", spacy_model="zh_core_web_sm")
         self.use_macdict = False
         self.load_dictionary()
@@ -238,7 +238,7 @@ class CCCEDICTDictionary(Dictionary):
         
         # Fall back to CC-CEDICT
         try:
-            from src.havachat.enrichers.vocab.chinese.cc_cedict_parser import cc_cedict
+            from havachat.enrichers.vocab.chinese.cc_cedict_parser import cc_cedict
             
             if not cc_cedict:
                 logger.warning("CC-CEDICT dictionary not loaded")

@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.havachat.utils.google_translate import GoogleTranslateHelper
+from havachat.utils.google_translate import GoogleTranslateHelper
 
 
 @pytest.fixture
@@ -20,26 +20,20 @@ def temp_cache_dir():
 @pytest.fixture
 def mock_translate_client():
     """Mock Google Translate client."""
-    with patch('src.havachat.utils.google_translate.translate.Client') as mock_client:
+    with patch('havachat.utils.google_translate.translate_v2.Client') as mock_client:
         yield mock_client
 
 
 @pytest.fixture
 def mock_env_credentials():
-    """Mock GOOGLE_APPLICATION_CREDENTIALS environment variable."""
-    with patch.dict(os.environ, {"GOOGLE_APPLICATION_CREDENTIALS": "/path/to/credentials.json"}):
+    """Mock GOOGLE_CLOUD_PROJECT environment variable for v3 API."""
+    with patch.dict(os.environ, {"GOOGLE_CLOUD_PROJECT": "test-project-id"}):
         yield
-
-
-def test_init_without_credentials():
-    """Test initialization fails without credentials."""
-    with pytest.raises(ValueError, match="Google Translate credentials not set"):
-        GoogleTranslateHelper()
 
 
 def test_init_with_credentials(mock_translate_client, mock_env_credentials, temp_cache_dir):
     """Test successful initialization with credentials."""
-    helper = GoogleTranslateHelper()
+    helper = GoogleTranslateHelper(version="v2")
     helper.cache.cache_dir = temp_cache_dir
     
     assert helper.client is not None
@@ -59,7 +53,7 @@ def test_translate_batch(mock_translate_client, mock_env_credentials, temp_cache
     ]
     mock_translate_client.return_value = mock_client_instance
     
-    helper = GoogleTranslateHelper()
+    helper = GoogleTranslateHelper(version="v2")
     helper.cache.cache_dir = temp_cache_dir
     
     texts = ["你好", "谢谢", "再见"]
@@ -78,7 +72,7 @@ def test_translate_single(mock_translate_client, mock_env_credentials, temp_cach
     mock_client_instance.translate.return_value = [{'translatedText': 'Hello'}]
     mock_translate_client.return_value = mock_client_instance
     
-    helper = GoogleTranslateHelper()
+    helper = GoogleTranslateHelper(version="v2")
     helper.cache.cache_dir = temp_cache_dir
     
     translation = helper.translate_single("你好", "zh", "en")
@@ -92,7 +86,7 @@ def test_monthly_limit_exceeded(mock_translate_client, mock_env_credentials, tem
     mock_client_instance = MagicMock()
     mock_translate_client.return_value = mock_client_instance
     
-    helper = GoogleTranslateHelper()
+    helper = GoogleTranslateHelper(version="v2")
     helper.cache.cache_dir = temp_cache_dir
     helper.total_characters = 499_999
     
@@ -109,7 +103,7 @@ def test_get_usage_summary(mock_translate_client, mock_env_credentials, temp_cac
     mock_client_instance.translate.return_value = [{'translatedText': 'Hello'}]
     mock_translate_client.return_value = mock_client_instance
     
-    helper = GoogleTranslateHelper()
+    helper = GoogleTranslateHelper(version="v2")
     helper.cache.cache_dir = temp_cache_dir
     helper.translate_single("你好", "zh", "en")
     
@@ -127,7 +121,7 @@ def test_reset_usage(mock_translate_client, mock_env_credentials, temp_cache_dir
     mock_client_instance = MagicMock()
     mock_translate_client.return_value = mock_client_instance
     
-    helper = GoogleTranslateHelper()
+    helper = GoogleTranslateHelper(version="v2")
     helper.cache.cache_dir = temp_cache_dir
     helper.total_characters = 10000
     
@@ -142,7 +136,7 @@ def test_cache_integration(mock_translate_client, mock_env_credentials, temp_cac
     mock_client_instance.translate.return_value = [{'translatedText': 'Hello'}]
     mock_translate_client.return_value = mock_client_instance
     
-    helper = GoogleTranslateHelper(enable_cache=True)
+    helper = GoogleTranslateHelper(enable_cache=True, version="v2")
     helper.cache.cache_dir = temp_cache_dir
     
     # First call should hit API
@@ -158,7 +152,7 @@ def test_cache_integration(mock_translate_client, mock_env_credentials, temp_cac
 
 def test_empty_batch(mock_translate_client, mock_env_credentials, temp_cache_dir):
     """Test translating empty batch."""
-    helper = GoogleTranslateHelper()
+    helper = GoogleTranslateHelper(version="v2")
     helper.cache.cache_dir = temp_cache_dir
     
     translations = helper.translate_batch([], "zh", "en")

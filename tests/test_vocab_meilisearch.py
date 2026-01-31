@@ -2,7 +2,7 @@
 """Test script to enrich vocabulary and index in Meilisearch.
 
 This script:
-1. Enriches 20 sample vocabulary items (Mandarin from test fixtures)
+1. Enriches 20 sample vocabulary items (Chinese from test fixtures)
 2. Indexes them in Meilisearch with OpenAI embeddings
 3. Tests hybrid search queries
 4. Validates results
@@ -54,7 +54,7 @@ def run_enrichment(
     cmd = [
         sys.executable,
         "-m",
-        "src.havachat.cli.enrich_vocab",
+        "havachat.cli.enrich_vocab",
         "--language",
         language,
         "--level",
@@ -232,7 +232,7 @@ def main() -> int:
     # Test parameters
     language = "zh"
     level = "HSK1"
-    enricher = "mandarin"
+    enricher = "chinese"
     input_file = fixtures_dir / "mandarin_vocab_sample.tsv"
     output_file = output_dir / "mandarin_hsk1_enriched.json"
     max_items = 20

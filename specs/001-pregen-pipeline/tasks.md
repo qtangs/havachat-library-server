@@ -3,7 +3,7 @@
 **Feature**: Pre-generation Pipeline  
 **Branch**: `001-pregen-pipeline`  
 **Spec**: [spec.md](spec.md) | **Plan**: [plan.md](plan.md)  
-**Last Updated**: 2026-01-28
+**Last Updated**: 2026-01-31
 
 ## Task Format
 
@@ -20,13 +20,15 @@
 
 **MVP Scope**: User Story 1 + User Story 2 (vocab and grammar enrichment only)  
 **Incremental Delivery**: Each user story is independently testable and deliverable  
-**Priority Order**: P1 (US1, US2) → P2 (US5, US3) → P3 (US4)
+**Priority Order**: P1 (US1, US2) → P2 (US5, US3, US6) → P3 (US4, US7)
 
 ## Critical Implementation Notes
 
 **Learning Item Generation**: Each learning item (vocab, grammar, pronunciation, idioms, etc.) is enriched one-by-one via individual LLM calls with retry logic (up to 3 retries per item).
 
 **Content Generation**: Single LLM call per topic generates N conversations + N stories using ALL learning item categories together. Chain-of-thought (generate → critique → revise → assign scenarios) is structured within the prompt itself, not executed as sequential API calls.
+
+**LLM Quality Judge & Notion Integration**: After content generation, LLM judge evaluates each conversation/story across 6 dimensions and pushes results to Notion database for human review. Notion sync CLI processes status changes (Ready for Audio, Rejected) with manual trigger (--check-notion flag).
 
 ---
 
@@ -106,23 +108,23 @@
 
 ## Phase 3: User Story 1 - Vocab Enrichment (P1) ✅ COMPLETE
 
-**Goal**: Import and enrich official vocabulary lists for Mandarin, Japanese, French
+**Goal**: Import and enrich official vocabulary lists for Chinese, Japanese, French
 
 **Status**: All tasks complete with optimizations (language-specific models, parallel processing, checkpoints, token tracking)
 
 **Independent Test**: Run enricher on sample vocab files, verify JSON output with all required fields
 
-### Mandarin Vocab Enricher
+### Chinese Vocab Enricher
 
 - [X] T044 [P] [US1] Create src/pipeline/enrichers/vocab/__init__.py
-- [X] T045 [P] [US1] Create src/pipeline/enrichers/vocab/mandarin.py with MandarinVocabEnricher class
-- [X] T046 [US1] Implement parse_source() for TSV with "Word, Part of Speech" columns in mandarin.py
-- [X] T047 [US1] Implement detect_missing_fields() checking for pinyin, definition, examples in mandarin.py
-- [X] T048 [US1] Create src/pipeline/prompts/mandarin/vocab_prompts.py with Chinese-specific prompts
-- [X] T049 [US1] Implement build_prompt() using prompts from vocab_prompts.py in mandarin.py
-- [X] T050 [US1] Implement validate_output() enforcing romanization presence in mandarin.py
-- [X] T051 [US1] Add polysemy detection and sense_gloss generation in mandarin.py
-- [X] T052 [US1] Write unit tests for MandarinVocabEnricher in tests/unit/test_mandarin_vocab_enricher.py
+- [X] T045 [P] [US1] Create src/pipeline/enrichers/vocab/chinese.py with ChineseVocabEnricher class
+- [X] T046 [US1] Implement parse_source() for TSV with "Word, Part of Speech" columns in chinese.py
+- [X] T047 [US1] Implement detect_missing_fields() checking for pinyin, definition, examples in chinese.py
+- [X] T048 [US1] Create src/pipeline/prompts/chinese/vocab_prompts.py with Chinese-specific prompts
+- [X] T049 [US1] Implement build_prompt() using prompts from vocab_prompts.py in chinese.py
+- [X] T050 [US1] Implement validate_output() enforcing romanization presence in chinese.py
+- [X] T051 [US1] Add polysemy detection and sense_gloss generation in chinese.py
+- [X] T052 [US1] Write unit tests for ChineseVocabEnricher in tests/unit/test_mandarin_vocab_enricher.py
 
 ### Japanese Vocab Enricher
 
@@ -168,21 +170,21 @@
 
 ## Phase 4: User Story 2 - Grammar Enrichment (P1)
 
-**Goal**: Import and enrich official grammar lists for Mandarin, Japanese, French
+**Goal**: Import and enrich official grammar lists for Chinese, Japanese, French
 
 **Independent Test**: Run enricher on sample grammar files, verify narrow-scope items without "mega-items"
 
-### Mandarin Grammar Enricher
+### Chinese Grammar Enricher
 
 - [X] T077 [P] [US2] Create src/pipeline/enrichers/grammar/__init__.py
-- [X] T078 [P] [US2] Create src/pipeline/enrichers/grammar/mandarin.py with MandarinGrammarEnricher class
-- [X] T079 [US2] Implement parse_source() for CSV with "类别,类别名称,细目,语法内容" columns in mandarin.py
-- [X] T080 [US2] Implement detect_missing_fields() checking for definition, examples in mandarin.py
-- [X] T081 [US2] Create src/pipeline/prompts/mandarin/grammar_prompts.py with grammar-specific prompts (implemented inline in mandarin.py)
-- [X] T082 [US2] Implement build_prompt() with granularity instructions (avoid mega-items) in mandarin.py
-- [X] T083 [US2] Implement validate_output() with granularity checks in mandarin.py
-- [X] T084 [US2] Add sub-item breakdown logic for broad patterns in mandarin.py
-- [X] T085 [US2] Write unit tests for MandarinGrammarEnricher in tests/unit/test_mandarin_grammar_enricher.py
+- [X] T078 [P] [US2] Create src/pipeline/enrichers/grammar/chinese.py with ChineseGrammarEnricher class
+- [X] T079 [US2] Implement parse_source() for CSV with "类别,类别名称,细目,语法内容" columns in chinese.py
+- [X] T080 [US2] Implement detect_missing_fields() checking for definition, examples in chinese.py
+- [X] T081 [US2] Create src/pipeline/prompts/chinese/grammar_prompts.py with grammar-specific prompts (implemented inline in chinese.py)
+- [X] T082 [US2] Implement build_prompt() with granularity instructions (avoid mega-items) in chinese.py
+- [X] T083 [US2] Implement validate_output() with granularity checks in chinese.py
+- [X] T084 [US2] Add sub-item breakdown logic for broad patterns in chinese.py
+- [X] T085 [US2] Write unit tests for ChineseGrammarEnricher in tests/unit/test_mandarin_grammar_enricher.py
 
 ### Japanese Grammar Enricher
 
@@ -337,7 +339,7 @@
 
 - [X] T180 [P] [US5] Create voice_config.json at repo root with language-to-voice-ID mappings
 - [X] T181 [P] [US5] Define voice schema: voice_id, name, type (single|conversation_N_M_speaker_K), description, supported_languages[], comment
-- [X] T182 [P] [US5] Add voice configurations for Mandarin (single + conversation_2_1 pair) in voice_config.json
+- [X] T182 [P] [US5] Add voice configurations for Chinese (single + conversation_2_1 pair) in voice_config.json
 - [X] T183 [P] [US5] Add voice configurations for French, Japanese (single + conversation pairs) in voice_config.json
 - [X] T184 [P] [US5] Create src/pipeline/models/voice_config.py with VoiceConfig Pydantic model
 - [X] T185 [P] [US5] Create src/pipeline/validators/voice_validator.py with voice config validation logic
@@ -526,7 +528,110 @@
 
 ---
 
-## Phase 10: Scenario Matching & Normalization (Post-MVP)
+## Phase 10: User Story 6 - LLM Quality Judge & Notion Integration (P2)
+
+**Goal**: Implement comprehensive LLM quality evaluation and Notion workflow for human review
+
+**Independent Test**: Generate conversations, run LLM judge, verify 6-dimension evaluation output, push to Notion with correct data structure, manually update Notion status, run sync CLI to verify audio generation for "Ready for Audio" items and local status updates for "Rejected" items
+
+### LLM Judge Evaluation Models
+
+- [X] T280 [P] [US6] Create src/models/llm_judge_evaluation.py with LLMJudgeEvaluation Pydantic model
+- [X] T281 [P] [US6] Define DimensionScore model (score: int, explanation: str) in llm_judge_evaluation.py
+- [X] T282 [P] [US6] Define 6 evaluation dimensions (naturalness, level_appropriateness, grammatical_correctness, vocabulary_diversity, cultural_accuracy, engagement) in llm_judge_evaluation.py
+- [X] T283 [P] [US6] Add overall_recommendation and recommendation_justification fields in llm_judge_evaluation.py
+- [X] T284 [P] [US6] Write unit tests for LLMJudgeEvaluation model in tests/unit/test_llm_judge_evaluation.py
+
+### Notion Integration Models
+
+- [X] T285 [P] [US6] Create src/models/notion_mapping.py with NotionMapping Pydantic model
+- [X] T286 [P] [US6] Define fields: content_id, notion_page_id, language, level, type, title, last_pushed_at, last_synced_at, status_in_notion, status_in_local in notion_mapping.py
+- [X] T287 [P] [US6] Create src/models/notion_push_queue.py with NotionPushQueue Pydantic model
+- [X] T288 [P] [US6] Define fields: content_id, type, title, language, level, attempt_count, last_error, failed_at, payload in notion_push_queue.py
+- [X] T289 [P] [US6] Write unit tests for Notion models in tests/unit/test_notion_models.py
+
+### LLM Judge Implementation
+
+- [X] T290 [P] [US6] Create src/pipeline/validators/llm_judge.py with LLMJudge class
+- [X] T291 [US6] Implement evaluate_conversation() method with 6-dimension assessment in llm_judge.py
+- [X] T292 [US6] Create prompt template for comprehensive evaluation in llm_judge.py
+- [X] T293 [US6] Implement scoring logic (1-10 scale with explanations) in llm_judge.py
+- [X] T294 [US6] Implement overall recommendation logic (proceed/review based on score thresholds) in llm_judge.py
+- [X] T295 [US6] Add inconsistency detection (contradictory scores flagged) in llm_judge.py
+- [X] T296 [US6] Write unit tests for LLMJudge with mocked LLM responses in tests/unit/test_llm_judge.py
+
+### Notion Client Implementation
+
+- [X] T297 [P] [US6] Install notion-sdk-py via uv add notion-client
+- [X] T298 [P] [US6] Create src/pipeline/utils/notion_client.py with NotionClient class
+- [X] T299 [US6] Implement schema validation (validate_database_schema) checking required columns in notion_client.py
+- [X] T300 [US6] Implement push_conversation() method creating new Notion rows in notion_client.py
+- [X] T301 [US6] Implement format_script() and format_translation() with speaker labels in notion_client.py
+- [X] T302 [US6] Implement fetch_status_changes() filtering by Status field in notion_client.py
+- [X] T303 [US6] Implement update_audio_field() uploading R2 URL to Notion Audio column in notion_client.py
+- [X] T304 [US6] Implement update_status() changing Notion Status field in notion_client.py
+- [X] T305 [US6] Add retry logic (3 attempts with exponential backoff) for API calls in notion_client.py
+- [X] T306 [US6] Add failed push queueing to notion_push_queue.jsonl in notion_client.py
+- [X] T307 [US6] Write unit tests for NotionClient with mocked API responses in tests/unit/test_notion_client.py
+
+### Notion Mapping & Queue Management
+
+- [X] T308 [P] [US6] Create src/pipeline/utils/notion_mapping_manager.py with NotionMappingManager class
+- [X] T309 [US6] Implement load_mapping() reading notion_mapping.json in notion_mapping_manager.py
+- [X] T310 [US6] Implement save_mapping() writing notion_mapping.json in notion_mapping_manager.py
+- [X] T311 [US6] Implement add_mapping() tracking content_id ↔ notion_page_id in notion_mapping_manager.py
+- [X] T312 [US6] Implement get_notion_page_id() lookup by content_id in notion_mapping_manager.py
+- [X] T313 [US6] Implement update_sync_status() updating last_synced_at and status fields in notion_mapping_manager.py
+- [X] T314 [US6] Write unit tests for NotionMappingManager in tests/unit/test_notion_mapping_manager.py
+
+### Notion Sync CLI - Core Operations
+
+- [X] T315 [US6] Create src/pipeline/cli/notion_sync.py with CLI interface
+- [X] T316 [US6] Implement argument parsing: --check-notion, --regenerate-audio, --title, --push-failed in notion_sync.py
+- [X] T317 [US6] Implement check_notion command: fetch status changes from Notion in notion_sync.py
+- [X] T318 [US6] Implement process_ready_for_audio(): generate audio, upload to R2, update Notion in notion_sync.py
+- [X] T319 [US6] Implement process_rejected(): update local JSON status="rejected", decrement usage stats in notion_sync.py
+- [X] T320 [US6] Implement usage stats cascading for rejected items in notion_sync.py
+- [X] T321 [US6] Add logging for all Notion operations with structured JSON format in notion_sync.py
+
+### Notion Sync CLI - Audio Regeneration
+
+- [X] T322 [US6] Implement regenerate_audio command: search by title in notion_sync.py
+- [X] T323 [US6] Implement search_by_title() in both Notion (Title field) and local JSON files in notion_sync.py
+- [X] T324 [US6] Implement duplicate title disambiguation: present menu with context in notion_sync.py
+- [X] T325 [US6] Implement audio regeneration with same voice config in notion_sync.py
+- [X] T326 [US6] Implement dual update: Notion Audio field + local content_units_media.json in notion_sync.py
+
+### QA Gates Integration with LLM Judge
+
+- [X] T327 [US6] Update src/havachat/cli/generate_content.py to accept --enable-notion and --skip-judge flags
+- [X] T328 [US6] Integrate LLMJudge into content generation pipeline in generate_content.py
+- [X] T329 [US6] Add LLM judge evaluation to each conversation/story after generation in generate_content.py
+- [X] T330 [US6] Store llm_judge_evaluation in ContentUnit metadata field in generate_content.py
+- [X] T331 [US6] Add auto-push to Notion after LLM judge evaluation in generate_content.py
+- [X] T332 [US6] Add NotionMapping tracking for pushed content in generate_content.py
+- [ ] T331 [US6] Implement Notion push after successful judge evaluation (if --push-to-notion) in run_qa_gates.py
+- [ ] T332 [US6] Add error handling: continue processing if Notion push fails, queue for retry in run_qa_gates.py
+
+### Integration Testing
+
+- [X] T333 [US6] Create tests/integration/test_llm_judge_notion_pipeline.py
+- [X] T334 [US6] Test end-to-end: generate conversation → LLM judge → push to Notion in test_llm_judge_notion_pipeline.py
+- [X] T335 [US6] Test Notion sync: mock status changes → process audio generation in test_llm_judge_notion_pipeline.py
+- [X] T336 [US6] Test audio regeneration: search by title → handle duplicates → update both locations in test_llm_judge_notion_pipeline.py
+- [X] T337 [US6] Test rejected item cascading: verify usage stats decrement in test_llm_judge_notion_pipeline.py
+- [X] T338 [US6] Test Notion schema validation: detect missing/mismatched columns in test_llm_judge_notion_pipeline.py
+
+### Configuration & Documentation
+
+- [X] T339 [P] [US6] Add NOTION_API_KEY and NOTION_DATABASE_ID to .env.template
+- [X] T340 [P] [US6] Add Notion database URL to constants.py
+- [X] T341 [P] [US6] Create docs/NOTION_INTEGRATION.md with setup instructions and workflow guide
+- [X] T342 [P] [US6] Update README.md with Notion integration CLI examples
+
+---
+
+## Phase 11: Scenario Matching & Normalization (Post-MVP)
 
 **Goal**: Implement scenario similarity search and normalization for content reuse
 
@@ -780,7 +885,7 @@ Phase 13 (Polish)
 ### Parallelization Opportunities
 
 **Within Phase 4 (US2) - Grammar Enrichment:**
-- T078-T085 (Mandarin grammar)
+- T078-T085 (Chinese grammar)
 - T086-T092 (Japanese grammar)
 - T093-T099 (French grammar)
 - Can develop all 3 enrichers in parallel
@@ -811,7 +916,7 @@ Phase 13 (Polish)
 **Timeline**: 4-6 weeks  
 **Status**: Phases 1-3 ✅ COMPLETE, Phase 4 IN PROGRESS  
 **Deliverables**:
-- ✅ Vocab enrichment for 3 languages (Mandarin, Japanese, French)
+- ✅ Vocab enrichment for 3 languages (Chinese, Japanese, French)
 - 🔄 Grammar enrichment for 3 languages (IN PROGRESS)
 - QA gates with validation reports
 - CLI tools for batch processing
@@ -820,22 +925,22 @@ Phase 13 (Polish)
 **Example MVP Command Sequence**:
 ```bash
 # Stage 1: Enrich vocab (COMPLETED)
-python -m src.havachat.cli.enrich_vocab \
+python -m havachat.cli.enrich_vocab \
   --language zh --level HSK1 \
   --input sources/hsk1_vocab.tsv \
-  --enricher mandarin \
+  --enricher chinese \
   --parallel 5 --resume
 
 # Stage 2: Enrich grammar (NEXT)
-python -m src.havachat.cli.enrich_grammar \
+python -m havachat.cli.enrich_grammar \
   --language zh --level HSK1 \
   --input sources/hsk1_grammar.csv \
-  --enricher mandarin
+  --enricher chinese
 
 # Stage 3: Run QA gates
-python -m src.havachat.cli.run_qa_gates \
+python -m havachat.cli.run_qa_gates \
   --language zh --level HSK1 \
-  --content-dir ../havachat-knowledge/generated content/Mandarin/HSK1/
+  --content-dir ../havachat-knowledge/generated content/Chinese/HSK1/
 ```
 
 ### Two-Stage Content Generation (Phases 6-7)
@@ -851,20 +956,20 @@ python -m src.havachat.cli.run_qa_gates \
 **Example Two-Stage Command Sequence**:
 ```bash
 # Stage 1: Generate ALL learning items first
-python -m src.havachat.cli.generate_learning_items \
+python -m havachat.cli.generate_learning_items \
   --language zh --level HSK1 \
   --category pronunciation \
-  --source-dir ../havachat-knowledge/generated content/Mandarin/HSK1/vocab/
+  --source-dir ../havachat-knowledge/generated content/Chinese/HSK1/vocab/
 
-python -m src.havachat.cli.generate_learning_items \
+python -m havachat.cli.generate_learning_items \
   --language zh --level HSK1 \
   --category idiom \
-  --source-dir ../havachat-knowledge/generated content/Mandarin/HSK1/vocab/
+  --source-dir ../havachat-knowledge/generated content/Chinese/HSK1/vocab/
 
 # ... repeat for functional, cultural, writing_system, misc categories
 
 # Stage 2: Generate content using ALL learning items together
-python -m src.havachat.cli.generate_content \
+python -m havachat.cli.generate_content \
   --language zh --level HSK1 \
   --topic "Food" \
   --num-conversations 5 \
@@ -916,7 +1021,7 @@ Each phase must pass these gates before proceeding:
 - [ ] Can process 100 grammar patterns with >90% granularity validation
 - [ ] QA gates run on 100-item batch in <10min with <5% flagged items
 - [ ] Manual review queue contains only legitimate failures
-- [X] ✅ All 3 languages (Mandarin, Japanese, French) fully supported for vocabulary
+- [X] ✅ All 3 languages (Chinese, Japanese, French) fully supported for vocabulary
 
 ### Two-Stage Content Generation Acceptance (End of Phase 6)
 
@@ -946,9 +1051,9 @@ Each phase must pass these gates before proceeding:
 **Summary**: All vocabulary enrichment tasks (T044-T076a) completed with 10 additional optimizations for cost reduction, performance, and maintainability.
 
 **Key Achievements**:
-- ✅ 3 language-specific enrichers: Mandarin (TSV), Japanese (JSON), French (TSV)
-- ✅ Auto-romanization: `pypinyin` for Mandarin, `pykakasi` for Japanese (no LLM calls needed)
-- ✅ Language-specific response models: MandarinVocabItem, JapaneseVocabItem, FrenchVocabItem
+- ✅ 3 language-specific enrichers: Chinese (TSV), Japanese (JSON), French (TSV)
+- ✅ Auto-romanization: `pypinyin` for Chinese, `pykakasi` for Japanese (no LLM calls needed)
+- ✅ Language-specific response models: ChineseVocabItem, JapaneseVocabItem, FrenchVocabItem
 - ✅ System prompts moved to enricher classes (@property pattern)
 - ✅ Token tracking & cost estimation with OpenAI prompt caching support
 - ✅ Parallel processing with `--parallel N` flag (5x speedup)
@@ -968,7 +1073,7 @@ Each phase must pass these gates before proceeding:
 **Implementation Details**:
 - **Files Created**:
   - `src/pipeline/validators/vocab_schemas.py` - Language-specific Pydantic models
-  - `src/pipeline/enrichers/vocab/mandarin.py` - Mandarin enricher with pypinyin
+  - `src/pipeline/enrichers/vocab/chinese.py` - Chinese enricher with pypinyin
   - `src/pipeline/enrichers/vocab/japanese.py` - Japanese enricher with pykakasi
   - `src/pipeline/enrichers/vocab/french.py` - French enricher (TSV format)
   - `src/pipeline/cli/enrich_vocab.py` - CLI with parallel processing, checkpoints, token tracking
@@ -1001,7 +1106,7 @@ Each phase must pass these gates before proceeding:
 - Each grammar item must be enriched one-by-one via individual LLM calls (same as vocab)
 - Must implement retry logic for each individual item (up to 3 retries)
 - Language-specific source formats:
-  - Mandarin: CSV with "类别,类别名称,细目,语法内容"
+  - Chinese: CSV with "类别,类别名称,细目,语法内容"
   - Japanese: TSV with "Type, Rule, Example"
   - French: Markdown with "## Category" headers
 - Must enforce narrow-scope items (avoid "mega-items" like "past tense" without sub-items)

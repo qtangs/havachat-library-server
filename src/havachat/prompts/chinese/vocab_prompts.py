@@ -1,6 +1,6 @@
-"""Prompts for Mandarin Chinese vocabulary enrichment."""
+"""Prompts for Chinese vocabulary enrichment."""
 
-SYSTEM_PROMPT = """You are an expert Mandarin Chinese teacher specializing in vocabulary pedagogy.
+SYSTEM_PROMPT = """You are an expert Chinese teacher specializing in vocabulary pedagogy.
 Your task is to enrich vocabulary entries with accurate, learner-friendly information.
 
 Key requirements:
@@ -35,7 +35,7 @@ Words with trailing numbers (e.g., 本1, 点1, 会1) indicate disambiguation for
 Output format: Structured JSON matching the LearningItem schema.
 """
 
-USER_PROMPT_TEMPLATE = """Enrich the following Mandarin Chinese vocabulary item:
+USER_PROMPT_TEMPLATE = """Enrich the following Chinese vocabulary item:
 
 **Word**: {target_item}
 **Part of Speech**: {pos}
@@ -65,7 +65,7 @@ Ensure examples are:
 - Demonstrating different contexts/collocations
 """
 
-POLYSEMY_DETECTION_PROMPT = """Analyze this Mandarin word for polysemy (multiple distinct meanings):
+POLYSEMY_DETECTION_PROMPT = """Analyze this Chinese word for polysemy (multiple distinct meanings):
 
 **Word**: {target_item}
 **Context from source**: {context}
@@ -95,7 +95,7 @@ def build_vocab_enrichment_prompt(
     missing_fields: list[str],
     existing_data: dict | None = None,
 ) -> str:
-    """Build vocabulary enrichment prompt for Mandarin.
+    """Build vocabulary enrichment prompt for Chinese.
 
     Args:
         target_item: Chinese word/phrase

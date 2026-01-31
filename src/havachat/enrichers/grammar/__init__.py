@@ -1,5 +1,5 @@
 """Grammar enrichers for different languages."""
 
-from .mandarin import MandarinGrammarEnricher
+from .chinese import ChineseGrammarEnricher
 
-__all__ = ["MandarinGrammarEnricher"]
+__all__ = ["ChineseGrammarEnricher"]

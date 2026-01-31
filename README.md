@@ -4,7 +4,7 @@
 
 This project contains the batch processing pipeline for generating and enriching language learning content (vocabulary, grammar, conversations, questions) from source materials. It uses LangGraph for LLM agent orchestration and Instructor for structured outputs with Pydantic validation.
 
-**Supported Languages**: Mandarin (HSK 1-6), Japanese (JLPT N5-N1), French (CEFR A1-C2)  
+**Supported Languages**: Chinese (HSK 1-6), Japanese (JLPT N5-N1), French (CEFR A1-C2)  
 **Python Version**: >=3.14  
 **Package Manager**: uv
 
@@ -117,7 +117,7 @@ LOG_LEVEL=INFO
 
 ### 1. Seed Selection
 - Import vocab and grammar lists from official/authoritative sources
-- For HSK (Mandarin): Use official HSK word lists
+- For HSK (Chinese): Use official HSK word lists
 - For JLPT (Japanese): Use official JLPT vocabulary
 - For CEFR (French): Use standardized CEFR references
 
@@ -176,7 +176,7 @@ uv run black src/ tests/
 
 ```bash
 # TBD: CLI commands will be added in later phases
-# Example: python -m src.havachat.enrichers.vocab.mandarin --input vocab.tsv
+# Example: python -m havachat.enrichers.vocab.chinese --input vocab.tsv
 ```
 
 ## Key Features

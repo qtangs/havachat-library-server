@@ -4,14 +4,14 @@ Usage:
     python -m havachat.cli.enrich_vocab \
         --language zh \
         --level HSK1 \
-        --input data/mandarin_hsk1.tsv \
-        --enricher mandarin \
-        --output output/mandarin/hsk1/vocab.json \
+        --input data/chinese_hsk1.tsv \
+        --enricher chinese \
+        --output output/chinese/hsk1/vocab.json \
         --max-items 10 \
         --dry-run
 
 Supports:
-- Mandarin Chinese (--enricher mandarin, TSV input)
+- Chinese (--enricher chinese, TSV input)
 - Japanese (--enricher japanese, JSON input)
 - French (--enricher french, TSV input)
 
@@ -38,7 +38,7 @@ from havachat.enrichers.base import BaseEnricher
 from havachat.enrichers.vocab import (
     FrenchVocabEnricher,
     JapaneseVocabEnricher,
-    MandarinVocabEnricher,
+    ChineseVocabEnricher,
 )
 from havachat.utils.file_io import write_json
 from havachat.utils.llm_client import LLMClient
@@ -51,7 +51,7 @@ load_dotenv()
 
 # Enricher-language validation mapping
 ENRICHER_LANGUAGE_MAP = {
-    "mandarin": "zh",
+    "chinese": "zh",
     "japanese": "ja",
     "french": "fr",
 }
@@ -64,11 +64,11 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Enrich Mandarin HSK1 vocabulary
+  # Enrich Chinese HSK1 vocabulary
   python -m havachat.cli.enrich_vocab \\
       --language zh --level HSK1 \\
       --input data/hsk1_vocab.tsv \\
-      --enricher mandarin \\
+      --enricher chinese \\
       --output output/zh/hsk1/vocab.json
 
   # Enrich Japanese N5 vocabulary (dry run, 5 items)
@@ -91,7 +91,7 @@ Examples:
   python -m havachat.cli.enrich_vocab \\
       --language zh --level HSK1 \\
       --input data/hsk1_vocab.tsv \\
-      --enricher mandarin \\
+      --enricher chinese \\
       --output output/zh/hsk1/vocab.json \\
       --resume
         """,
@@ -114,13 +114,13 @@ Examples:
         "--input",
         required=True,
         type=Path,
-        help="Input file path (TSV for Mandarin/French, JSON for Japanese)",
+        help="Input file path (TSV for Chinese/French, JSON for Japanese)",
     )
 
     parser.add_argument(
         "--enricher",
         required=True,
-        choices=["mandarin", "japanese", "french"],
+        choices=["chinese", "japanese", "french"],
         help="Enricher to use (must match language)",
     )
 
@@ -189,7 +189,7 @@ Examples:
 def get_enricher_class(enricher_name: str) -> BaseEnricher:
     """Get enricher class by name."""
     enrichers = {
-        "mandarin": MandarinVocabEnricher,
+        "chinese": ChineseVocabEnricher,
         "japanese": JapaneseVocabEnricher,
         "french": FrenchVocabEnricher,
     }

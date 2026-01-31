@@ -51,15 +51,15 @@ All NEEDS CLARIFICATION items from Technical Context have been resolved through 
 
 ## 3. Language-Specific Subclasses vs. Generic Config
 
-**Decision**: Implement language-specific subclasses (e.g., `MandarinVocabEnricher`, `JapaneseVocabEnricher`, `FrenchVocabEnricher`) with their own parsing logic and LLM prompts
+**Decision**: Implement language-specific subclasses (e.g., `ChineseVocabEnricher`, `JapaneseVocabEnricher`, `FrenchVocabEnricher`) with their own parsing logic and LLM prompts
 
 **Rationale** (from spec clarification):
 - Source formats are fundamentally different:
   - Japanese JSON: `{word, meaning, furigana, romaji, level}`
   - French CSV: `{Mot, Définition, Exemple}`
-  - Mandarin TSV: `{Word, Part of Speech}`
+  - Chinese TSV: `{Word, Part of Speech}`
 - Each language needs different LLM prompts:
-  - Mandarin: "Generate Pinyin romanization and sense glosses"
+  - Chinese: "Generate Pinyin romanization and sense glosses"
   - Japanese: "Preserve existing furigana/romaji, only add examples"
   - French: "Preserve definitions, add contextual usage"
 - Generic config would be complex (column mappings, conditional prompts per language)
@@ -81,7 +81,7 @@ All NEEDS CLARIFICATION items from Technical Context have been resolved through 
 - FR-018 requires >85% similarity check to avoid duplicate conversations
 - Embedding-based similarity is fast (<50ms for 1000 comparisons) and semantically accurate
 - Can run locally (no API cost for similarity checks)
-- Sentence-transformers has multilingual models (supports Mandarin, Japanese, French)
+- Sentence-transformers has multilingual models (supports Chinese, Japanese, French)
 
 **Alternatives Considered**:
 - **Keyword overlap**: Misses semantic similarity ("ordering food" vs "restaurant menu")
@@ -202,9 +202,9 @@ All NEEDS CLARIFICATION items from Technical Context have been resolved through 
 
 **Workflow**:
 1. Implement enricher subclasses with LLM prompts
-2. Test with `python -m src.havachat.cli.enrich_vocab --input test.tsv --output out/`
+2. Test with `python -m havachat.cli.enrich_vocab --input test.tsv --output out/`
 3. Add LangGraph orchestration in `enrichment_graph.py`
-4. Run full graph: `python -m src.havachat.langgraph.enrichment_graph --config config.json`
+4. Run full graph: `python -m havachat.langgraph.enrichment_graph --config config.json`
 
 ## 11. Two-Tier Architecture: Batch + Live API
 
@@ -262,7 +262,7 @@ All NEEDS CLARIFICATION items from Technical Context have been resolved through 
 - Postgres: Table partitioning by language column OR separate schemas
   - Option A: `PARTITION BY LIST (language)` → `learning_items_zh`, `learning_items_ja`
   - Option B: Separate schemas → `zh.learning_items`, `ja.learning_items`
-- JSON files: Already partitioned by directory structure (`Mandarin/HSK1/vocab/`)
+- JSON files: Already partitioned by directory structure (`Chinese/HSK1/vocab/`)
 
 ## Open Questions (None)
 
@@ -278,7 +278,7 @@ All technical unknowns from spec have been resolved. Ready for Phase 1 (Design &
 **Decision**: Use language-specific Python libraries for romanization instead of LLM generation
 
 **Implementation**:
-- Mandarin: `pypinyin>=0.55.0` - Automatic pinyin generation (95%+ accuracy)
+- Chinese: `pypinyin>=0.55.0` - Automatic pinyin generation (95%+ accuracy)
 - Japanese: `pykakasi>=2.3.0` - Automatic romaji generation (98%+ accuracy)
 - French: No romanization needed (Latin alphabet)
 
@@ -289,7 +289,7 @@ All technical unknowns from spec have been resolved. Ready for Phase 1 (Design &
 **Decision**: Create optimized Pydantic models for each language instead of generic `LearningItem`
 
 **Implementation**:
-- `MandarinVocabItem`: Requires romanization, sense_gloss (for polysemous words)
+- `ChineseVocabItem`: Requires romanization, sense_gloss (for polysemous words)
 - `JapaneseVocabItem`: Requires romanization, optional furigana
 - `FrenchVocabItem`: Includes context_category field, no romanization
 
@@ -310,7 +310,7 @@ def system_prompt(self) -> str:
     """Each enricher must implement its own system prompt"""
     pass
 
-# MandarinVocabEnricher implementation
+# ChineseVocabEnricher implementation
 @property
 def system_prompt(self) -> str:
     return vocab_prompts.SYSTEM_PROMPT
@@ -337,9 +337,9 @@ def system_prompt(self) -> str:
 **Implementation**:
 ```bash
 # Process 5 items in parallel
-python -m src.havachat.cli.enrich_vocab \
+python -m havachat.cli.enrich_vocab \
   --language zh --level HSK1 \
-  --input data.tsv --enricher mandarin \
+  --input data.tsv --enricher chinese \
   --output output.json \
   --parallel 5
 ```
@@ -386,7 +386,7 @@ with tqdm(total=len(items), desc="Enriching") as pbar:
 **Implementation**:
 ```python
 ENRICHER_LANGUAGE_MAP = {
-    "mandarin": "zh",
+    "chinese": "zh",
     "japanese": "ja",
     "french": "fr",
 }

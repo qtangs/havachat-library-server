@@ -8,15 +8,62 @@ from pathlib import Path
 from typing import Literal
 
 
-from src.havachat.generators.audio_generator import AudioGenerator
-from src.havachat.utils.audio_progress_manager import AudioProgressManager
-from src.havachat.utils.elevenlabs_client import ElevenLabsClient
-from src.havachat.utils.language_utils import get_language_code, get_language_name
-from src.havachat.validators.voice_validator import VoiceConfigValidator
+from havachat.generators.audio_generator import AudioGenerator
+from havachat.utils.audio_progress_manager import AudioProgressManager
+from havachat.utils.elevenlabs_client import ElevenLabsClient
+from havachat.utils.language_utils import get_language_code, get_language_name
+from havachat.validators.voice_validator import VoiceConfigValidator
 
 logger = logging.getLogger(__name__)
 
 load_dotenv()
+
+
+def normalize_speaker_genders(genders: list[str]) -> list[str]:
+    """
+    Normalize speaker genders to ensure distinct voices.
+    
+    Rules:
+    - If gender is not "male" or "female", determine appropriate gender
+    - For 2 speakers: if one valid, use opposite; if both invalid, assign opposites
+    - For >2 speakers: use opposite of immediately previous speaker
+    
+    Args:
+        genders: List of gender strings from speakers
+        
+    Returns:
+        List of normalized genders (all "male" or "female")
+    """
+    if not genders:
+        return []
+    
+    normalized = []
+    valid_genders = {"male", "female"}
+    
+    for i, gender in enumerate(genders):
+        gender_lower = gender.lower() if gender else ""
+        
+        if gender_lower in valid_genders:
+            # Valid gender, keep it
+            normalized.append(gender_lower)
+        else:
+            # Invalid gender, determine what it should be
+            if i == 0:
+                # First speaker with invalid gender
+                if len(genders) > 1 and genders[1].lower() in valid_genders:
+                    # Next speaker has valid gender, use opposite
+                    next_gender = genders[1].lower()
+                    normalized.append("female" if next_gender == "male" else "male")
+                else:
+                    # Default to "male" for first speaker
+                    normalized.append("male")
+            else:
+                # Use opposite of immediately previous speaker
+                prev_gender = normalized[i - 1]
+                normalized.append("female" if prev_gender == "male" else "male")
+    
+    logger.info(f"Normalized speaker genders: {genders} -> {normalized}")
+    return normalized
 
 
 def parse_args():
@@ -29,7 +76,7 @@ def parse_args():
     parser.add_argument(
         "--language",
         required=True,
-        help="Language name or ISO 639-1 code (e.g., 'Mandarin' or 'zh', 'French' or 'fr')"
+        help="Language name or ISO 639-1 code (e.g., 'Chinese' or 'zh', 'French' or 'fr')"
     )
     parser.add_argument(
         "--level",
@@ -245,6 +292,9 @@ def main():
         first_unit = items[0]
         speaker_genders = [speaker.gender for speaker in first_unit.speakers]
         
+        # Normalize genders to ensure distinct voices
+        speaker_genders = normalize_speaker_genders(speaker_genders)
+        
         # Validate conversation voices exist for these genders
         is_valid, error = voice_validator.validate_conversation_config(speaker_genders)
         if not is_valid:
@@ -288,6 +338,8 @@ def main():
             else:
                 # Generate audio for content unit with speaker-to-voice mapping
                 speaker_genders = [speaker.gender for speaker in item.speakers]
+                # Normalize genders for this specific content unit
+                speaker_genders = normalize_speaker_genders(speaker_genders)
                 voice_mapping = voice_validator.get_conversation_voices_for_speakers(speaker_genders)
                 
                 # Use Text-to-Dialogue API for more natural conversations

@@ -7,19 +7,19 @@ from pathlib import Path
 from typing import List, Literal
 from uuid import uuid4
 
-from src.havachat.models.audio_metadata import (
+from havachat.models.audio_metadata import (
     AudioVersion,
     ContentUnitAudio,
     LearningItemAudio,
     SegmentAudio,
 )
-from src.havachat.models.audio_progress import (
+from havachat.models.audio_progress import (
     AudioGenerationProgress,
     AudioProgressItem,
 )
-from src.havachat.utils.elevenlabs_client import ElevenLabsClient
-from src.havachat.validators.schema import ContentUnit, LearningItem
-from src.havachat.validators.voice_validator import VoiceConfigValidator
+from havachat.utils.elevenlabs_client import ElevenLabsClient
+from havachat.validators.schema import ContentUnit, LearningItem
+from havachat.validators.voice_validator import VoiceConfigValidator
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ class AudioGenerator:
         """Load learning items from consolidated JSON files.
         
         Args:
-            language: Full language name (e.g., "Mandarin", "French", "Japanese")
+            language: Full language name (e.g., "Chinese", "French", "Japanese")
             level: Level (e.g., "HSK1", "A1", "N5")
             category: Optional category filter (vocab, grammar, idiom, etc.)
             
@@ -140,7 +140,7 @@ class AudioGenerator:
         Args:
             item: LearningItem to generate audio for
             voice_id: ElevenLabs voice ID
-            language_full: Full language name (Mandarin, French, Japanese)
+            language_full: Full language name (Chinese, French, Japanese)
             level: Level (HSK1, A1, N5)
             versions: Number of versions to generate (1-3)
             audio_format: Audio format (opus or mp3)
@@ -349,10 +349,9 @@ class AudioGenerator:
         # Build dialogue inputs for the API
         dialogue_inputs = []
         for segment in content_unit.segments:
-            voice_id = voice_mapping.get(segment.speaker, list(voice_mapping.values())[0])
             dialogue_inputs.append({
                 "text": segment.text,
-                "voice_id": voice_id
+                "speaker": segment.speaker
             })
         
         content_audio = ContentUnitAudio(
@@ -369,6 +368,7 @@ class AudioGenerator:
             
             success, metadata = self.elevenlabs.text_to_dialogue(
                 dialogue_inputs=dialogue_inputs,
+                voice_mapping=voice_mapping,
                 output_path=output_path,
                 audio_format=audio_format
             )

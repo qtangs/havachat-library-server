@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from src.havachat.utils.file_io import (
+from havachat.utils.file_io import (
     create_language_level_dir,
     get_language_level_path,
     list_files,

@@ -5,10 +5,10 @@ and return normalized dictionaries that can be used by enrichers or other
 pipeline stages.
 
 Supported formats:
-- Mandarin Vocab: TSV with "Word\tPart of Speech" columns
+- Chinese Vocab: TSV with "Word\tPart of Speech" columns
 - Japanese Vocab: JSON with word, furigana, romaji, level fields
 - French Vocab: TSV with "Mot\tCatégorie" columns
-- Mandarin Grammar: CSV with "类别,类别名称,细目,语法内容" columns
+- Chinese Grammar: CSV with "类别,类别名称,细目,语法内容" columns
 """
 
 import csv
@@ -102,8 +102,8 @@ def translate_chinese_pos(chinese_pos: str) -> str:
     return pos_map.get(chinese_pos, chinese_pos)
 
 
-def parse_mandarin_vocab_tsv(source_path: Union[str, Path]) -> List[Dict[str, Any]]:
-    """Parse Mandarin vocabulary TSV file with Word and Part of Speech columns.
+def parse_chinese_vocab_tsv(source_path: Union[str, Path]) -> List[Dict[str, Any]]:
+    """Parse Chinese vocabulary TSV file with Word and Part of Speech columns.
 
     Expected format:
         Word\tPart of Speech
@@ -180,7 +180,7 @@ def parse_mandarin_vocab_tsv(source_path: Union[str, Path]) -> List[Dict[str, An
             )
 
     logger.info(
-        f"Parsed {len(items)} Mandarin vocab items from {source_path}",
+        f"Parsed {len(items)} Chinese vocab items from {source_path}",
         extra={"source": str(source_path), "item_count": len(items)},
     )
 
@@ -390,8 +390,8 @@ def parse_french_vocab_tsv(source_path: Union[str, Path]) -> List[Dict[str, Any]
 # ============================================================================
 
 
-def parse_mandarin_grammar_csv(source_path: Union[str, Path]) -> List[Dict[str, Any]]:
-    """Parse Mandarin grammar CSV file with official HSK grammar patterns.
+def parse_chinese_grammar_csv(source_path: Union[str, Path]) -> List[Dict[str, Any]]:
+    """Parse Chinese grammar CSV file with official HSK grammar patterns.
     
     Expected format:
         类别,类别名称,细目,语法内容
@@ -459,7 +459,7 @@ def parse_mandarin_grammar_csv(source_path: Union[str, Path]) -> List[Dict[str, 
                     })
     
     logger.info(
-        f"Parsed {len(items)} Mandarin grammar patterns from {source_path}",
+        f"Parsed {len(items)} Chinese grammar patterns from {source_path}",
         extra={"source": str(source_path), "item_count": len(items)},
     )
     
@@ -496,10 +496,10 @@ def load_source_file(
     content_type = content_type.lower()
     
     parsers = {
-        ("zh", "vocab"): parse_mandarin_vocab_tsv,
+        ("zh", "vocab"): parse_chinese_vocab_tsv,
         ("ja", "vocab"): parse_japanese_vocab_json,
         ("fr", "vocab"): parse_french_vocab_tsv,
-        ("zh", "grammar"): parse_mandarin_grammar_csv,
+        ("zh", "grammar"): parse_chinese_grammar_csv,
     }
     
     key = (language, content_type)

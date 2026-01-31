@@ -16,7 +16,7 @@ import opencc
 from pypinyin import Style, pinyin
 
 from havachat.utils.azure_translation import AzureTranslationHelper
-from havachat.utils.romanization import get_japanese_romaji, get_mandarin_pinyin
+from havachat.utils.romanization import get_japanese_romaji, get_chinese_pinyin
 from havachat.validators.schema import Example
 
 logger = logging.getLogger(__name__)
@@ -64,12 +64,12 @@ def get_traditional_chinese(text: str) -> str:
         return ""
 
 
-def process_mandarin_item(
+def process_chinese_item(
     item_dict: dict,
     azure_translator: Optional[AzureTranslationHelper] = None,
     translate_examples: bool = True
 ) -> dict:
-    """Apply Mandarin-specific post-processing to an item.
+    """Apply Chinese-specific post-processing to an item.
     
     Generates:
     - romanization (pinyin with tone marks)
@@ -89,7 +89,7 @@ def process_mandarin_item(
     
     # Generate romanization
     if not item_dict.get("romanization"):
-        item_dict["romanization"] = get_mandarin_pinyin(target_item)
+        item_dict["romanization"] = get_chinese_pinyin(target_item)
     
     # Generate numeric pinyin
     numeric_pinyin = get_numeric_pinyin(target_item)
@@ -338,7 +338,7 @@ def post_process_learning_item(
     language = language.lower()
     
     if language == "zh":
-        result = process_mandarin_item(item_data, azure_translator, translate_examples)
+        result = process_chinese_item(item_data, azure_translator, translate_examples)
     elif language == "ja":
         result = process_japanese_item(item_data, azure_translator, translate_examples)
     elif language == "fr":

@@ -3,7 +3,7 @@
 import pytest
 from uuid import uuid4
 
-from src.havachat.validators.schema import (
+from havachat.validators.schema import (
     LevelSystem,
     Category,
     LearningItem,
@@ -14,7 +14,7 @@ from datetime import datetime, UTC
 
 @pytest.fixture
 def mandarin_vocab_items():
-    """Create sample Mandarin vocabulary items."""
+    """Create sample Chinese vocabulary items."""
     return [
         LearningItem(
             id=str(uuid4()),
@@ -57,7 +57,7 @@ def mandarin_vocab_items():
 
 def test_character_validation_all_present(mandarin_vocab_items):
     """Test that content with all characters in vocab is marked active."""
-    from src.havachat.validators.character_validator import validate_content_characters
+    from havachat.validators.character_validator import validate_content_characters
     
     # Content uses only characters from vocab
     content = "我爱学习"
@@ -71,7 +71,7 @@ def test_character_validation_all_present(mandarin_vocab_items):
 
 def test_character_validation_missing_chars(mandarin_vocab_items):
     """Test that content with missing characters is marked for review."""
-    from src.havachat.validators.character_validator import validate_content_characters
+    from havachat.validators.character_validator import validate_content_characters
     
     # Content uses characters not in vocab: 你, 好
     content = "我爱学习，你好"
@@ -86,7 +86,7 @@ def test_character_validation_missing_chars(mandarin_vocab_items):
 
 def test_character_validation_french_placeholder():
     """Test that French content validation is placeholder."""
-    from src.havachat.validators.character_validator import validate_content_characters
+    from havachat.validators.character_validator import validate_content_characters
     
     content = "Bonjour tout le monde"
     vocab = ["Bonjour", "tout", "le", "monde"]
@@ -100,7 +100,7 @@ def test_character_validation_french_placeholder():
 
 def test_character_validation_japanese_placeholder():
     """Test that Japanese content validation is placeholder."""
-    from src.havachat.validators.character_validator import validate_content_characters
+    from havachat.validators.character_validator import validate_content_characters
     
     content = "こんにちは世界"
     vocab = ["こんにちは", "世界"]

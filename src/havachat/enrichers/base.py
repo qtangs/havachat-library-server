@@ -14,8 +14,8 @@ from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 
 from pydantic import BaseModel, ValidationError
 
-from src.havachat.utils.file_io import write_json
-from src.havachat.utils.llm_client import LLMClient
+from havachat.utils.file_io import write_json
+from havachat.utils.llm_client import LLMClient
 
 T = TypeVar("T", bound=BaseModel)
 

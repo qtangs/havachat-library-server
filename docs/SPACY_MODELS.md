@@ -4,7 +4,7 @@ The translation dictionary system uses language-specific tokenization to provide
 
 ## Tokenization Approaches
 
-### Mandarin Chinese (zh) - **jieba**
+### Chinese (zh) - **jieba**
 
 We use **jieba** for Chinese tokenization instead of spaCy due to Python 3.14 compatibility issues with spaCy.
 
@@ -40,7 +40,7 @@ The dictionary system automatically selects the appropriate tokenizer based on t
 ### Example: Chinese Dictionary Lookup with jieba
 
 ```python
-from src.havachat.utils.dictionary import DictionaryFactory
+from havachat.utils.dictionary import DictionaryFactory
 
 # Load dictionary (automatically uses jieba for Chinese)
 dictionary = DictionaryFactory.get_dictionary("zh")

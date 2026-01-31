@@ -9,10 +9,10 @@ This script generates learning items for categories beyond official vocab/gramma
 - misc: sociolinguistic, pragmatic, literacy, pattern (from vocab/grammar)
 
 Usage:
-    python -m src.havachat.cli.generate_learning_items \\
+    python -m havachat.cli.generate_learning_items \\
         --language zh --level HSK1 \\
         --category pronunciation \\
-        --source-dir ../havachat-knowledge/generated\\ content/Mandarin/HSK1/ \\
+        --source-dir ../havachat-knowledge/generated\\ content/Chinese/HSK1/ \\
         --output output/learning_items/pronunciation/
 
 Args:
@@ -28,13 +28,13 @@ Args:
 
 Examples:
     # Generate pronunciation items from vocab
-    python -m src.havachat.cli.generate_learning_items \\
+    python -m havachat.cli.generate_learning_items \\
         --language zh --level HSK1 \\
         --category pronunciation \\
-        --source-dir ../havachat-knowledge/generated\\ content/Mandarin/HSK1/vocab/
+        --source-dir ../havachat-knowledge/generated\\ content/Chinese/HSK1/vocab/
 
     # Generate cultural items for a topic
-    python -m src.havachat.cli.generate_learning_items \\
+    python -m havachat.cli.generate_learning_items \\
         --language zh --level HSK1 \\
         --category cultural \\
         --topic "Food" \\

@@ -4,21 +4,21 @@ import pytest
 from pathlib import Path
 
 from havachat.parsers.source_parsers import (
-    parse_mandarin_vocab_tsv,
+    parse_chinese_vocab_tsv,
     parse_japanese_vocab_json,
     parse_french_vocab_tsv,
-    parse_mandarin_grammar_csv,
+    parse_chinese_grammar_csv,
     load_source_file,
 )
 
 
-class TestMandarinVocabParser:
-    """Tests for Mandarin vocabulary TSV parser."""
+class TestChineseVocabParser:
+    """Tests for Chinese vocabulary TSV parser."""
     
-    def test_parse_mandarin_vocab_tsv(self):
-        """Test parsing Mandarin vocab TSV file."""
+    def test_parse_chinese_vocab_tsv(self):
+        """Test parsing Chinese vocab TSV file."""
         fixture_path = Path("tests/fixtures/mandarin_vocab_sample.tsv")
-        items = parse_mandarin_vocab_tsv(fixture_path)
+        items = parse_chinese_vocab_tsv(fixture_path)
         
         assert len(items) > 0
         assert all("target_item" in item for item in items)
@@ -33,7 +33,7 @@ class TestMandarinVocabParser:
     def test_sense_marker_handling(self):
         """Test that sense markers are properly cleaned and extracted."""
         fixture_path = Path("tests/fixtures/mandarin_vocab_sample.tsv")
-        items = parse_mandarin_vocab_tsv(fixture_path)
+        items = parse_chinese_vocab_tsv(fixture_path)
         
         # Find item with sense marker (e.g., "点1")
         sense_items = [item for item in items if item.get("sense_marker")]
@@ -47,7 +47,7 @@ class TestMandarinVocabParser:
     def test_chinese_pos_translation(self):
         """Test that Chinese POS tags are translated to English."""
         fixture_path = Path("tests/fixtures/mandarin_vocab_sample.tsv")
-        items = parse_mandarin_vocab_tsv(fixture_path)
+        items = parse_chinese_vocab_tsv(fixture_path)
         
         # Should have English POS tags
         pos_tags = [item["pos"] for item in items if item.get("pos")]
@@ -123,13 +123,13 @@ class TestFrenchVocabParser:
         assert "Exprimer ses goûts" in categories
 
 
-class TestMandarinGrammarParser:
-    """Tests for Mandarin grammar CSV parser."""
+class TestChineseGrammarParser:
+    """Tests for Chinese grammar CSV parser."""
     
-    def test_parse_mandarin_grammar_csv(self):
-        """Test parsing Mandarin grammar CSV file."""
+    def test_parse_chinese_grammar_csv(self):
+        """Test parsing Chinese grammar CSV file."""
         fixture_path = Path("tests/fixtures/mandarin_grammar_sample.csv")
-        items = parse_mandarin_grammar_csv(fixture_path)
+        items = parse_chinese_grammar_csv(fixture_path)
         
         assert len(items) > 0
         assert all("pattern" in item for item in items)
@@ -144,7 +144,7 @@ class TestMandarinGrammarParser:
     def test_pattern_splitting(self):
         """Test that multi-item patterns are split into individual items."""
         fixture_path = Path("tests/fixtures/mandarin_grammar_sample.csv")
-        items = parse_mandarin_grammar_csv(fixture_path)
+        items = parse_chinese_grammar_csv(fixture_path)
         
         # Find items from the same original_content
         grouped = {}
@@ -165,7 +165,7 @@ class TestMandarinGrammarParser:
     def test_pattern_cleaning(self):
         """Test that patterns are cleaned of numbers and prefixes."""
         fixture_path = Path("tests/fixtures/mandarin_grammar_sample.csv")
-        items = parse_mandarin_grammar_csv(fixture_path)
+        items = parse_chinese_grammar_csv(fixture_path)
         
         # Patterns should not have trailing numbers
         patterns = [item["pattern"] for item in items]
@@ -175,8 +175,8 @@ class TestMandarinGrammarParser:
 class TestGenericLoader:
     """Tests for generic load_source_file function."""
     
-    def test_load_mandarin_vocab(self):
-        """Test loading Mandarin vocab via generic loader."""
+    def test_load_chinese_vocab(self):
+        """Test loading Chinese vocab via generic loader."""
         fixture_path = Path("tests/fixtures/mandarin_vocab_sample.tsv")
         items = load_source_file(fixture_path, "zh", "vocab")
         assert len(items) > 0
@@ -193,8 +193,8 @@ class TestGenericLoader:
         items = load_source_file(fixture_path, "fr", "vocab")
         assert len(items) > 0
     
-    def test_load_mandarin_grammar(self):
-        """Test loading Mandarin grammar via generic loader."""
+    def test_load_chinese_grammar(self):
+        """Test loading Chinese grammar via generic loader."""
         fixture_path = Path("tests/fixtures/mandarin_grammar_sample.csv")
         items = load_source_file(fixture_path, "zh", "grammar")
         assert len(items) > 0
