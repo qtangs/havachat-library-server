@@ -1,4 +1,4 @@
-- Use `uv` package manager with PYTHONPATH=src
+- Use `uv` package manager with `PYTHONPATH=src`
 - Use `uv run python -m pytest` for unit test
 - Any updates to docs should be done in `specs/<feature>` folder
 - Ensure generated code are compilable

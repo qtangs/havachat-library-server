@@ -3,8 +3,7 @@
 Provides a base class for language-specific dictionaries (e.g., CC-CEDICT for Mandarin,
 EDICT for Japanese) that can be used as reference material for LLM translation.
 
-Uses jieba for Chinese tokenization (Python 3.14 compatible).
-For other languages, can use spaCy when Python version < 3.14.
+Uses spaCy for tokenization and POS tagging.
 """
 
 import logging
@@ -12,13 +11,13 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Tuple
 
 try:
-    import jieba
-    import jieba.posseg as pseg
-    HAS_JIEBA = True
+    import spacy
+    from spacy.tokens import Doc
+    HAS_SPACY = True
 except ImportError:
-    HAS_JIEBA = False
-    jieba = None
-    pseg = None
+    HAS_SPACY = False
+    spacy = None
+    Doc = None
 
 logger = logging.getLogger(__name__)
 
@@ -27,25 +26,35 @@ class Dictionary(ABC):
     """Abstract base class for language dictionaries.
     
     Subclasses should implement language-specific lookup logic.
-    Uses jieba for Chinese tokenization (Python 3.14 compatible).
+    Uses spaCy for tokenization and POS tagging.
     """
     
-    def __init__(self, language: str, tokenizer_type: str = "jieba"):
+    def __init__(self, language: str, spacy_model: str):
         """Initialize dictionary for a specific language.
         
         Args:
             language: ISO 639-1 language code (e.g., "zh", "ja", "fr")
-            tokenizer_type: Tokenizer to use ("jieba" for Chinese, "basic" for fallback)
+            spacy_model: spaCy model name (e.g., "zh_core_web_sm")
         """
         self.language = language
         self.lookup_dict: Dict[str, str] = {}
-        self.tokenizer_type = tokenizer_type
+        self.spacy_model_name = spacy_model
+        self.nlp = None
         
-        # Log tokenizer status
-        if language == "zh" and not HAS_JIEBA:
+        # Load spaCy model
+        if HAS_SPACY:
+            try:
+                self.nlp = spacy.load(spacy_model)
+                logger.info(f"Loaded spaCy model: {spacy_model}")
+            except OSError:
+                logger.warning(
+                    f"spaCy model '{spacy_model}' not found. "
+                    f"Install with: python -m spacy download {spacy_model}"
+                )
+        else:
             logger.warning(
-                "jieba not installed. Chinese tokenization will be basic character-level. "
-                "Install with: pip install jieba"
+                "spaCy not installed. Dictionary tokenization will not work. "
+                "Install with: pip install spacy"
             )
     
     @abstractmethod
@@ -57,7 +66,7 @@ class Dictionary(ABC):
         pass
     
     def tokenize_and_lookup(self, text: str) -> List[Tuple[str, str, Optional[str]]]:
-        """Tokenize text and look up each word in dictionary.
+        """Tokenize text using spaCy and look up each word in dictionary.
         
         Args:
             text: Text to tokenize and look up
@@ -65,73 +74,29 @@ class Dictionary(ABC):
         Returns:
             List of (word, pos, definition) tuples. Definition is None if not found.
         """
-        if self.language == "zh" and HAS_JIEBA:
-            return self._tokenize_chinese(text)
-        else:
-            # Fallback: basic character-level splitting
-            logger.warning(f"Using basic character splitting for {self.language}")
-            words = [(char, "NOUN", self.lookup_dict.get(char)) for char in text if not char.isspace()]
-            return words
-    
-    def _tokenize_chinese(self, text: str) -> List[Tuple[str, str, Optional[str]]]:
-        """Tokenize Chinese text using jieba with POS tagging.
-        
-        Args:
-            text: Chinese text to tokenize
-        
-        Returns:
-            List of (word, pos, definition) tuples
-        """
-        if not HAS_JIEBA or not pseg:
+        if not self.nlp:
+            logger.warning(f"spaCy model not loaded for {self.language}")
             return []
         
-        # Use jieba with POS tagging
-        words = pseg.cut(text)
+        # Parse text with spaCy
+        doc: Doc = self.nlp(text)
         results = []
         
-        for word, pos in words:
-            # Skip whitespace
-            if word.strip() == "":
+        for token in doc:
+            # Skip whitespace and punctuation
+            if token.is_space or token.is_punct:
                 continue
             
-            # Map jieba POS tags to simplified tags
-            simple_pos = self._map_jieba_pos(pos)
+            # Use lemma for dictionary lookup (base form)
+            lemma = token.lemma_
+            pos = token.pos_
             
             # Look up in dictionary
-            definition = self.lookup_dict.get(word)
+            definition = self.lookup_dict.get(lemma) or self.lookup_dict.get(token.text)
             
-            results.append((word, simple_pos, definition))
+            results.append((token.text, pos, definition))
         
         return results
-    
-    def _map_jieba_pos(self, jieba_pos: str) -> str:
-        """Map jieba POS tags to simplified universal tags.
-        
-        Args:
-            jieba_pos: jieba POS tag (e.g., 'n', 'v', 'a')
-        
-        Returns:
-            Simplified POS tag (e.g., 'NOUN', 'VERB', 'ADJ')
-        """
-        pos_map = {
-            'n': 'NOUN',      # 名词
-            'v': 'VERB',      # 动词
-            'a': 'ADJ',       # 形容词
-            'd': 'ADV',       # 副词
-            'p': 'ADP',       # 介词
-            'c': 'CONJ',      # 连词
-            'm': 'NUM',       # 数词
-            'q': 'PART',      # 量词
-            'r': 'PRON',      # 代词
-            'u': 'PART',      # 助词
-            'e': 'INTJ',      # 叹词
-            'o': 'PART',      # 拟声词
-            'x': 'X',         # 其他
-        }
-        
-        # Get first character for compound tags (e.g., 'ns' -> 'n')
-        base_pos = jieba_pos[0] if jieba_pos else 'x'
-        return pos_map.get(base_pos, 'X')
     
     def lookup_batch_with_context(self, texts: List[str]) -> List[List[Tuple[str, str, Optional[str]]]]:
         """Look up dictionary definitions for words in a batch of texts.
@@ -194,12 +159,12 @@ class CCCEDICTDictionary(Dictionary):
     
     Loads CC-CEDICT entries from the cc_cedict_parser module and provides
     lookup for both simplified and traditional Chinese characters.
-    Uses jieba for tokenization (Python 3.14 compatible).
+    Uses spaCy zh_core_web_sm model for tokenization.
     """
     
     def __init__(self):
         """Initialize CC-CEDICT dictionary for Mandarin Chinese."""
-        super().__init__(language="zh", tokenizer_type="jieba")
+        super().__init__(language="zh", spacy_model="zh_core_web_sm")
         self.load_dictionary()
     
     def load_dictionary(self) -> None:

@@ -7,8 +7,14 @@
 #This code was written by Franki Allegra in February 2020.
 
 #open CEDICT file
+import os
+from pathlib import Path
 
-with open('cedict_ts.u8') as file:
+# Get the directory where this script is located
+script_dir = Path(__file__).parent
+cedict_path = script_dir / 'cedict_ts.u8'
+
+with open(cedict_path, encoding='utf-8') as file:
     text = file.read()
     lines = text.split('\n')
     dict_lines = list(lines)

@@ -5,7 +5,7 @@ Provides a common interface for translating text using:
 2. Azure Translation API (optional, via flag)
 3. Google Translate API (optional, via flag)
 
-Uses jieba tokenization for Chinese (Python 3.14 compatible).
+Uses spaCy for word-level dictionary tokenization and POS tagging.
 """
 
 import logging
@@ -131,15 +131,19 @@ def _translate_with_llm(
         if dictionary and hasattr(dictionary, 'tokenize_and_lookup'):
             word_defs = dictionary.tokenize_and_lookup(text)
             if word_defs:
-                # Format: word (POS): definition
-                word_refs = []
+                # Format: each entry on its own line, split multiple definitions
+                dict_lines = []
                 for word, pos, definition in word_defs:
                     if definition:
-                        word_refs.append(f"{word} ({pos}): {definition}")
                         has_dictionary_refs = True
+                        # Split definitions by semicolon and create separate lines
+                        defs = [d.strip() for d in definition.split(';')]
+                        for def_part in defs:
+                            if def_part:  # Skip empty parts
+                                dict_lines.append(f"     {word} ({pos}): {def_part}")
                 
-                if word_refs:
-                    line += "\n   Dictionary: " + "; ".join(word_refs)
+                if dict_lines:
+                    line += "\n   Dictionary:\n" + "\n".join(dict_lines)
         
         texts_formatted_lines.append(line)
     
@@ -159,6 +163,8 @@ Texts:
 {texts_formatted}
 
 Provide translations in the same order with their index numbers."""
+
+    logger.info(f"LLM Translation Prompt:\n{prompt}")
     
     try:
         result: BatchTranslationResult = llm_client.generate(
