@@ -14,7 +14,7 @@ class DimensionScore(BaseModel):
     """Score and explanation for a single evaluation dimension."""
     
     score: int = Field(..., ge=1, le=10, description="Score from 1 (poor) to 10 (excellent)")
-    explanation: str = Field(..., min_length=10, max_length=500, description="Detailed explanation of the score")
+    explanation: str = Field(..., min_length=10, max_length=500, description="Detailed explanation of the score, in English")
 
 
 class LLMJudgeEvaluation(BaseModel):
@@ -85,3 +85,33 @@ class LLMJudgeEvaluation(BaseModel):
     def to_json_string(self) -> str:
         """Serialize to JSON string for Notion LLM Comment field."""
         return self.model_dump_json(indent=2, exclude={"content_id", "content_type", "evaluated_at"})
+
+    def to_readable_text(self) -> str:
+        """Serialize to human-readable text for Notion and local files."""
+        lines = [
+            f"Content ID: {self.content_id}",
+            f"Content Type: {self.content_type}",
+            f"Evaluated At: {self.evaluated_at.isoformat()}",
+            f"Evaluator Model: {self.evaluator_model}",
+            "",
+            f"Overall Recommendation: {self.overall_recommendation}",
+            f"Recommendation Justification: {self.recommendation_justification}",
+            f"Average Score: {self.average_score():.1f}/10",
+            "",
+            "Dimension Scores:",
+            f"- Naturalness: {self.naturalness.score}/10 — {self.naturalness.explanation}",
+            f"- Level Appropriateness: {self.level_appropriateness.score}/10 — {self.level_appropriateness.explanation}",
+            f"- Grammatical Correctness: {self.grammatical_correctness.score}/10 — {self.grammatical_correctness.explanation}",
+            f"- Vocabulary Diversity: {self.vocabulary_diversity.score}/10 — {self.vocabulary_diversity.explanation}",
+            f"- Cultural Accuracy: {self.cultural_accuracy.score}/10 — {self.cultural_accuracy.explanation}",
+            f"- Engagement: {self.engagement.score}/10 — {self.engagement.explanation}",
+        ]
+
+        if self.has_inconsistency:
+            lines.extend([
+                "",
+                "Inconsistency Detected:",
+                f"- {self.inconsistency_note or 'No details provided'}",
+            ])
+
+        return "\n".join(lines)

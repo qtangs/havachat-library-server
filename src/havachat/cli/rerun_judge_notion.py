@@ -44,9 +44,9 @@ from typing import List
 from havachat.utils.llm_client import LLMClient
 from havachat.validators.schema import ContentUnit
 from src.models.llm_judge_evaluation import LLMJudgeEvaluation
-from src.pipeline.validators.llm_judge import LLMJudge
-from src.pipeline.utils.notion_client import NotionClient, NotionSchemaError
-from src.pipeline.utils.notion_mapping_manager import NotionMappingManager
+from havachat.validators.llm_judge import LLMJudge
+from havachat.utils.notion_client import NotionClient, NotionSchemaError
+from havachat.utils.notion_mapping_manager import NotionMappingManager
 
 # Rebuild ContentUnit model now that LLMJudgeEvaluation is imported
 ContentUnit.model_rebuild()
@@ -120,6 +120,43 @@ def save_content_unit(content_unit: ContentUnit, content_dir: Path) -> None:
     logger.debug(f"Saved: {filename}")
 
 
+def get_llm_judge_eval_path(
+    content_dir: Path,
+    content_type: str,
+    content_id: str
+) -> Path:
+    eval_dir = content_dir / "llm_judge"
+    return eval_dir / f"{content_type}_{content_id}_llm_judge.txt"
+
+
+def save_llm_judge_evaluation_text(
+    evaluation: LLMJudgeEvaluation,
+    content_dir: Path,
+    content_type: str
+) -> Path:
+    """Save LLM judge evaluation as human-readable text."""
+    eval_dir = content_dir / "llm_judge"
+    eval_dir.mkdir(parents=True, exist_ok=True)
+    output_path = get_llm_judge_eval_path(content_dir, content_type, evaluation.content_id)
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(evaluation.to_readable_text())
+
+    logger.debug(f"Saved LLM judge evaluation: {output_path}")
+    return output_path
+
+
+def load_llm_judge_evaluation_text(
+    content_dir: Path,
+    content_type: str,
+    content_id: str
+) -> str | None:
+    eval_path = get_llm_judge_eval_path(content_dir, content_type, content_id)
+    if not eval_path.exists():
+        return None
+    return eval_path.read_text(encoding="utf-8")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Rerun LLM Judge + Notion sync on existing content"
@@ -158,6 +195,11 @@ def main():
         help="Re-evaluate even if evaluation already exists",
     )
     parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force Notion push even if ID already exists",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Print what would be done without processing",
@@ -181,6 +223,7 @@ def main():
     logger.info(f"  Skip judge: {args.skip_judge}")
     logger.info(f"  Judge only: {args.judge_only}")
     logger.info(f"  Force re-evaluation: {args.force_judge}")
+    logger.info(f"  Force Notion push: {args.force}")
     
     if args.dry_run:
         logger.info("DRY RUN - no processing will be done")
@@ -253,11 +296,21 @@ def main():
         logger.info(f"\n[{i}/{len(content_units)}] Processing: {content_unit.title} ({content_unit.type.value})")
         
         # Check if LLM judge evaluation needed
+        existing_eval_text = load_llm_judge_evaluation_text(
+            content_dir=args.content_dir,
+            content_type=content_unit.type.value,
+            content_id=content_unit.id,
+        )
         needs_evaluation = (
             not args.skip_judge and
-            (args.force_judge or content_unit.llm_judge_evaluation is None)
+            (args.force_judge or existing_eval_text is None)
         )
-        
+        if existing_eval_text is not None and not args.force_judge:
+            logger.info("  • Evaluation already exists (skipping LLM judge)")
+            needs_evaluation = False
+
+        eval_text: str | None = existing_eval_text
+
         if needs_evaluation:
             stats["judge_needed"] += 1
             
@@ -284,11 +337,12 @@ def main():
                         content_type=content_unit.type.value
                     )
                     
-                    # Store evaluation
-                    content_unit.llm_judge_evaluation = evaluation
-                    
-                    # Save updated content unit
-                    save_content_unit(content_unit, args.content_dir)
+                    eval_text = evaluation.to_readable_text()
+                    save_llm_judge_evaluation_text(
+                        evaluation=evaluation,
+                        content_dir=args.content_dir,
+                        content_type=content_unit.type.value,
+                    )
                     
                     logger.info(
                         f"  ✓ Evaluation complete: avg_score={evaluation.average_score():.1f}/10, "
@@ -301,10 +355,10 @@ def main():
                     stats["judge_failed"] += 1
                     continue  # Skip Notion push if evaluation failed
         else:
-            if content_unit.llm_judge_evaluation:
-                logger.info(f"  • Evaluation already exists (avg_score={content_unit.llm_judge_evaluation.average_score():.1f}/10)")
+            if existing_eval_text:
+                logger.info("  • Evaluation already exists (llm_judge text file)")
             else:
-                logger.info(f"  • Skipping evaluation (--skip-judge)")
+                logger.info("  • Skipping evaluation (--skip-judge)")
         
         # Check if Notion push needed
         if not args.judge_only and notion_client:
@@ -316,10 +370,19 @@ def main():
                 try:
                     logger.info(f"  Pushing to Notion...")
                     
-                    page_id = notion_client.push_conversation(content_unit=content_unit)
-                    
-                    # Save mapping
-                    notion_mapping_manager.add_mapping(
+                    page_id = notion_client.push_conversation(
+                        content_id=content_unit.id,
+                        content_type=content_unit.type.value,
+                        title=content_unit.title,
+                        description=content_unit.description or "",
+                        topic=", ".join(content_unit.topic_ids) if content_unit.topic_ids else "",
+                        scenario=", ".join(content_unit.scenario_ids) if content_unit.scenario_ids else "",
+                        segments=[seg.model_dump() for seg in content_unit.segments],
+                        llm_comment_text=eval_text or "",
+                        language=args.language,
+                        level=args.level,
+                        force=args.force
+                    )
                         content_id=content_unit.id,
                         notion_page_id=page_id,
                         title=content_unit.title,

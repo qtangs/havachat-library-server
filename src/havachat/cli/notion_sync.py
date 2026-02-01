@@ -19,8 +19,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from havachat.utils.llm_client import LLMClient
-from src.pipeline.utils.notion_client import NotionClient, NotionSchemaError
-from src.pipeline.utils.notion_mapping_manager import NotionMappingManager
+from havachat.utils.notion_client import NotionClient, NotionSchemaError
+from havachat.utils.notion_mapping_manager import NotionMappingManager
 from src.models.notion_mapping import NotionMapping
 
 # Configure logging
@@ -603,12 +603,12 @@ def main():
     args = parser.parse_args()
     
     # Get Notion credentials from environment
-    notion_token = os.getenv("NOTION_API_TOKEN")
+    notion_token = os.getenv("NOTION_API_KEY")
     database_id = os.getenv("NOTION_DATABASE_ID")
     
     if not notion_token or not database_id:
         logger.error(
-            "Missing Notion credentials. Set NOTION_API_TOKEN and NOTION_DATABASE_ID "
+            "Missing Notion credentials. Set NOTION_API_KEY and NOTION_DATABASE_ID "
             "environment variables."
         )
         sys.exit(1)

@@ -6,8 +6,8 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from src.models.llm_judge_evaluation import DimensionScore, LLMJudgeEvaluation
-from src.models.notion_mapping import NotionMapping, NotionPushQueue
+from models.llm_judge_evaluation import DimensionScore, LLMJudgeEvaluation
+from models.notion_mapping import NotionMapping, NotionPushQueue
 
 
 class TestDimensionScore:

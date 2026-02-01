@@ -8,8 +8,8 @@ from unittest.mock import MagicMock, Mock, patch, mock_open
 
 import pytest
 
-from src.models.llm_judge_evaluation import DimensionScore, LLMJudgeEvaluation
-from src.pipeline.utils.notion_client import NotionClient, NotionSchemaError
+from models.llm_judge_evaluation import DimensionScore, LLMJudgeEvaluation
+from havachat.utils.notion_client import NotionClient, NotionSchemaError
 
 
 class TestNotionClient:
@@ -18,7 +18,7 @@ class TestNotionClient:
     @pytest.fixture
     def mock_notion_client(self):
         """Create mock Notion client."""
-        with patch("src.pipeline.utils.notion_client.Client") as mock_client:
+        with patch("havachat.utils.notion_client.Client") as mock_client:
             yield mock_client
             
     @pytest.fixture

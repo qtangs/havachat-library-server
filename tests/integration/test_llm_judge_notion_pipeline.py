@@ -16,10 +16,10 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from src.models.llm_judge_evaluation import DimensionScore, LLMJudgeEvaluation
-from src.pipeline.validators.llm_judge import LLMJudge
-from src.pipeline.utils.notion_client import NotionClient
-from src.pipeline.utils.notion_mapping_manager import NotionMappingManager
+from models.llm_judge_evaluation import DimensionScore, LLMJudgeEvaluation
+from havachat.validators.llm_judge import LLMJudge
+from havachat.utils.notion_client import NotionClient
+from havachat.utils.notion_mapping_manager import NotionMappingManager
 from havachat.cli.notion_sync import NotionSyncCLI
 
 
@@ -112,7 +112,7 @@ class TestLLMJudgeNotionPipeline:
     @pytest.fixture
     def mock_notion_client(self):
         """Create mock Notion client."""
-        with patch("src.pipeline.utils.notion_client.Client") as mock:
+        with patch("havachat.utils.notion_client.Client") as mock:
             yield mock
             
     def test_end_to_end_generation_to_notion(
@@ -444,7 +444,7 @@ class TestLLMJudgeNotionPipeline:
             }
         }
         
-        from src.pipeline.utils.notion_client import NotionSchemaError
+        from havachat.utils.notion_client import NotionSchemaError
         
         with pytest.raises(NotionSchemaError, match="Missing columns: Audio"):
             notion_client = NotionClient(
@@ -472,7 +472,7 @@ class TestLLMJudgeNotionPipeline:
             }
         }
         
-        from src.pipeline.utils.notion_client import NotionSchemaError
+        from havachat.utils.notion_client import NotionSchemaError
         
         with pytest.raises(NotionSchemaError, match="Type mismatches: Status"):
             notion_client = NotionClient(

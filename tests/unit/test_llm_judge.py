@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pydantic import ValidationError
 
-from src.models.llm_judge_evaluation import DimensionScore, LLMJudgeEvaluation
-from src.pipeline.validators.llm_judge import LLMJudge
+from models.llm_judge_evaluation import DimensionScore, LLMJudgeEvaluation
+from havachat.validators.llm_judge import LLMJudge
 
 
 @pytest.fixture

@@ -15,6 +15,7 @@ dependencies = [
     "meilisearch>=0.40.0",
     "opencc>=1.2.0",
     "pip>=26.0",
+    "audioop-lts>=0.2.0",
     "pydub>=0.25.1",
     "pykakasi>=2.3.0",
     "pypinyin>=0.55.0",

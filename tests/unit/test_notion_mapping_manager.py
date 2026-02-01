@@ -10,8 +10,8 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-from src.models.notion_mapping import NotionMapping
-from src.pipeline.utils.notion_mapping_manager import NotionMappingManager
+from models.notion_mapping import NotionMapping
+from havachat.utils.notion_mapping_manager import NotionMappingManager
 
 
 class TestNotionMappingManager:

@@ -18,6 +18,9 @@ class VoiceConfig(BaseModel):
     
     voice_id: str = Field(..., description="Provider/Voice ID (e.g., 'elevenlabs/abc123')")
     name: str = Field(..., description="Human-readable voice name")
+    status: Literal["enabled", "disabled"] = Field(
+        "enabled", description="Voice status: 'enabled' or 'disabled'"
+    )
     type: Literal["single", "conversation"] = Field(
         ...,
         description="Voice type: 'single' for learning items or 'conversation' for conversations"
@@ -51,15 +54,15 @@ class VoiceConfigCollection(BaseModel):
     
     def get_voices_for_language(self, language: str) -> List[VoiceConfig]:
         """Get all voices that support a specific language."""
-        return [v for v in self.voices if language in v.supported_languages]
+        return [v for v in self.voices if language in v.supported_languages and v.status == "enabled"]
     
     def get_single_voices(self, language: str | None = None, gender: str | None = None) -> List[VoiceConfig]:
         """Get all single-type voices, optionally filtered by language and gender."""
-        voices = [v for v in self.voices if v.type == "single"]
+        voices = [v for v in self.voices if v.type == "single" and v.status == "enabled"]
         if language:
-            voices = [v for v in voices if language in v.supported_languages]
+            voices = [v for v in voices if language in v.supported_languages and v.status == "enabled"]
         if gender:
-            voices = [v for v in voices if v.gender == gender]
+            voices = [v for v in voices if v.gender == gender and v.status == "enabled"]
         return voices
     
     def get_conversation_voices(
@@ -76,9 +79,9 @@ class VoiceConfigCollection(BaseModel):
         Returns:
             List of VoiceConfig objects matching the criteria
         """
-        voices = [v for v in self.voices if v.is_conversation_voice()]
+        voices = [v for v in self.voices if v.is_conversation_voice() and v.status == "enabled"]
         if language:
-            voices = [v for v in voices if language in v.supported_languages]
+            voices = [v for v in voices if language in v.supported_languages and v.status == "enabled"]
         if gender in ["male", "female"]:
-            voices = [v for v in voices if v.gender == gender]
+            voices = [v for v in voices if v.gender == gender and v.status == "enabled"]
         return voices

@@ -247,7 +247,7 @@ If you see "Notion schema validation failed", verify:
 
 Run validation manually:
 ```python
-from src.pipeline.utils.notion_client import NotionClient
+from havachat.utils.notion_client import NotionClient
 client = NotionClient(api_token="...", database_id="...")
 client.validate_database_schema()
 ```

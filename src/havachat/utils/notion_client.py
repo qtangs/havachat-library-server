@@ -46,6 +46,7 @@ class NotionClient:
         "LLM Comment": "rich_text",
         "Human Comment": "rich_text",
         "Status": "status",  # Changed from "select" to match actual Notion type
+        "ID": "rich_text",
     }
     
     # Status values
@@ -117,6 +118,45 @@ class NotionClient:
         logger.info(f"Using data source: {data_sources[0].get('name', self.data_source_id)}")
         
         return self.data_source_id
+
+    def _query_data_source(self, body: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Query the data source using API v2025-09-03.
+
+        Args:
+            body: Query body
+
+        Returns:
+            Query response JSON
+        """
+        data_source_id = self._get_data_source_id()
+        url = f"{self.NOTION_API_BASE}/data_sources/{data_source_id}/query"
+        response = requests.post(url, headers=self.headers, json=body)
+        response.raise_for_status()
+        return response.json()
+
+    def find_page_by_content_id(self, content_id: str) -> Optional[str]:
+        """
+        Find a Notion page by content UUID stored in the ID property.
+
+        Args:
+            content_id: Content UUID
+
+        Returns:
+            Notion page ID if found, otherwise None
+        """
+        body = {
+            "filter": {
+                "property": "ID",
+                "rich_text": {
+                    "equals": content_id
+                }
+            },
+            "page_size": 1
+        }
+        data = self._query_data_source(body)
+        results = data.get("results", [])
+        return results[0]["id"] if results else None
         
     def validate_database_schema(self) -> None:
         """
@@ -213,6 +253,21 @@ class NotionClient:
             translation = segment.get("translation", "")
             lines.append(f"{speaker}: {translation}")
         return "\n".join(lines)
+
+    def _to_rich_text(self, text: str) -> List[Dict[str, Any]]:
+        """
+        Convert plain text to Notion rich_text list, chunking to 2000 chars.
+
+        Args:
+            text: Plain text content
+
+        Returns:
+            List of rich_text objects
+        """
+        if not text:
+            return []
+        chunks = [text[i:i + 2000] for i in range(0, len(text), 2000)]
+        return [{"text": {"content": chunk}} for chunk in chunks]
         
     def push_conversation(
         self,
@@ -224,9 +279,11 @@ class NotionClient:
         scenario: Optional[str] = None,
         segments: Optional[List[Dict[str, Any]]] = None,
         llm_evaluation: Optional[LLMJudgeEvaluation] = None,
+        llm_comment_text: Optional[str] = None,
         language: Optional[str] = None,
         level: Optional[str] = None,
         content_unit: Optional[Any] = None,  # ContentUnit object
+        force: bool = False,
     ) -> str:
         """
         Push conversation/story to Notion database.
@@ -274,25 +331,36 @@ class NotionClient:
         # Validate required parameters
         if not all([content_id, content_type, title, segments, language, level]):
             raise ValueError("Missing required parameters for push_conversation")
+
+        # Skip if already in Notion (unless forced)
+        if not force and content_id:
+            existing_page_id = self.find_page_by_content_id(content_id)
+            if existing_page_id:
+                logger.info(f"Content already in Notion (ID={content_id}): {existing_page_id}")
+                return existing_page_id
         
         # Format script and translation
         script = self.format_script(segments)
         translation = self.format_translation(segments)
         
         # Serialize LLM evaluation
-        llm_comment = llm_evaluation.to_json_string() if llm_evaluation else ""
+        if llm_comment_text is not None:
+            llm_comment = llm_comment_text
+        else:
+            llm_comment = llm_evaluation.to_readable_text() if llm_evaluation else ""
         
         # Build payload
         payload = {
+            "ID": {"rich_text": self._to_rich_text(content_id)},
             "Type": {"select": {"name": content_type}},
-            "Title": {"title": [{"text": {"content": title}}]},
-            "Description": {"rich_text": [{"text": {"content": description or ""}}]},
-            "Topic": {"rich_text": [{"text": {"content": topic or ""}}]},
-            "Scenario": {"rich_text": [{"text": {"content": scenario or ""}}]},
-            "Script": {"rich_text": [{"text": {"content": script}}]},
-            "Translation": {"rich_text": [{"text": {"content": translation}}]},
+            "Title": {"title": self._to_rich_text(title)},
+            "Description": {"rich_text": self._to_rich_text(description or "")},
+            "Topic": {"rich_text": self._to_rich_text(topic or "")},
+            "Scenario": {"rich_text": self._to_rich_text(scenario or "")},
+            "Script": {"rich_text": self._to_rich_text(script)},
+            "Translation": {"rich_text": self._to_rich_text(translation)},
             "Audio": {"files": []},  # Empty until generated (files type, not url)
-            "LLM Comment": {"rich_text": [{"text": {"content": llm_comment}}]},
+            "LLM Comment": {"rich_text": self._to_rich_text(llm_comment)},
             "Human Comment": {"rich_text": []},
             "Status": {"status": {"name": "Not started"}},  # status type, not select
         }
@@ -323,7 +391,13 @@ class NotionClient:
                 return notion_page_id
                 
             except Exception as e:
-                last_error = str(e)
+                error_detail = None
+                if isinstance(e, requests.HTTPError) and e.response is not None:
+                    try:
+                        error_detail = e.response.json()
+                    except ValueError:
+                        error_detail = e.response.text
+                last_error = f"{str(e)} | {error_detail}" if error_detail else str(e)
                 logger.warning(
                     f"Push attempt {attempt + 1}/{self.MAX_RETRIES} failed: {last_error}"
                 )
@@ -412,11 +486,7 @@ class NotionClient:
                 }
             
             # Query data source using REST API (API v2025-09-03)
-            data_source_id = self._get_data_source_id()
-            url = f"{self.NOTION_API_BASE}/data_sources/{data_source_id}/query"
-            response = requests.post(url, headers=self.headers, json=body)
-            response.raise_for_status()
-            data = response.json()
+            data = self._query_data_source(body)
             results = data.get("results", [])
             
             # Extract relevant fields

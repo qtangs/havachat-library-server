@@ -243,7 +243,9 @@ class ElevenLabsClient:
                 
                 # Calculate audio duration
                 try:
-                    audio = AudioSegment.from_file(output_path, format=audio_format)
+                    # For opus files, use 'ogg' as the format or let pydub auto-detect
+                    format_for_pydub = "ogg" if audio_format == "opus" else audio_format
+                    audio = AudioSegment.from_file(output_path, format=format_for_pydub)
                     duration_ms = len(audio)  # pydub returns duration in milliseconds
                     metadata["duration_ms"] = duration_ms
                 except Exception as e:

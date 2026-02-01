@@ -73,9 +73,9 @@ from havachat.generators.content_generator import ContentGenerator
 from havachat.utils.llm_client import LLMClient
 from havachat.utils.usage_tracker import UsageTracker
 from havachat.validators.schema import LevelSystem
-from src.pipeline.validators.llm_judge import LLMJudge
-from src.pipeline.utils.notion_client import NotionClient, NotionSchemaError
-from src.pipeline.utils.notion_mapping_manager import NotionMappingManager
+from havachat.validators.llm_judge import LLMJudge
+from havachat.utils.notion_client import NotionClient, NotionSchemaError
+from havachat.utils.notion_mapping_manager import NotionMappingManager
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -104,6 +104,31 @@ def save_content_unit(content_unit, output_dir: Path) -> None:
         json.dump(content_unit.model_dump(mode="json"), f, ensure_ascii=False, indent=2)
     
     logger.debug(f"Saved {content_unit.type.value}: {output_path}")
+
+
+def save_llm_judge_evaluation_text(
+    evaluation,
+    output_dir: Path,
+    content_type: str
+) -> Path:
+    """Save LLM judge evaluation as human-readable text.
+
+    Args:
+        evaluation: LLMJudgeEvaluation instance
+        output_dir: Base output directory
+        content_type: "conversation" or "story"
+    """
+    eval_dir = output_dir / "llm_judge"
+    eval_dir.mkdir(parents=True, exist_ok=True)
+
+    filename = f"{content_type}_{evaluation.content_id}_llm_judge.txt"
+    output_path = eval_dir / filename
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(evaluation.to_readable_text())
+
+    logger.debug(f"Saved LLM judge evaluation: {output_path}")
+    return output_path
 
 
 def main():
@@ -249,6 +274,8 @@ def main():
         stats_file = args.output / "usage_stats.json"
         usage_tracker = UsageTracker(stats_file)
         logger.info(f"Usage tracking enabled: {stats_file}")
+
+    llm_evaluations: dict[str, str] = {}
     
     try:
         # Stage 1: Load ALL learning items
@@ -322,8 +349,14 @@ def main():
                     content_type="conversation"
                 )
                 
-                # Store evaluation in content unit
-                conversation.llm_judge_evaluation = evaluation
+                # Save evaluation as readable text file
+                eval_text = evaluation.to_readable_text()
+                save_llm_judge_evaluation_text(
+                    evaluation=evaluation,
+                    output_dir=args.output,
+                    content_type="conversation",
+                )
+                llm_evaluations[conversation.id] = eval_text
                 
                 logger.info(
                     f"  Average score: {evaluation.average_score():.1f}/10 - "
@@ -345,8 +378,14 @@ def main():
                     content_type="story"
                 )
                 
-                # Store evaluation in content unit
-                story.llm_judge_evaluation = evaluation
+                # Save evaluation as readable text file
+                eval_text = evaluation.to_readable_text()
+                save_llm_judge_evaluation_text(
+                    evaluation=evaluation,
+                    output_dir=args.output,
+                    content_type="story",
+                )
+                llm_evaluations[story.id] = eval_text
                 
                 logger.info(
                     f"  Average score: {evaluation.average_score():.1f}/10 - "
@@ -360,12 +399,12 @@ def main():
             logger.info("=" * 80)
             
             # Get Notion credentials
-            notion_token = os.getenv("NOTION_API_TOKEN")
+            notion_token = os.getenv("NOTION_API_KEY")
             database_id = os.getenv("NOTION_DATABASE_ID")
             
             if not notion_token or not database_id:
                 logger.warning(
-                    "Notion credentials not found. Set NOTION_API_TOKEN and "
+                    "Notion credentials not found. Set NOTION_API_KEY and "
                     "NOTION_DATABASE_ID environment variables to enable Notion push."
                 )
             else:
@@ -393,7 +432,7 @@ def main():
                                 topic=conversation.topic_name,
                                 scenario=conversation.scenario_name,
                                 segments=[seg.model_dump() for seg in conversation.segments],
-                                llm_evaluation=conversation.llm_judge_evaluation,
+                                llm_comment_text=llm_evaluations.get(conversation.id, ""),
                                 language=args.language,
                                 level=args.level
                             )
@@ -429,7 +468,7 @@ def main():
                                 topic=story.topic_name,
                                 scenario=story.scenario_name,
                                 segments=[seg.model_dump() for seg in story.segments],
-                                llm_evaluation=story.llm_judge_evaluation,
+                                llm_comment_text=llm_evaluations.get(story.id, ""),
                                 language=args.language,
                                 level=args.level
                             )

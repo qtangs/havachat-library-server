@@ -14,7 +14,7 @@
       "name": "ShanShan",
       "type": "conversation",
       "gender": "female",
-      "description": " - Young, Energetic Female - A youthful Chinese female voice with lively energy. Suitable for narrating stories and creating content for social media videos.",
+      "description": "Young, Energetic Female - A youthful Chinese female voice with lively energy. Suitable for narrating stories and creating content for social media videos.",
       "supported_languages": ["zh"],
       "comment": ""
     },
@@ -75,6 +75,7 @@
     {
       "voice_id": "elevenlabs/kbrsaic1zriFXx1pgRYN",
       "name": "Evan",
+      "status": "disabled",
       "type": "conversation",
       "gender": "male",
       "description": "Warm, Soothing and Soft - Laid-Back, Soothing Mandarin - Therapeutic and calming Taiwanese Mandarin, with a laid-back warmth that soothes and reassures.",
@@ -82,7 +83,7 @@
       "comment": ""
     },
     {
-      "voice_id": "elevenlabs/ByhETIclHirOlWnWKhHc",
+      "voice_id": "elevenlabs/vZZLclMx4wouUtKBRfZn",
       "name": "Jin",
       "type": "conversation",
       "gender": "male",
