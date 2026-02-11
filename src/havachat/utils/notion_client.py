@@ -494,6 +494,9 @@ class NotionClient:
             for page in results:
                 page_id = page["id"]
                 props = page.get("properties", {})
+
+                content_id_prop = props.get("ID", {}).get("rich_text", [])
+                content_id = content_id_prop[0].get("text", {}).get("content", "") if content_id_prop else ""
                 
                 # Extract status (status type, not select)
                 status_prop = props.get("Status", {}).get("status")
@@ -508,13 +511,18 @@ class NotionClient:
                 # Audio is files type, extract first file URL if exists
                 audio_files = props.get("Audio", {}).get("files", [])
                 audio_url = audio_files[0].get("file", {}).get("url") if audio_files else None
+
+                print("language props", page)
                 
                 pages.append({
                     "notion_page_id": page_id,
+                    "id": content_id,
                     "status": status,
                     "title": title,
                     "type": content_type,
                     "audio_url": audio_url,
+                    "language": props.get("Language", {}).get("select", {}).get("name"),
+                    "level": props.get("Level", {}).get("select", {}).get("name"),
                 })
                 
             logger.info(f"Fetched {len(pages)} pages from Notion")

@@ -65,6 +65,7 @@ class ContentStatus(str, Enum):
 
     ACTIVE = "active"
     FOR_REVIEW = "for_review"
+    REJECTED = "rejected"
 
 
 class QuestionType(str, Enum):

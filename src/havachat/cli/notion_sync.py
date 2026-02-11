@@ -18,10 +18,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from dotenv import load_dotenv
+
 from havachat.utils.llm_client import LLMClient
 from havachat.utils.notion_client import NotionClient, NotionSchemaError
-from havachat.utils.notion_mapping_manager import NotionMappingManager
-from src.models.notion_mapping import NotionMapping
 
 # Configure logging
 logging.basicConfig(
@@ -29,6 +29,8 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+load_dotenv()
 
 
 class NotionSyncCLI:
@@ -38,7 +40,7 @@ class NotionSyncCLI:
         self,
         notion_token: str,
         database_id: str,
-        data_root: str = "data"
+        content_dir: str
     ):
         """
         Initialize Notion sync CLI.
@@ -46,14 +48,13 @@ class NotionSyncCLI:
         Args:
             notion_token: Notion API token
             database_id: Notion database ID
-            data_root: Root directory for language data
+            content_dir: Content directory (e.g., ".../Chinese/HSK1/02_Generated/")
         """
         self.notion_client = NotionClient(
             api_token=notion_token,
             database_id=database_id
         )
-        self.mapping_manager = NotionMappingManager()
-        self.data_root = Path(data_root)
+        self.content_dir = Path(content_dir)
         
         # Validate Notion schema on initialization
         try:
@@ -103,7 +104,9 @@ class NotionSyncCLI:
             logger.info("Notion sync completed")
             
         except Exception as e:
-            logger.error(f"Failed to check Notion: {e}")
+            import traceback
+            traceback.print_exc()
+            logger.error(f"Failed to check Notion: {e}. Last page {page}")
             raise
             
     def _process_ready_for_audio(self, page: Dict) -> None:
@@ -115,26 +118,22 @@ class NotionSyncCLI:
         """
         notion_page_id = page["notion_page_id"]
         title = page["title"]
+        content_id = page["id"]
+        language = page.get("language")
+        level = page.get("level")
+        content_type = page["type"]
+        
+        if not language or not level:
+            logger.error(f"Missing language or level for content {content_id} ('{title}'). Skipping.")
+            return
         
         logger.info(f"Processing Ready for Audio: {title}")
         
-        # Get content ID from mapping
-        content_id = self.mapping_manager.get_content_id(notion_page_id)
-        if not content_id:
-            logger.warning(f"No mapping found for Notion page: {notion_page_id}")
-            return
-            
-        # Get full mapping to find file location
-        mapping = self.mapping_manager.get_mapping(content_id)
-        if not mapping:
-            logger.warning(f"No mapping found for content: {content_id}")
-            return
-            
         # Load content unit from local file
         content_unit = self._load_content_unit(
-            language=mapping.language,
-            level=mapping.level,
-            content_type=mapping.type,
+            language=language,
+            level=level,
+            content_type=content_type,
             content_id=content_id
         )
         
@@ -146,8 +145,8 @@ class NotionSyncCLI:
         logger.info(f"Generating audio for: {title}")
         audio_url = self._generate_audio(
             content_unit=content_unit,
-            language=mapping.language,
-            level=mapping.level
+            language=language,
+            level=level
         )
         
         if audio_url:
@@ -157,11 +156,13 @@ class NotionSyncCLI:
             # Update status to "OK"
             self.notion_client.update_status(notion_page_id, "OK")
             
-            # Update mapping
-            self.mapping_manager.update_sync_status(
+            # Update local status
+            self._update_local_status(
+                language=language,
+                level=level,
+                content_type=content_type,
                 content_id=content_id,
-                status_in_notion="OK",
-                status_in_local="published"
+                new_status="published"
             )
             
             logger.info(f"Audio generated and Notion updated: {title}")
@@ -177,42 +178,31 @@ class NotionSyncCLI:
         """
         notion_page_id = page["notion_page_id"]
         title = page["title"]
+        content_id = page["id"]
+        language = page.get("language")
+        level = page.get("level")
+        content_type = page["type"]
+        
+        if not language or not level:
+            logger.error(f"Missing language or level for content {content_id} ('{title}'). Skipping.")
+            return
         
         logger.info(f"Processing Rejected: {title}")
         
-        # Get content ID from mapping
-        content_id = self.mapping_manager.get_content_id(notion_page_id)
-        if not content_id:
-            logger.warning(f"No mapping found for Notion page: {notion_page_id}")
-            return
-            
-        # Get full mapping
-        mapping = self.mapping_manager.get_mapping(content_id)
-        if not mapping:
-            logger.warning(f"No mapping found for content: {content_id}")
-            return
-            
         # Update local content status
         self._update_local_status(
-            language=mapping.language,
-            level=mapping.level,
-            content_type=mapping.type,
+            language=language,
+            level=level,
+            content_type=content_type,
             content_id=content_id,
             new_status="rejected"
         )
         
         # Decrement usage stats for learning items
         self._decrement_usage_stats(
-            language=mapping.language,
-            level=mapping.level,
+            language=language,
+            level=level,
             content_id=content_id
-        )
-        
-        # Update mapping
-        self.mapping_manager.update_sync_status(
-            content_id=content_id,
-            status_in_notion="Rejected",
-            status_in_local="rejected"
         )
         
         logger.info(f"Local status updated for rejected content: {title}")
@@ -225,36 +215,30 @@ class NotionSyncCLI:
         content_id: str
     ) -> Optional[Dict]:
         """
-        Load content unit from local JSON file.
+        Load content unit from individual JSON file.
         
         Args:
-            language: Language code
-            level: Level code
+            language: Language code (not used, kept for signature compatibility)
+            level: Level code (not used, kept for signature compatibility)
             content_type: "conversation" or "story"
             content_id: Content UUID
             
         Returns:
             Content unit dict or None if not found
         """
-        # Construct file path
-        filename = f"{content_type}s.json"  # conversations.json or stories.json
-        file_path = self.data_root / language / level / filename
+        # Construct file path: {content_dir}/conversations/conversation_{id}.json
+        folder_name = f"{content_type}"  # "conversations" or "stories"
+        filename = f"{content_type}_{content_id}.json"
+        file_path = self.content_dir / folder_name / filename
         
         if not file_path.exists():
             logger.error(f"Content file not found: {file_path}")
             return None
             
         try:
-            with open(file_path, "r") as f:
-                content_units = json.load(f)
-                
-            # Find content unit by ID
-            for unit in content_units:
-                if unit.get("id") == content_id:
-                    return unit
-                    
-            logger.error(f"Content unit {content_id} not found in {file_path}")
-            return None
+            with open(file_path, "r", encoding="utf-8") as f:
+                content_unit = json.load(f)
+            return content_unit
             
         except Exception as e:
             logger.error(f"Failed to load content file {file_path}: {e}")
@@ -269,17 +253,18 @@ class NotionSyncCLI:
         new_status: str
     ) -> None:
         """
-        Update status field in local JSON file.
+        Update status field in individual JSON file.
         
         Args:
-            language: Language code
-            level: Level code
+            language: Language code (not used, kept for signature compatibility)
+            level: Level code (not used, kept for signature compatibility)
             content_type: "conversation" or "story"
             content_id: Content UUID
             new_status: New status value
         """
-        filename = f"{content_type}s.json"
-        file_path = self.data_root / language / level / filename
+        folder_name = f"{content_type}"
+        filename = f"{content_type}_{content_id}.json"
+        file_path = self.content_dir / folder_name / filename
         
         if not file_path.exists():
             logger.error(f"Content file not found: {file_path}")
@@ -287,25 +272,18 @@ class NotionSyncCLI:
             
         try:
             # Load current data
-            with open(file_path, "r") as f:
-                content_units = json.load(f)
+            with open(file_path, "r", encoding="utf-8") as f:
+                content_unit = json.load(f)
                 
             # Update status
-            updated = False
-            for unit in content_units:
-                if unit.get("id") == content_id:
-                    unit["status"] = new_status
-                    unit["updated_at"] = datetime.now().isoformat()
-                    updated = True
-                    break
-                    
-            if updated:
-                # Save back to file
-                with open(file_path, "w") as f:
-                    json.dump(content_units, f, indent=2, ensure_ascii=False)
-                logger.info(f"Updated local status to '{new_status}' for {content_id}")
-            else:
-                logger.warning(f"Content unit not found: {content_id}")
+            content_unit["status"] = new_status
+            content_unit["updated_at"] = datetime.now().isoformat()
+            
+            # Save back to file
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(content_unit, f, indent=2, ensure_ascii=False)
+            
+            logger.info(f"Updated local status to '{new_status}' for {content_id}")
                 
         except Exception as e:
             logger.error(f"Failed to update local status: {e}")
@@ -320,53 +298,44 @@ class NotionSyncCLI:
         Decrement usage stats for learning items in rejected content.
         
         Args:
-            language: Language code
-            level: Level code
+            language: Language code (not used, kept for signature compatibility)
+            level: Level code (not used, kept for signature compatibility)
             content_id: Content UUID
         """
-        # Load content to get learning item IDs
-        content_units_file = self.data_root / language / level / "conversations.json"
-        stories_file = self.data_root / language / level / "stories.json"
-        
+        # Try loading conversation first, then story
         learning_item_ids = []
         
-        # Try conversations first
-        if content_units_file.exists():
-            try:
-                with open(content_units_file, "r") as f:
-                    content_units = json.load(f)
-                for unit in content_units:
-                    if unit.get("id") == content_id:
-                        learning_item_ids = unit.get("learning_item_ids", [])
+        for content_type in ["conversation", "story"]:
+            folder_name = f"{content_type}"
+            filename = f"{content_type}_{content_id}.json"
+            file_path = self.content_dir / folder_name / filename
+            
+            if file_path.exists():
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        content_unit = json.load(f)
+                    learning_item_ids = content_unit.get("learning_item_ids", [])
+                    if learning_item_ids:
                         break
-            except Exception as e:
-                logger.error(f"Failed to load conversations: {e}")
-                
-        # Try stories if not found
-        if not learning_item_ids and stories_file.exists():
-            try:
-                with open(stories_file, "r") as f:
-                    stories = json.load(f)
-                for story in stories:
-                    if story.get("id") == content_id:
-                        learning_item_ids = story.get("learning_item_ids", [])
-                        break
-            except Exception as e:
-                logger.error(f"Failed to load stories: {e}")
-                
+                except Exception as e:
+                    logger.error(f"Failed to load {file_path}: {e}")
+        
         if not learning_item_ids:
             logger.warning(f"No learning items found for content: {content_id}")
             return
             
-        # Load and update usage stats
-        usage_stats_file = self.data_root / language / level / "usage_stats.json"
+        # Load and update usage stats from parent directory
+        usage_stats_file = self.content_dir.parent / "usage_stats.json"
         
         if not usage_stats_file.exists():
-            logger.warning(f"Usage stats file not found: {usage_stats_file}")
-            return
+            # Try in content_dir itself
+            usage_stats_file = self.content_dir / "usage_stats.json"
+            if not usage_stats_file.exists():
+                logger.warning(f"Usage stats file not found in {self.content_dir.parent} or {self.content_dir}")
+                return
             
         try:
-            with open(usage_stats_file, "r") as f:
+            with open(usage_stats_file, "r", encoding="utf-8") as f:
                 usage_stats = json.load(f)
                 
             # Decrement counts
@@ -379,7 +348,7 @@ class NotionSyncCLI:
                     
             # Save back
             if updated_count > 0:
-                with open(usage_stats_file, "w") as f:
+                with open(usage_stats_file, "w", encoding="utf-8") as f:
                     json.dump(usage_stats, f, indent=2, ensure_ascii=False)
                 logger.info(f"Decremented usage stats for {updated_count} learning items")
                 
@@ -424,57 +393,63 @@ class NotionSyncCLI:
         """
         logger.info(f"Searching for content with title: {title}")
         
-        # Search in mapping manager
-        mappings = self.mapping_manager.find_by_title(
+        # Search in Notion database by title
+        pages = self.notion_client.search_by_title(
             title=title,
             language=language,
             level=level
         )
         
-        if not mappings:
+        if not pages:
             logger.warning(f"No content found with title: {title}")
             return
             
-        if len(mappings) > 1:
-            logger.warning(f"Found {len(mappings)} content items with title '{title}':")
-            for i, mapping in enumerate(mappings, 1):
+        if len(pages) > 1:
+            logger.warning(f"Found {len(pages)} content items with title '{title}':")
+            for i, page in enumerate(pages, 1):
                 logger.info(
-                    f"  {i}. {mapping.language}/{mapping.level} - {mapping.type} "
-                    f"(ID: {mapping.content_id})"
+                    f"  {i}. {page['language']}/{page['level']} - {page['type']} "
+                    f"(ID: {page['id']})"
                 )
             logger.info("Please specify language and/or level to disambiguate")
             return
             
         # Single match found
-        mapping = mappings[0]
+        page = pages[0]
+        content_id = page["id"]
+        page_language = page["language"]
+        page_level = page["level"]
+        content_type = page["type"]
+        notion_page_id = page["notion_page_id"]
+        
         logger.info(
-            f"Found content: {mapping.language}/{mapping.level} - {mapping.type} "
-            f"(ID: {mapping.content_id})"
+            f"Found content: {page_language}/{page_level} - {content_type} "
+            f"(ID: {content_id})"
         )
         
         # Load content unit
         content_unit = self._load_content_unit(
-            language=mapping.language,
-            level=mapping.level,
-            content_type=mapping.type,
-            content_id=mapping.content_id
+            language=page_language,
+            level=page_level,
+            content_type=content_type,
+            content_id=content_id
         )
         
         if not content_unit:
-            logger.error(f"Failed to load content unit: {mapping.content_id}")
+            logger.error(f"Failed to load content unit: {content_id}")
             return
             
         # Generate audio
         audio_url = self._generate_audio(
             content_unit=content_unit,
-            language=mapping.language,
-            level=mapping.level
+            language=page_language,
+            level=page_level
         )
         
         if audio_url:
             # Update Notion with new audio URL
             self.notion_client.update_audio_field(
-                notion_page_id=mapping.notion_page_id,
+                notion_page_id=notion_page_id,
                 audio_url=audio_url
             )
             logger.info(f"Audio regenerated and Notion updated: {title}")
@@ -518,17 +493,6 @@ class NotionSyncCLI:
                 response = self.notion_client.client.pages.create(
                     parent={"database_id": self.notion_client.database_id},
                     properties=payload
-                )
-                notion_page_id = response["id"]
-                
-                # Update mapping
-                self.mapping_manager.add_mapping(
-                    content_id=content_id,
-                    notion_page_id=notion_page_id,
-                    language=entry["language"],
-                    level=entry["level"],
-                    content_type=entry["type"],
-                    title=entry["title"]
                 )
                 
                 successful.append(content_id)
@@ -594,10 +558,10 @@ def main():
     )
     
     parser.add_argument(
-        "--data-root",
+        "--content-dir",
         type=str,
-        default="data",
-        help="Root directory for language data (default: data)"
+        required=True,
+        help="Content directory (e.g., '../havachat-knowledge/generated content/Chinese/HSK1/02_Generated/')"
     )
     
     args = parser.parse_args()
@@ -618,7 +582,7 @@ def main():
         cli = NotionSyncCLI(
             notion_token=notion_token,
             database_id=database_id,
-            data_root=args.data_root
+            content_dir=args.content_dir
         )
     except NotionSchemaError as e:
         logger.error(f"Notion schema validation failed: {e}")

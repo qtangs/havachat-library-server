@@ -383,13 +383,6 @@ def main():
                         level=args.level,
                         force=args.force
                     )
-                        content_id=content_unit.id,
-                        notion_page_id=page_id,
-                        title=content_unit.title,
-                        content_type=content_unit.type.value,
-                        language=args.language,
-                        level=args.level
-                    )
                     
                     logger.info(f"  ✓ Pushed to Notion: {page_id}")
                     stats["notion_success"] += 1

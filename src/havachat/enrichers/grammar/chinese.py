@@ -38,30 +38,19 @@ logger = logging.getLogger(__name__)
 class ChineseGrammarEnriched(BaseModel):
     """Grammar enrichment response from LLM."""
     
+    title: str = Field(
+        ...,
+        description="Very short title for the grammar pattern, in English. This goes to the front of a flashcard."
+    )
     definition: str = Field(
         ...,
-        description="Clear English definition explaining the grammar pattern, suitable for learners"
+        description="Clear definition explaining the grammar pattern, in English, suitable for learners. This goes to the back of a flashcard."
     )
     examples: List[str] = Field(
         ...,
         min_length=2,
         max_length=3,
-        description="Example sentences in Chinese ONLY (no pinyin, no English translation)"
-    )
-
-
-class ChineseGrammarEnriched(BaseModel):
-    """Grammar enrichment response from LLM."""
-    
-    definition: str = Field(
-        ...,
-        description="Clear English definition explaining the grammar pattern, suitable for learners"
-    )
-    examples: List[str] = Field(
-        ...,
-        min_length=2,
-        max_length=3,
-        description="Example sentences in Chinese ONLY (no pinyin, no English translation)"
+        description="Example sentences in Chinese ONLY (no pinyin, no English translation). This goes to the back of a flashcard."
     )
 
 
@@ -188,8 +177,7 @@ class ChineseGrammarEnricher(BaseEnricher):
         detail = item["detail"]
         original_content = item.get("original_content", pattern)
         
-        prompt = f"""Enrich the following Chinese grammar pattern:
-
+        prompt = f"""
 **Grammar Pattern**: {pattern}
 **Type**: {grammar_type} > {category_name}"""
         
@@ -197,27 +185,7 @@ class ChineseGrammarEnricher(BaseEnricher):
             prompt += f"\n**Detail**: {detail}"
         
         prompt += f"\n**Original Group**: {original_content}"
-        prompt += f"\n**Target Level**: {level}"
-        
-        prompt += """
-
-**CRITICAL**: This is a SINGLE, SPECIFIC grammar pattern. Do NOT create a "mega-item" that covers multiple patterns or overly broad explanations.
-
-**Required**:
-1. **Definition**: Explain the grammatical function and usage of THIS SPECIFIC pattern
-2. **Examples**: Provide 2-3 example sentences in Chinese characters ONLY (no pinyin, no English)
-
-**Granularity Check**:
-- If the pattern seems to cover multiple distinct uses, focus on the PRIMARY use
-- Keep the scope NARROW and SPECIFIC to this pattern
-- Examples should clearly demonstrate THIS pattern, not related patterns
-
-Provide your response in the format:
-{
-  "definition": "...",
-  "examples": ["...", "...", "..."]
-}
-"""
+        prompt += f"\n**Target Proficiency Level**: {level}"
         
         return prompt
 
@@ -245,13 +213,13 @@ Provide your response in the format:
         
         # Target item check
         pattern = source_item["pattern"]
-        if enriched.target_item != pattern:
-            return False, f"target_item '{enriched.target_item}' doesn't match pattern '{pattern}'"
+        if pattern not in enriched.target_item:
+            return False, f"target_item '{enriched.target_item}' doesn't contain pattern '{pattern}'"
         
         # Granularity check: Definition shouldn't be overly long (suggests mega-item)
         if len(enriched.definition) > 500:
             logger.warning(
-                f"Definition for '{pattern}' is long ({len(enriched.definition)} chars). "
+                f"Definition for '{enriched.target_item}' is long ({len(enriched.definition)} chars). "
                 "Possible mega-item. Consider manual review."
             )
         
@@ -286,7 +254,7 @@ Provide your response in the format:
             logger.info(f"Skipping LLM enrichment for grammar pattern '{pattern}' (--skip-llm mode)")
             
             # Get pinyin for the pattern
-            pattern_pinyin = get_chinese_pinyin(pattern)
+            target_item_pinyin = get_chinese_pinyin(pattern)
             
             # Create minimal item with UUID
             minimal_item = LearningItem(
@@ -296,7 +264,7 @@ Provide your response in the format:
                 target_item=pattern,
                 definition=item.get("definition", ""),  # Empty or from source
                 examples=[],  # Empty examples
-                romanization=pattern_pinyin,
+                romanization=target_item_pinyin,
                 sense_gloss=None,
                 lemma=pattern,
                 pos=None,
@@ -337,6 +305,7 @@ Provide your response in the format:
                 # Get structured response from LLM
                 enriched_data = self.llm_client.generate(
                     prompt=prompt,
+                    system_prompt=self.system_prompt,
                     response_model=ChineseGrammarEnriched,
                     use_cache=True,
                 )
@@ -367,18 +336,18 @@ Provide your response in the format:
                         )
                     )
                 
-                # Get pinyin for the pattern
-                pattern_pinyin = get_chinese_pinyin(pattern)
+                # Get pinyin for the target item
+                target_item_pinyin = get_chinese_pinyin(enriched_data.title)
                 
                 # Build LearningItem
                 learning_item = LearningItem(
                     id=str(uuid4()),
                     language=language,
                     category=Category.GRAMMAR,
-                    target_item=pattern,
+                    target_item=enriched_data.title,
                     definition=enriched_data.definition,
                     examples=processed_examples,
-                    romanization=pattern_pinyin,
+                    romanization=target_item_pinyin,
                     sense_gloss=None,
                     lemma=pattern,
                     pos=None,
@@ -395,7 +364,7 @@ Provide your response in the format:
                 # Validate output
                 is_valid, error_msg = self.validate_output(learning_item, item)
                 if not is_valid:
-                    logger.error(f"Validation failed for '{pattern}': {error_msg}")
+                    logger.error(f"Validation failed for '{enriched_data.title}': {error_msg}")
                     if attempt == self.max_retries:
                         # Write to manual review queue
                         if self.manual_review_dir:
@@ -403,11 +372,11 @@ Provide your response in the format:
                         return None
                     continue
                 
-                logger.info(f"Successfully enriched grammar pattern: {pattern}")
+                logger.info(f"Successfully enriched grammar pattern: {enriched_data.title}")
                 return learning_item
                 
             except Exception as e:
-                logger.error(f"Enrichment failed for '{pattern}' (attempt {attempt}): {e}")
+                logger.error(f"Enrichment failed for '{item}' (attempt {attempt}): {e}")
                 if attempt == self.max_retries:
                     # Write to manual review queue
                     if self.manual_review_dir:
@@ -415,6 +384,90 @@ Provide your response in the format:
                     return None
         
         return None
+
+    def enrich_from_llm_explained(self, item: Dict[str, Any]) -> Optional[LearningItem]:
+        """Enrich a grammar item from pre-generated LLM explanations.
+        
+        This method bypasses LLM generation and directly creates a LearningItem
+        from pre-generated content, adding only translation and romanization.
+        
+        Args:
+            item: Dictionary with keys:
+                - target_item: Grammar pattern title
+                - definition: Grammar explanation
+                - examples: List of Chinese example sentences
+                - language: Language code (default: "zh")
+                - level: Proficiency level (default: "HSK1")
+                - level_system: Level system (default: LevelSystem.HSK)
+                
+        Returns:
+            Enriched LearningItem or None if enrichment fails
+        """
+        target_item = item["target_item"]
+        definition = item["definition"]
+        examples = item["examples"]
+        language = item.get("language", "zh")
+        level = item.get("level", "HSK1")
+        level_system = item.get("level_system", LevelSystem.HSK)
+        
+        try:
+            logger.info(f"Enriching from pre-generated LLM: {target_item}")
+            
+            # Get pinyin for all examples
+            example_pinyins = [get_chinese_pinyin(ex) for ex in examples]
+            
+            # Translate all examples using common translation utility with dictionary
+            example_translations = translate_texts(
+                texts=examples,
+                from_language="zh",
+                llm_client=self.llm_client,
+                azure_translator=self.azure_translator,
+                use_azure=self.skip_translation is False and self.azure_translator is not None,
+                dictionary=self.dictionary,
+            )
+            
+            # Build Example objects
+            processed_examples = []
+            for example_text, translation in zip(examples, example_translations):
+                processed_examples.append(
+                    Example(
+                        text=example_text,
+                        translation=translation if translation else "[Translation unavailable]",
+                        media_urls=[],
+                    )
+                )
+            
+            # Get pinyin for the target item
+            target_item_pinyin = get_chinese_pinyin(target_item)
+            
+            # Build LearningItem
+            learning_item = LearningItem(
+                id=str(uuid4()),
+                language=language,
+                category=Category.GRAMMAR,
+                target_item=target_item,
+                definition=definition,
+                examples=processed_examples,
+                romanization=target_item_pinyin,
+                sense_gloss=None,
+                lemma=target_item,  # Use target_item as lemma since we don't have original pattern
+                pos=None,
+                aliases=[],
+                media_urls=[],
+                level_system=level_system,
+                level_min=level,
+                level_max=level,
+                created_at=datetime.now(UTC),
+                version="1.0.0",
+                source_file="",
+            )
+            
+            logger.info(f"Successfully enriched from LLM explained: {target_item}")
+            return learning_item
+            
+        except Exception as e:
+            logger.error(f"Failed to enrich from LLM explained '{target_item}': {e}")
+            return None
 
     def _write_to_manual_review(self, item: Dict[str, Any], error: str) -> None:
         """Write failed item to manual review queue.

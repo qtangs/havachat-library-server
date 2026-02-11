@@ -88,7 +88,7 @@ class LLMClient:
             self.client = instructor.patch(client)
             
         elif self.provider == "anthropic":
-            if enable_langfuse:
+            if False and enable_langfuse:
                 # Use Langfuse-wrapped Anthropic client for automatic tracing
                 from langfuse.anthropic import Anthropic
                 client = Anthropic(api_key=api_key or os.getenv("ANTHROPIC_API_KEY"))
@@ -97,16 +97,16 @@ class LLMClient:
                 from anthropic import Anthropic
                 client = Anthropic(api_key=api_key or os.getenv("ANTHROPIC_API_KEY"))
             # Patch with Instructor for structured outputs
-            self.client = instructor.patch(client, mode=instructor.Mode.ANTHROPIC_TOOLS)
+            # self.client = instructor.patch(client, mode=instructor.Mode.ANTHROPIC_TOOLS)
+            self.client = instructor.from_anthropic(client=client, mode=instructor.Mode.ANTHROPIC_TOOLS)
             
         elif self.provider == "gemini":
-            import google.generativeai as genai
+            from google import genai
             api_key_to_use = api_key or os.getenv("GOOGLE_GENERATIVE_AI_API_KEY")
             if not api_key_to_use:
                 raise ValueError("GOOGLE_GENERATIVE_AI_API_KEY environment variable is not set")
-            genai.configure(api_key=api_key_to_use)
-            client = genai.GenerativeModel(model_name=self.model)
-            self.client = instructor.from_gemini(client=client, mode=instructor.Mode.GEMINI_JSON)
+            client = genai.Client(model_name=self.model)
+            self.client = instructor.from_genai(client=client, mode=instructor.Mode.GEMINI_JSON)
             if enable_langfuse:
                 logger.warning("Langfuse tracing not yet supported for Gemini provider")
         else:

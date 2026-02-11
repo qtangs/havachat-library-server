@@ -90,45 +90,43 @@ class ContentOverview(BaseModel):
 
 class SimplifiedLearningItem(BaseModel):
     """Simplified learning item for token-efficient prompts.
-    
+
     Contains minimal fields based on category:
-    - Vocab: word + part_of_speech
-    - Grammar: rule
-    - Other categories: target_item
-    
-    This reduces token usage significantly (~300-400 tokens for 200 items).
+    - Vocab: target_item + part_of_speech
+    - All other categories: target_item only
+
+    Uses compact IDs (e.g., vo0, gr1) instead of UUIDs for ~50% token reduction.
     """
-    
-    id: str = Field(..., description="Learning item UUID")
+
+    id: str = Field(..., description="Compact ID (e.g., vo0, gr1)")
     category: Category
     target_item: str = Field(..., description="The word, phrase, or pattern")
-    
-    # Category-specific fields (only populated for relevant categories)
+
+    # Category-specific fields (only populated for vocab)
     part_of_speech: Optional[str] = Field(None, description="POS for vocab items")
-    rule: Optional[str] = Field(None, description="Grammar rule for grammar items")
 
 
 class SegmentDraft(BaseModel):
     """Draft segment with learning items (no translation in initial draft)."""
-    
+
     speaker: Optional[int] = Field(
         None, description="Speaker index (0-based, references speakers in overview)"
     )
     text: str = Field(..., description="Text in target language")
     learning_item_ids: List[str] = Field(
-        ..., description="Short UUIDs (8 chars) of learning items in this segment"
+        ..., description="Compact IDs (e.g., vo0, gr1) of learning items in this segment"
     )
 
 
 class RevisedSegmentDraft(BaseModel):
     """Revised segment with learning items."""
-    
+
     speaker: Optional[int] = Field(
         None, description="Speaker index (0-based, references speakers in overview)"
     )
     text: str = Field(..., description="Text in target language")
     learning_item_ids: List[str] = Field(
-        ..., description="Short UUIDs (8 chars) of learning items in this segment"
+        ..., description="Compact IDs (e.g., vo0, gr1) of learning items in this segment"
     )
 
 
@@ -220,7 +218,7 @@ class ContentGenerator:
 
     This generator:
     1. Loads ALL learning items (vocab, grammar, pronunciation, idioms, etc.)
-       in simplified format (target_item only) to minimize tokens
+       in simplified format with compact IDs (e.g., vo0, gr1) to minimize tokens
     2. Generates content batch (N conversations + N stories) in single LLM call
        using chain-of-thought: generate → critique → revise → assign scenarios
     3. Validates all learning_item_ids exist and appear in text
@@ -256,9 +254,31 @@ class ContentGenerator:
         # Storage for loaded learning items
         self.all_learning_items: Dict[str, LearningItem] = {}
         self.simplified_items: List[SimplifiedLearningItem] = []
-        
-        # UUID mapping: short (8 chars) -> full UUID
-        self.short_to_full_uuid: Dict[str, str] = {}
+
+        # UUID mapping: compact ID (e.g., vo0, gr1) -> full UUID
+        self.compact_id_to_full_uuid: Dict[str, str] = {}
+
+        # Category prefix mapping for compact IDs
+        self.category_to_prefix = {
+            "vocab": "vo",
+            "grammar": "gr",
+            "pronunciation": "pr",
+            "idiom": "id",
+            "functional": "fu",
+            "cultural": "cu",
+            "writing_system": "ws",
+            "sociolinguistic": "so",
+            "pragmatic": "pg",
+            "literacy": "li",
+            "pattern": "pa",
+            "other": "ot"
+        }
+
+        # Category counters for generating compact IDs
+        self.category_counters = {
+            "vo": 0, "gr": 0, "pr": 0, "id": 0, "fu": 0, "cu": 0,
+            "ws": 0, "so": 0, "pg": 0, "li": 0, "pa": 0, "ot": 0
+        }
         
         # Language dictionary for translation reference
         self.dictionary = DictionaryFactory.get_dictionary(self.language)
@@ -600,29 +620,32 @@ class ContentGenerator:
             
             # Store full item
             self.all_learning_items[item.id] = item
-            
-            # Map short UUID (first 8 chars) to full UUID
-            short_id = item.id[:8]
-            self.short_to_full_uuid[short_id] = item.id
-            
-            # Create simplified version with minimal fields and short ID
+
+            # Generate compact ID using category prefix + counter
+            prefix = self.category_to_prefix[item.category.value]
+            compact_id = f"{prefix}{self.category_counters[prefix]}"
+            self.category_counters[prefix] += 1
+
+            # Map compact ID to full UUID
+            self.compact_id_to_full_uuid[compact_id] = item.id
+
+            # Create simplified version with minimal fields and compact ID
             if content_type == "vocab":
-                # Vocab: word + part_of_speech
+                # Vocab: target_item + part_of_speech
                 simplified = SimplifiedLearningItem(
-                    id=short_id,
+                    id=compact_id,
                     category=item.category,
                     target_item=item.target_item,
                     part_of_speech=item.part_of_speech,
                 )
             else:
-                # Grammar: rule
+                # Grammar and others: just target_item
                 simplified = SimplifiedLearningItem(
-                    id=short_id,
+                    id=compact_id,
                     category=item.category,
                     target_item=item.target_item,
-                    rule=item.rule,
                 )
-            
+
             self.simplified_items.append(simplified)
     
     def _load_enriched_source(self, source_path: Path, category_key: str) -> None:
@@ -655,17 +678,31 @@ class ContentGenerator:
                         
                         # Store full item
                         self.all_learning_items[item.id] = item
-                        
-                        # Map short UUID (first 8 chars) to full UUID
-                        short_id = item.id[:8]
-                        self.short_to_full_uuid[short_id] = item.id
-                        
-                        # Create simplified version - all enriched items just use target_item
-                        simplified = SimplifiedLearningItem(
-                            id=short_id,
-                            category=item.category,
-                            target_item=item.target_item,
-                        )
+
+                        # Generate compact ID using category prefix + counter
+                        prefix = self.category_to_prefix[item.category.value]
+                        compact_id = f"{prefix}{self.category_counters[prefix]}"
+                        self.category_counters[prefix] += 1
+
+                        # Map compact ID to full UUID
+                        self.compact_id_to_full_uuid[compact_id] = item.id
+
+                        # Create simplified version based on category
+                        if item.category == Category.VOCAB:
+                            # Vocab: target_item + part_of_speech
+                            simplified = SimplifiedLearningItem(
+                                id=compact_id,
+                                category=item.category,
+                                target_item=item.target_item,
+                                part_of_speech=item.pos,  # Use pos field from enriched data
+                            )
+                        else:
+                            # All others: just target_item
+                            simplified = SimplifiedLearningItem(
+                                id=compact_id,
+                                category=item.category,
+                                target_item=item.target_item,
+                            )
                         self.simplified_items.append(simplified)
             except Exception as e:
                 logger.warning(f"Failed to load {json_file}: {e}")
@@ -707,19 +744,16 @@ class ContentGenerator:
             
             # Format based on category
             if item.category == Category.VOCAB and item.part_of_speech:
-                # Vocab: word (POS) - using short ID (8 chars)
-                formatted = f"  - {item.target_item} ({item.part_of_speech}) [ID: {item.id}]"
-            elif item.category == Category.GRAMMAR and item.rule:
-                # Grammar: rule - using short ID (8 chars)
-                formatted = f"  - {item.rule} [ID: {item.id}]"
+                # Vocab: target_item (POS) - using compact ID (e.g., vo0)
+                formatted = f"{item.id}: {item.target_item} ({item.part_of_speech})"
             else:
-                # Other categories: just target_item - using short ID (8 chars)
-                formatted = f"  - {item.target_item} [ID: {item.id}]"
-            
+                # All other categories: just target_item - using compact ID (e.g., gr0)
+                formatted = f"{item.id}: {item.target_item}"
+
             items_by_category[category].append(formatted)
 
         items_formatted = "\n\n".join([
-            f"{category.upper()}:\n" + "\n".join(items[:20])  # Limit to 20 per category
+            f"{category.upper()}:\n" + "\n".join(items)  # Limit to 20 per category
             for category, items in items_by_category.items()
         ])
         
@@ -741,19 +775,12 @@ Generate:
 Learning Items to Incorporate:
 {items_formatted}
 
-Follow the four-step chain-of-thought process:
-1. Create overview with type, title, and speakers (for conversations)
-2. Generate initial drafts (reference speakers by index: 0, 1, 2...)
-3. Critique each draft
-4. Revise based on critique
-5. Assign scenario names
-
 Remember:
 - Use items from MULTIPLE categories in each piece
 - Match {self.level} difficulty
 - Make content natural and engaging
 - Use speaker indices (0, 1, 2...) that reference the overview
-- Use short IDs (8 chars) for learning items
+- Use IDs (e.g., vo0, gr1) for learning items
 - Explicitly list all learning item IDs in revised versions"""
 
     def _convert_to_content_batch(
@@ -820,10 +847,10 @@ Remember:
                 if seg_draft.speaker is not None and speakers_list:
                     speaker_id = speaker_ids[seg_draft.speaker]
                 
-                # Convert short UUIDs to full UUIDs
+                # Convert compact IDs to full UUIDs
                 full_item_ids = [
-                    self.short_to_full_uuid.get(short_id, short_id)
-                    for short_id in seg_draft.learning_item_ids
+                    self.compact_id_to_full_uuid.get(compact_id, compact_id)
+                    for compact_id in seg_draft.learning_item_ids
                 ]
                 
                 segment = Segment(

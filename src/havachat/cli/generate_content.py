@@ -131,6 +131,38 @@ def save_llm_judge_evaluation_text(
     return output_path
 
 
+def get_topic_name(topic_id: str, generator: ContentGenerator) -> str:
+    """Get topic name from topic ID.
+    
+    Args:
+        topic_id: Topic UUID
+        generator: ContentGenerator with topics dictionary
+    
+    Returns:
+        Topic name or empty string if not found
+    """
+    for name, topic in generator.topics.items():
+        if topic.id == topic_id:
+            return name
+    return ""
+
+
+def get_scenario_name(scenario_id: str, generator: ContentGenerator) -> str:
+    """Get scenario name from scenario ID.
+    
+    Args:
+        scenario_id: Scenario UUID
+        generator: ContentGenerator with scenarios dictionary
+    
+    Returns:
+        Scenario name or empty string if not found
+    """
+    for name, scenario in generator.scenarios.items():
+        if scenario.id == scenario_id:
+            return name
+    return ""
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Generate content with chain-of-thought reasoning",
@@ -423,14 +455,18 @@ def main():
                             if mapping_manager.get_notion_page_id(conversation.id):
                                 logger.info(f"Already in Notion: {conversation.title}")
                                 continue
+                            
+                            # Get topic and scenario names from IDs
+                            topic_name = get_topic_name(conversation.topic_ids[0], generator) if conversation.topic_ids else ""
+                            scenario_name = get_scenario_name(conversation.scenario_ids[0], generator) if conversation.scenario_ids else ""
                                 
                             notion_page_id = notion_client.push_conversation(
                                 content_id=conversation.id,
                                 content_type="conversation",
                                 title=conversation.title,
                                 description=conversation.description or "",
-                                topic=conversation.topic_name,
-                                scenario=conversation.scenario_name,
+                                topic=topic_name,
+                                scenario=scenario_name,
                                 segments=[seg.model_dump() for seg in conversation.segments],
                                 llm_comment_text=llm_evaluations.get(conversation.id, ""),
                                 language=args.language,
@@ -459,14 +495,18 @@ def main():
                             if mapping_manager.get_notion_page_id(story.id):
                                 logger.info(f"Already in Notion: {story.title}")
                                 continue
+                            
+                            # Get topic and scenario names from IDs
+                            topic_name = get_topic_name(story.topic_ids[0], generator) if story.topic_ids else ""
+                            scenario_name = get_scenario_name(story.scenario_ids[0], generator) if story.scenario_ids else ""
                                 
                             notion_page_id = notion_client.push_conversation(
                                 content_id=story.id,
                                 content_type="story",
                                 title=story.title,
                                 description=story.description or "",
-                                topic=story.topic_name,
-                                scenario=story.scenario_name,
+                                topic=topic_name,
+                                scenario=scenario_name,
                                 segments=[seg.model_dump() for seg in story.segments],
                                 llm_comment_text=llm_evaluations.get(story.id, ""),
                                 language=args.language,

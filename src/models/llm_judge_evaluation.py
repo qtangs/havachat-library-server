@@ -14,8 +14,9 @@ class DimensionScore(BaseModel):
     """Score and explanation for a single evaluation dimension."""
     
     score: int = Field(..., ge=1, le=10, description="Score from 1 (poor) to 10 (excellent)")
-    explanation: str = Field(..., min_length=10, max_length=500, description="Detailed explanation of the score, in English")
-
+    explanation: str = Field(..., min_length=10, 
+                            #  max_length=500, 
+                             description="1 sentence explanation of the score, in English. Max 100 characters.")
 
 class LLMJudgeEvaluation(BaseModel):
     """Comprehensive quality evaluation for a conversation or story.
@@ -48,13 +49,13 @@ class LLMJudgeEvaluation(BaseModel):
     recommendation_justification: str = Field(
         ..., 
         min_length=20, 
-        max_length=500,
-        description="Detailed justification for the recommendation"
+        # max_length=500,
+        description="Detailed justification for the recommendation. Max 500 characters."
     )
     
     # Metadata
     evaluated_at: datetime = Field(default_factory=datetime.utcnow, description="Timestamp of evaluation")
-    evaluator_model: str = Field(default="gpt-4", description="LLM model used for evaluation")
+    # evaluator_model: str = Field(default="gpt-4", description="LLM model used for evaluation")
     
     # Optional flags
     has_inconsistency: bool = Field(
@@ -89,10 +90,10 @@ class LLMJudgeEvaluation(BaseModel):
     def to_readable_text(self) -> str:
         """Serialize to human-readable text for Notion and local files."""
         lines = [
-            f"Content ID: {self.content_id}",
-            f"Content Type: {self.content_type}",
+            # f"Content ID: {self.content_id}",
+            # f"Content Type: {self.content_type}",
             f"Evaluated At: {self.evaluated_at.isoformat()}",
-            f"Evaluator Model: {self.evaluator_model}",
+            # f"Evaluator Model: {self.evaluator_model}",
             "",
             f"Overall Recommendation: {self.overall_recommendation}",
             f"Recommendation Justification: {self.recommendation_justification}",

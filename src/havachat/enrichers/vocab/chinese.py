@@ -371,6 +371,98 @@ Remember: We will add pinyin and English translations automatically later.
         
         return prompt
 
+    def enrich_from_llm_explained(self, item: Dict[str, Any]) -> Optional[LearningItem]:
+        """Enrich a vocabulary item from pre-generated LLM explanations.
+        
+        This method bypasses LLM generation and directly creates a LearningItem
+        from pre-generated content, adding only romanization, traditional Chinese,
+        and translations.
+        
+        Args:
+            item: Dictionary with keys:
+                - target_item: Chinese word
+                - pos: Part of speech
+                - definition: English definition
+                - examples: List of Chinese example sentences
+                - language: Language code (default: "zh")
+                - level_min: Minimum proficiency level
+                - level_max: Maximum proficiency level
+                - level_system: Level system
+                
+        Returns:
+            Enriched LearningItem or None if enrichment fails
+        """
+        target_item = item["target_item"]
+        pos = item.get("pos")
+        definition = item["definition"]
+        examples = item["examples"]
+        level_min = item.get("level_min", "HSK1")
+        level_max = item.get("level_max", level_min)
+        level_system = item.get("level_system", LevelSystem.HSK)
+        
+        try:
+            logger.info(f"Enriching from pre-generated LLM: {target_item}")
+            
+            # Generate pinyin with tone marks
+            romanization = get_chinese_pinyin(target_item)
+            
+            # Generate numeric pinyin
+            numeric_pinyin = self._get_numeric_pinyin(target_item)
+            
+            # Get traditional Chinese
+            traditional = self._get_traditional(target_item)
+            
+            # Translate examples using common translation utility with dictionary
+            example_translations = translate_texts(
+                texts=examples,
+                from_language="zh",
+                llm_client=self.llm_client,
+                azure_translator=self.azure_translator,
+                use_azure=self.skip_translation is False and self.azure_translator is not None,
+                dictionary=self.dictionary,
+            )
+            
+            # Format examples with translations
+            formatted_examples = self._format_examples(
+                examples,
+                example_translations
+            )
+            
+            # Build aliases array
+            aliases = []
+            if traditional and traditional != target_item:
+                aliases.append(traditional)
+            if numeric_pinyin and numeric_pinyin != romanization:
+                aliases.append(numeric_pinyin)
+            
+            # Build LearningItem
+            learning_item = LearningItem(
+                id=str(uuid4()),
+                language="zh",
+                category=Category.VOCAB,
+                target_item=target_item,
+                definition=definition,
+                examples=formatted_examples,
+                sense_gloss=None,  # Not provided in pre-generated CSV
+                romanization=romanization,
+                pos=pos,
+                lemma=None,
+                aliases=aliases,
+                level_system=level_system if isinstance(level_system, LevelSystem) else LevelSystem(level_system),
+                level_min=level_min,
+                level_max=level_max,
+                created_at=datetime.now(UTC),
+                version="1.0.0",
+                source_file="",
+            )
+            
+            logger.info(f"Successfully enriched from LLM explained: {target_item}")
+            return learning_item
+            
+        except Exception as e:
+            logger.error(f"Failed to enrich from LLM explained '{target_item}': {e}")
+            return None
+
     def _get_numeric_pinyin(self, text: str) -> str:
         """Get pinyin with numeric tones (ai4, ba4 ba5).
         

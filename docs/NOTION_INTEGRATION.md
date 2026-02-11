@@ -7,10 +7,12 @@ This document explains how to set up and use the Notion integration for content 
 The Notion integration enables a human-in-the-loop review workflow for generated content:
 
 1. **Generate** conversations/stories with automatic LLM quality evaluation
-2. **Push** to Notion database for human review
+2. **Push** to Notion database for human review (Notion becomes source of truth)
 3. **Review** in Notion: approve ("Ready for Audio") or reject
 4. **Sync** status changes back to local files
 5. **Generate** audio automatically for approved content
+
+**Note**: Content metadata (language, level, type, content ID) is stored in Notion. The system no longer uses a separate mapping file.
 
 ## Setup
 
@@ -28,7 +30,10 @@ Create a new database with the following columns:
 
 | Column Name | Type | Description |
 |------------|------|-------------|
+| ID | Text | Content UUID (primary identifier) |
 | Type | Select | "conversation" or "story" |
+| Language | Text | Language code (e.g., "zh", "ja", "fr") |
+| Level | Text | Level code (e.g., "HSK3", "N5", "A2") |
 | Title | Title | Content title |
 | Description | Text | Content description |
 | Topic | Text | Topic name (e.g., "Food", "Travel") |
@@ -173,26 +178,20 @@ graph LR
 
 ## Data Flow
 
-### Content Mapping
+### Notion as Source of Truth
 
-The `notion_mapping.json` file tracks relationships:
+Content metadata is stored directly in Notion database columns:
+- **ID**: Content UUID used to locate content in local JSON files
+- **Language**: Language code (zh, ja, fr, etc.)
+- **Level**: Level code (HSK3, N5, A2, etc.)
+- **Type**: Content type (conversation or story)
 
-```json
-[
-  {
-    "content_id": "abc123",
-    "notion_page_id": "xyz789",
-    "language": "zh",
-    "level": "HSK3",
-    "type": "conversation",
-    "title": "Ordering Food",
-    "last_pushed_at": "2026-01-31T10:00:00",
-    "last_synced_at": "2026-01-31T11:30:00",
-    "status_in_notion": "OK",
-    "status_in_local": "published"
-  }
-]
-```
+When syncing, the system:
+1. Fetches pages from Notion with status changes
+2. Extracts `id`, `language`, `level`, `type` from Notion columns
+3. Uses these to locate and update corresponding content in local `data/{language}/{level}/{type}s.json` files
+
+No separate mapping file is maintained - Notion database serves as the mapping layer.
 
 ### Failed Push Queue
 
@@ -252,12 +251,13 @@ client = NotionClient(api_token="...", database_id="...")
 client.validate_database_schema()
 ```
 
-### Missing Mappings
+### Missing Content
 
 If `--check-notion` can't find content:
-1. Check `notion_mapping.json` exists
-2. Verify content was pushed with `--enable-notion`
-3. Check mapping has correct notion_page_id
+1. Verify the ID column in Notion matches the content UUID in local JSON files
+2. Check that Language, Level, and Type columns are correctly populated
+3. Ensure the content exists in `data/{language}/{level}/{type}s.json`
+4. Verify content was pushed with `--enable-notion` flag
 
 ### Audio Generation Failures
 
@@ -269,14 +269,17 @@ If audio generation fails during sync:
 ## Best Practices
 
 1. **Always use `--enable-notion`** for production content generation
-2. **Review LLM Comment** before approving in Notion
-3. **Add Human Comment** for rejected items (helps improve prompts)
-4. **Run `--check-notion` regularly** (e.g., every hour via cron)
-5. **Monitor `notion_push_queue.jsonl`** for recurring failures
-6. **Use `--since` parameter** to avoid re-processing old items
+2. **Never modify ID, Language, Level, or Type columns** in Notion after push (they're used for lookups)
+3. **Review LLM Comment** before approving in Notion
+4. **Add Human Comment** for rejected items (helps improve prompts)
+5. **Run `--check-notion` regularly** (e.g., every hour via cron)
+6. **Monitor `notion_push_queue.jsonl`** for recurring failures
+7. **Use `--since` parameter** to avoid re-processing old items
 
 ## Architecture Notes
 
+- **Notion as source of truth**: Content metadata stored in Notion database columns (ID, Language, Level, Type)
+- **No mapping file**: System queries Notion directly; no separate `notion_mapping.json` maintained
 - **Stateless CLI**: Each command call is independent
 - **Manual triggers**: No polling or webhooks (controlled via CLI)
 - **Idempotent operations**: Safe to re-run commands

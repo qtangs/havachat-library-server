@@ -10,6 +10,14 @@ Usage:
         --max-items 10 \
         --dry-run
 
+    # Or use pre-generated LLM explanations:
+    python -m havachat.cli.enrich_vocab \
+        --language zh \
+        --level HSK1 \
+        --enricher chinese \
+        --output output/chinese/hsk1/vocab.json \
+        --llm-explained-file generated_content/Chinese/HSK1/Final/vocab_explained_by_llm.csv
+
 Supports:
 - Chinese (--enricher chinese, TSV input)
 - Japanese (--enricher japanese, JSON input)
@@ -23,6 +31,7 @@ Features:
 """
 
 import argparse
+import csv
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 import json
@@ -112,9 +121,8 @@ Examples:
 
     parser.add_argument(
         "--input",
-        required=True,
         type=Path,
-        help="Input file path (TSV for Chinese/French, JSON for Japanese)",
+        help="Input file path (TSV for Chinese/French, JSON for Japanese). Not required when using --llm-explained-file.",
     )
 
     parser.add_argument(
@@ -181,6 +189,14 @@ Examples:
         "--skip-translation",
         action="store_true",
         help="Skip translation service (examples will have no translations)",
+    )
+
+    parser.add_argument(
+        "--llm-explained-file",
+        type=Path,
+        help="CSV file with pre-generated LLM explanations (front,back,examples). "
+        "When provided, skips LLM generation and ignores --max-items. "
+        "Format: front=word;;;pos, back=definition, examples=example1;;;example2;;;example3",
     )
 
     return parser.parse_args()
@@ -253,6 +269,76 @@ def save_checkpoint(checkpoint_file: Path, processed_ids: set) -> None:
         logger.warning(f"Failed to save checkpoint: {e}")
 
 
+def parse_llm_explained_file(file_path: Path) -> list[dict]:
+    """Parse pre-generated LLM explanations CSV file for vocabulary.
+    
+    Expected format: front,back,examples
+    - front: word;;;pos (e.g., "银行;;;noun")
+    - back: definition
+    - examples: example1;;;example2;;;example3
+    
+    Args:
+        file_path: Path to CSV file
+        
+    Returns:
+        List of dictionaries with 'target_item', 'pos', 'definition', 'examples' keys
+        
+    Raises:
+        FileNotFoundError: If file doesn't exist
+        ValueError: If CSV format is invalid
+    """
+    if not file_path.exists():
+        raise FileNotFoundError(f"LLM explained file not found: {file_path}")
+    
+    items = []
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            
+            # Validate headers
+            if not all(col in reader.fieldnames for col in ["front", "back", "examples"]):
+                raise ValueError(
+                    f"CSV must have 'front', 'back', 'examples' columns, got {reader.fieldnames}"
+                )
+            
+            for row_num, row in enumerate(reader, start=2):  # Start at 2 (1 is header)
+                front = row["front"].strip()
+                definition = row["back"].strip()
+                examples_str = row["examples"].strip()
+                
+                if not front or not definition or not examples_str:
+                    logger.warning(f"Skipping incomplete row {row_num}: {row}")
+                    continue
+                
+                # Parse front: word;;;pos
+                front_parts = [p.strip() for p in front.split(";;;")]
+                if len(front_parts) != 2:
+                    logger.warning(f"Invalid front format in row {row_num}, expected 'word;;;pos': {front}")
+                    continue
+                
+                target_item, pos = front_parts
+                
+                # Split examples by ";;;"
+                examples = [ex.strip() for ex in examples_str.split(";;;") if ex.strip()]
+                
+                if not examples:
+                    logger.warning(f"No examples found in row {row_num}: {row}")
+                    continue
+                
+                items.append({
+                    "target_item": target_item,
+                    "pos": pos,
+                    "definition": definition,
+                    "examples": examples,
+                })
+        
+        logger.info(f"Parsed {len(items)} items from {file_path}")
+        return items
+        
+    except Exception as e:
+        raise ValueError(f"Failed to parse LLM explained file: {e}")
+
+
 def enrich_single_item(
     item: dict,
     enricher: BaseEnricher,
@@ -306,13 +392,21 @@ def main() -> int:
     logger.info(f"Language: {args.language}")
     logger.info(f"Level: {args.level}")
     logger.info(f"Enricher: {args.enricher}")
-    logger.info(f"Input: {args.input}")
+    if args.llm_explained_file:
+        logger.info(f"LLM Explained File: {args.llm_explained_file}")
+        if args.input:
+            logger.warning("--input is ignored when using --llm-explained-file")
+    else:
+        logger.info(f"Input: {args.input}")
     logger.info(f"Output: {args.output}")
     logger.info(f"Dry Run: {args.dry_run}")
     logger.info(f"Skip LLM: {args.skip_llm}")
     logger.info(f"Skip Translation: {args.skip_translation}")
     if args.max_items:
-        logger.info(f"Max Items: {args.max_items}")
+        if args.llm_explained_file:
+            logger.warning("--max-items is ignored when using --llm-explained-file")
+        else:
+            logger.info(f"Max Items: {args.max_items}")
     if args.parallel > 1:
         logger.info(f"Parallel Workers: {args.parallel}")
     if args.resume:
@@ -328,10 +422,20 @@ def main() -> int:
         )
         return 1
 
-    # Validate input file exists
-    if not args.input.exists():
-        logger.error(f"Input file not found: {args.input}")
-        return 1
+    # Validate inputs based on mode
+    if args.llm_explained_file:
+        # LLM explained mode: Only require llm_explained_file
+        if not args.llm_explained_file.exists():
+            logger.error(f"LLM explained file not found: {args.llm_explained_file}")
+            return 1
+    else:
+        # Normal mode: Require input file
+        if not args.input:
+            logger.error("--input is required when not using --llm-explained-file")
+            return 1
+        if not args.input.exists():
+            logger.error(f"Input file not found: {args.input}")
+            return 1
 
     # Validate output is writable
     try:
@@ -352,7 +456,7 @@ def main() -> int:
     # Setup manual review directory
     manual_review_dir = args.manual_review_dir or (args.output.parent / "manual_review")
 
-    # Initialize enricher
+    # Initialize enricher and LLM client based on mode
     if args.dry_run:
         logger.info("DRY RUN MODE: No LLM calls will be made")
         enricher: BaseEnricher = enricher_class(
@@ -371,6 +475,16 @@ def main() -> int:
             skip_translation=args.skip_translation,
         )
         llm_client = None
+    elif args.llm_explained_file and args.skip_translation:
+        # Don't need LLM if we have pre-generated explanations and skip translation
+        logger.info("LLM EXPLAINED MODE with --skip-translation: No LLM client needed")
+        enricher: BaseEnricher = enricher_class(
+            llm_client=None,
+            manual_review_dir=manual_review_dir,
+            skip_llm=False,  # We're not skipping enrichment, just using pre-generated
+            skip_translation=args.skip_translation,
+        )
+        llm_client = None
     else:
         llm_client = LLMClient()
         enricher: BaseEnricher = enricher_class(
@@ -381,12 +495,17 @@ def main() -> int:
             skip_translation=args.skip_translation,
         )
 
-    # Parse source file
-    logger.info(f"Parsing source file: {args.input}")
+    # Parse source file or LLM explained file
+    logger.info(f"Parsing source...")
     start_time = time.time()
 
     try:
-        items = enricher.parse_source(args.input)
+        if args.llm_explained_file:
+            # Parse pre-generated LLM explanations
+            items = parse_llm_explained_file(args.llm_explained_file)
+        else:
+            # Parse normal source file
+            items = enricher.parse_source(args.input)
     except Exception as e:
         logger.error(f"Failed to parse source file: {e}", exc_info=True)
         return 1
@@ -413,8 +532,8 @@ def main() -> int:
         if skipped > 0:
             logger.info(f"Skipped {skipped} already-processed items")
 
-    # Limit items if max_items specified
-    if args.max_items:
+    # Limit items if max_items specified (only in normal mode)
+    if args.max_items and not args.llm_explained_file:
         items = items[: args.max_items]
         logger.info(f"Limited to {len(items)} items for processing")
 
@@ -427,7 +546,11 @@ def main() -> int:
         for i, item in enumerate(items[:3], 1):
             logger.info(f"\nItem {i}:")
             logger.info(f"  Target: {item.get('target_item')}")
-            logger.info(f"  Missing fields: {enricher.detect_missing_fields(item)}")
+            if args.llm_explained_file:
+                logger.info(f"  POS: {item.get('pos')}")
+                logger.info(f"  Definition: {item.get('definition')[:50]}...")
+            else:
+                logger.info(f"  Missing fields: {enricher.detect_missing_fields(item)}")
 
         logger.info("\n" + "=" * 80)
         logger.info(f"Total items to process: {len(items)}")
@@ -451,10 +574,20 @@ def main() -> int:
         if "level_max" not in item:
             item["level_max"] = args.level
 
+    # Choose the enrichment method based on mode
+    if args.llm_explained_file:
+        enrich_method = lambda item: enricher.enrich_from_llm_explained(item)
+    else:
+        enrich_method = lambda item: enrich_single_item(item, enricher, 0, len(items))
+
     if args.parallel == 1:
         # Sequential processing with progress bar
         for i, item in enumerate(tqdm(items, desc="Enriching", unit="item"), 1):
-            result = enrich_single_item(item, enricher, i, len(items))
+            if args.llm_explained_file:
+                result_obj = enrich_method(item)
+                result = result_obj.model_dump(mode="json") if result_obj else None
+            else:
+                result = enrich_single_item(item, enricher, i, len(items))
 
             if result:
                 enriched_items.append(result)
@@ -468,12 +601,22 @@ def main() -> int:
 
     else:
         # Parallel processing with ThreadPoolExecutor
+        def enrich_wrapper(item_data):
+            i, item = item_data
+            try:
+                if args.llm_explained_file:
+                    result_obj = enrich_method(item)
+                    return result_obj.model_dump(mode="json") if result_obj else None
+                else:
+                    return enrich_single_item(item, enricher, i, len(items))
+            except Exception as e:
+                logger.error(f"Failed to enrich item {i}: {e}")
+                return None
+        
         with ThreadPoolExecutor(max_workers=args.parallel) as executor:
-            # Submit all tasks
+            # Submit all tasks with indices
             future_to_item = {
-                executor.submit(
-                    enrich_single_item, item, enricher, i, len(items)
-                ): (i, item)
+                executor.submit(enrich_wrapper, (i, item)): (i, item)
                 for i, item in enumerate(items, 1)
             }
 

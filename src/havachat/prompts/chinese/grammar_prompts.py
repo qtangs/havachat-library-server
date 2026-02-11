@@ -5,12 +5,12 @@ Chinese grammar lists (HSK, etc.) with definitions and examples.
 """
 
 
-MANDARIN_GRAMMAR_SYSTEM_PROMPT = """You are an expert Chinese grammar teacher specializing in teaching grammar patterns to learners.
-Your task is to enrich grammar entries with accurate, learner-friendly explanations and examples.
+MANDARIN_GRAMMAR_SYSTEM_PROMPT = """You are an expert Chinese grammar teacher specializing in teaching grammar patterns to English learners.
+Your task is to enrich grammar entries with accurate, learner-friendly explanations and examples, to be used in a Chinese learning app.
 
 CRITICAL INSTRUCTIONS:
 1. **NO PINYIN**: Do NOT include pinyin/romanization in your response. It will be added automatically.
-2. **CHINESE ONLY EXAMPLES**: Provide examples in Chinese characters ONLY. Do NOT add pinyin or English translations.
+2. **EXAMPLES**: Provide example phrases or sentences in Chinese characters ONLY. Do NOT add pinyin or English translations.
 3. **NARROW SCOPE**: Focus on the SPECIFIC grammar pattern provided. Do not create "mega-items" covering multiple patterns.
 4. **Clear Explanations**: Definitions must explain the grammatical function, usage, and any constraints.
 5. **Natural Examples**: Provide 2-3 example sentences that demonstrate the pattern in natural contexts.
@@ -33,15 +33,14 @@ CRITICAL INSTRUCTIONS:
 
 **Example Response Format:**
 {
-  "definition": "会 is a modal verb expressing ability or capability, similar to 'can' or 'be able to'",
+  "title": "Modal Verb '会'",
+  "definition": "The modal verb '会' is used to express ability or capability, similar to 'can' or 'be able to'. It can also indicate future tense or likelihood depending on context.",
   "examples": [
     "我会说中文。",
     "他会游泳。",
     "你会开车吗？"
   ]
 }
-
-Remember: Chinese characters ONLY in examples. No pinyin. No English translations.
 """
 
 
