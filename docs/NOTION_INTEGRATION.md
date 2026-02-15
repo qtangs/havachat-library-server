@@ -68,7 +68,7 @@ Add to `.env`:
 
 ```bash
 # Notion Integration
-NOTION_API_TOKEN=secret_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+NOTION_API_KEY=secret_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 NOTION_DATABASE_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 

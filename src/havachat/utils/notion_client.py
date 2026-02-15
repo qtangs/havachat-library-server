@@ -604,3 +604,110 @@ class NotionClient:
                 f"Failed to update status for {notion_page_id}: {str(e)}"
             )
             raise
+
+    def query_database_filtered(
+        self,
+        database_id: str,
+        filters: Optional[Dict[str, Any]] = None,
+        sorts: Optional[List[Dict[str, Any]]] = None,
+        page_size: int = 100
+    ) -> List[Dict[str, Any]]:
+        """
+        Generic method to query any Notion database with filters.
+        
+        This method can be reused for different databases (Audio, Voice, etc.)
+        by providing the appropriate database_id and filters.
+        
+        Args:
+            database_id: Notion database ID to query
+            filters: Notion filter object (e.g., {"property": "Status", "select": {"equals": "Ready"}})
+            sorts: Optional sort configuration
+            page_size: Results per page (max 100)
+        
+        Returns:
+            List of page objects matching the filter
+        
+        Example:
+            >>> client.query_database_filtered(
+            ...     database_id="abc123",
+            ...     filters={"property": "Status", "select": {"equals": "Ready for Audio"}}
+            ... )
+        """
+        # Temporarily override database_id for this query
+        original_db_id = self.database_id
+        original_data_source_id = self.data_source_id
+        
+        try:
+            self.database_id = database_id
+            self.data_source_id = None  # Force re-fetch of data source
+            
+            body: Dict[str, Any] = {"page_size": page_size}
+            if filters:
+                body["filter"] = filters
+            if sorts:
+                body["sorts"] = sorts
+            
+            all_results = []
+            has_more = True
+            start_cursor = None
+            
+            while has_more:
+                if start_cursor:
+                    body["start_cursor"] = start_cursor
+                
+                response = self._query_data_source(body)
+                all_results.extend(response.get("results", []))
+                
+                has_more = response.get("has_more", False)
+                start_cursor = response.get("next_cursor")
+            
+            return all_results
+            
+        finally:
+            # Restore original database_id
+            self.database_id = original_db_id
+            self.data_source_id = original_data_source_id
+
+    def update_page_properties(
+        self,
+        page_id: str,
+        properties: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Generic method to update any properties on a Notion page.
+        
+        This method can be reused for updating any property type
+        (rich_text, select, status, number, etc.) on any page.
+        
+        Args:
+            page_id: Notion page ID
+            properties: Dictionary of properties to update in Notion API format
+        
+        Returns:
+            Updated page object from Notion API
+        
+        Example:
+            >>> client.update_page_properties(
+            ...     page_id="abc123",
+            ...     properties={
+            ...         "Description": {"rich_text": [{"text": {"content": "Summary"}}]},
+            ...         "Tags": {"rich_text": [{"text": {"content": "#tag1 #tag2"}}]},
+            ...         "Status": {"status": {"name": "Completed"}}
+            ...     }
+            ... )
+        """
+        try:
+            url = f"{self.NOTION_API_BASE}/pages/{page_id}"
+            body = {"properties": properties}
+            
+            response = requests.patch(url, headers=self.headers, json=body)
+            response.raise_for_status()
+            
+            logger.info(f"Updated properties for page {page_id}")
+            return response.json()
+            
+        except Exception as e:
+            logger.error(
+                f"Failed to update properties for {page_id}: {str(e)}"
+            )
+            raise
