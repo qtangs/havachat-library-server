@@ -249,18 +249,18 @@ def main():
     if not args.judge_only:
         try:
             notion_database_id = os.getenv("NOTION_DATABASE_ID")
-            notion_api_token = os.getenv("NOTION_API_KEY")
+            NOTION_API_KEY = os.getenv("NOTION_API_KEY")
             
             if not notion_database_id:
                 logger.error("NOTION_DATABASE_ID not set in environment")
                 sys.exit(1)
             
-            if not notion_api_token:
+            if not NOTION_API_KEY:
                 logger.error("NOTION_API_KEY not set in environment")
                 sys.exit(1)
             
             notion_client = NotionClient(
-                api_token=notion_api_token,
+                api_token=NOTION_API_KEY,
                 database_id=notion_database_id
             )
             

@@ -10,7 +10,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from api.main import verify_api_key
+from api.utils import verify_api_key
 from libs.logging_helper import logger
 from tools.audio.tts_with_elevenlabs import text_to_speech_with_timestamps
 
