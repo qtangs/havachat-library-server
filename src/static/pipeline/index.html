@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meditation Video Pipeline</title>
+  <style>
+    :root {
+      --color-bg: #0f0e1a;
+      --color-surface: #1a1830;
+      --color-surface-2: #231f3a;
+      --color-border: #2e2a4a;
+      --color-text: #e8e4f0;
+      --color-text-muted: #8e8aaa;
+      --color-indigo: #5c4fc9;
+      --color-indigo-light: #7b6ee8;
+      --color-sage: #6a9e7f;
+      --color-sage-light: #8ec4a0;
+      --color-amber: #c98a3a;
+      --color-amber-light: #e8a84e;
+      --color-red: #c94f4f;
+      --color-pause: #b5612a;
+      --color-pause-bg: #3a2010;
+      --color-running: #3a6fc9;
+      --radius: 8px;
+      --radius-sm: 4px;
+      --shadow: 0 2px 12px rgba(0,0,0,0.4);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--color-bg);
+      color: var(--color-text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* Settings overlay */
+    #settings-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    #settings-overlay.visible { display: flex; }
+
+    #settings-panel {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 32px;
+      width: 420px;
+      max-width: 90vw;
+      box-shadow: var(--shadow);
+    }
+    #settings-panel h2 {
+      margin-bottom: 20px;
+      font-size: 18px;
+      color: var(--color-text);
+    }
+
+    /* App layout */
+    #app {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 20px 60px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 0 20px;
+      border-bottom: 1px solid var(--color-border);
+      margin-bottom: 32px;
+    }
+    header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--color-text);
+      letter-spacing: -0.02em;
+    }
+
+    /* Form styles */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--color-text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    input[type="text"],
+    input[type="password"],
+    select,
+    textarea {
+      width: 100%;
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      color: var(--color-text);
+      font-size: 14px;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+      font-family: inherit;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--color-indigo-light);
+    }
+    select option { background: var(--color-surface-2); }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .toggle-group {
+      display: flex;
+      gap: 24px;
+    }
+    .toggle-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    .toggle-item input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: var(--color-indigo-light);
+    }
+    .toggle-item span {
+      font-size: 14px;
+      color: var(--color-text);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      font-family: inherit;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary {
+      background: var(--color-indigo);
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--color-indigo-light); }
+    .btn-secondary {
+      background: var(--color-surface-2);
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+    }
+    .btn-secondary:hover:not(:disabled) { border-color: var(--color-indigo-light); }
+    .btn-success {
+      background: var(--color-sage);
+      color: #fff;
+    }
+    .btn-success:hover:not(:disabled) { background: var(--color-sage-light); }
+    .btn-danger {
+      background: var(--color-red);
+      color: #fff;
+    }
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+
+    /* Section headings */
+    #create-section h2,
+    #run-section h2 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: var(--color-text);
+    }
+
+    /* Stage timeline */
+    #stage-timeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 32px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 16px 24px;
+      overflow: hidden;
+    }
+    .stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+    }
+    .stage:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 18px;
+      width: 100%;
+      height: 2px;
+      background: var(--color-border);
+      left: 50%;
+      z-index: 0;
+    }
+    .stage-dot {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--color-surface-2);
+      border: 2px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      z-index: 1;
+      transition: all 0.3s;
+    }
+    .stage-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      transition: color 0.3s;
+    }
+
+    /* Stage states */
+    .stage.running .stage-dot {
+      background: var(--color-running);
+      border-color: var(--color-running);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    .stage.running .stage-label { color: #6fa8e8; }
+
+    .stage.awaiting .stage-dot {
+      background: var(--color-amber);
+      border-color: var(--color-amber-light);
+    }
+    .stage.awaiting .stage-label { color: var(--color-amber-light); }
+
+    .stage.complete .stage-dot {
+      background: var(--color-sage);
+      border-color: var(--color-sage-light);
+    }
+    .stage.complete .stage-label { color: var(--color-sage-light); }
+
+    .stage.failed .stage-dot {
+      background: var(--color-red);
+      border-color: var(--color-red);
+    }
+    .stage.failed .stage-label { color: #e87878; }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(58, 111, 201, 0.5); }
+      50% { box-shadow: 0 0 0 8px rgba(58, 111, 201, 0); }
+    }
+
+    /* Approval panels */
+    .approval-panel {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    .approval-panel h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--color-text);
+    }
+    .panel-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    /* Script text */
+    #script-body, .script-body {
+      background: var(--color-surface-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      white-space: pre-wrap;
+      font-size: 14px;
+      line-height: 1.8;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'Georgia', serif;
+      color: var(--color-text);
+    }
+
+    /* Pause marker badge */
+    .pause-marker {
+      display: inline-block;
+      background: var(--color-pause-bg);
+      color: var(--color-amber-light);
+      border: 1px solid var(--color-pause);
+      border-radius: 20px;
+      padding: 1px 8px;
+      font-size: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-style: normal;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    /* Audio player */
+    #audio-player {
+      width: 100%;
+      margin-top: 4px;
+    }
+    audio { width: 100%; }
+
+    /* Image preview */
+    #image-preview {
+      max-width: 100%;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--color-border);
+    }
+
+    /* Video download */
+    .download-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--color-sage-light);
+      font-size: 14px;
+      text-decoration: none;
+    }
+    .download-link:hover { text-decoration: underline; }
+
+    /* Error panel */
+    #error-message {
+      background: rgba(201, 79, 79, 0.1);
+      border: 1px solid var(--color-red);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #e87878;
+      font-family: monospace;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* Status badge */
+    .status-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .status-badge.running { background: rgba(58,111,201,0.2); color: #6fa8e8; }
+    .status-badge.awaiting { background: rgba(201,138,58,0.2); color: var(--color-amber-light); }
+    .status-badge.complete { background: rgba(106,158,127,0.2); color: var(--color-sage-light); }
+    .status-badge.failed { background: rgba(201,79,79,0.2); color: #e87878; }
+
+    /* Run header */
+    #run-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    #run-id-display {
+      font-size: 12px;
+      color: var(--color-text-muted);
+      font-family: monospace;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: var(--color-border);
+      margin: 24px 0;
+    }
+
+    /* Toast notification */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 12px 18px;
+      font-size: 13px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+      z-index: 200;
+      max-width: 320px;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    #toast.error { border-color: var(--color-red); color: #e87878; }
+    #toast.success { border-color: var(--color-sage); color: var(--color-sage-light); }
+
+    /* Loading state */
+    .loading-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--color-text-muted);
+      font-size: 14px;
+      padding: 8px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Settings overlay -->
+  <div id="settings-overlay">
+    <div id="settings-panel">
+      <h2>⚙ Settings</h2>
+      <div class="form-group">
+        <label for="api-key-input">API Key</label>
+        <input type="password" id="api-key-input" placeholder="Enter your API key" autocomplete="off">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button class="btn btn-primary" id="save-settings-btn">Save</button>
+        <button class="btn btn-secondary" id="cancel-settings-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main app -->
+  <div id="app">
+    <header>
+      <h1>Meditation Video Pipeline</h1>
+      <button class="btn btn-secondary btn-sm" id="settings-btn">⚙ Settings</button>
+    </header>
+
+    <!-- Create run form -->
+    <section id="create-section">
+      <h2>New Production Run</h2>
+      <form id="create-form">
+        <div class="form-group">
+          <label for="title-input">Meditation Title</label>
+          <input type="text" id="title-input" placeholder="e.g. Morning Breath Awareness" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="style-select">Style</label>
+            <select id="style-select">
+              <option value="">Loading styles…</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="duration-select">Duration</label>
+            <select id="duration-select">
+              <option value="">Loading durations…</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="voice-id-input">Voice ID</label>
+          <input type="text" id="voice-id-input" value="7AvtJrjTNyBhBxEvNPIZ" placeholder="ElevenLabs Voice ID">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="image-backend-select">Image Backend</label>
+            <select id="image-backend-select">
+              <option value="">Default</option>
+              <option value="google">Google (Gemini)</option>
+              <option value="runpod">RunPod</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="image-quality-select">Image Quality</label>
+            <select id="image-quality-select">
+              <option value="">Default</option>
+              <option value="nano">Nano (fast)</option>
+              <option value="pro">Pro (high quality)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="video-format-select">Video Format</label>
+            <select id="video-format-select">
+              <option value="long_form" selected>Long Form (16:9)</option>
+              <option value="shorts">Shorts (9:16)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Options</label>
+          <div class="toggle-group">
+            <label class="toggle-item">
+              <input type="checkbox" id="produce-shorts-checkbox">
+              <span>Produce Shorts</span>
+            </label>
+            <label class="toggle-item">
+              <input type="checkbox" id="enable-karaoke-checkbox">
+              <span>Enable Karaoke</span>
+            </label>
+          </div>
+        </div>
+
+        <div style="margin-top:24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <button type="submit" class="btn btn-primary" id="create-btn">
+            Start Pipeline
+          </button>
+          <span style="color:var(--color-text-muted);font-size:13px">or</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="resume-run-id-input" placeholder="Resume run ID…" style="width:260px;font-family:monospace;font-size:13px">
+            <button type="button" class="btn btn-secondary" id="resume-btn">Resume</button>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <!-- Active run view -->
+    <section id="run-section" style="display:none">
+      <div id="run-header">
+        <h2>Pipeline Run</h2>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span id="run-id-display"></span>
+          <button class="btn btn-secondary btn-sm" id="new-run-btn" style="display:none">+ New Run</button>
+        </div>
+      </div>
+
+      <!-- Stage timeline -->
+      <div id="stage-timeline">
+        <div class="stage" data-stage="script">
+          <div class="stage-dot">✍</div>
+          <div class="stage-label">Script</div>
+        </div>
+        <div class="stage" data-stage="audio">
+          <div class="stage-dot">🔊</div>
+          <div class="stage-label">Audio</div>
+        </div>
+        <div class="stage" data-stage="image">
+          <div class="stage-dot">🖼</div>
+          <div class="stage-label">Image</div>
+        </div>
+        <div class="stage" data-stage="video">
+          <div class="stage-dot">🎬</div>
+          <div class="stage-label">Video</div>
+        </div>
+      </div>
+
+      <!-- Script approval panel -->
+      <div id="script-panel" class="approval-panel" style="display:none">
+        <h3>Script Review</h3>
+        <div id="script-body"></div>
+        <div class="panel-actions">
+          <button class="btn btn-success" id="approve-script-btn">Approve Script</button>
+          <button class="btn btn-secondary" id="rerun-script-btn">Rerun Script</button>
+        </div>
+      </div>
+
+      <!-- Audio approval panel -->
+      <div id="audio-panel" class="approval-panel" style="display:none">
+        <h3>Audio Review</h3>
+        <div id="audio-player">
+          <div class="loading-row"><span class="spinner"></span> Loading audio…</div>
+        </div>
+        <details style="margin-top:16px">
+          <summary style="font-size:13px;color:var(--color-text-muted);cursor:pointer;user-select:none">Script transcript</summary>
+          <div id="audio-transcript" class="script-body" style="margin-top:10px;max-height:220px"></div>
+        </details>
+        <div class="panel-actions">
+          <button class="btn btn-success" id="approve-audio-btn">Approve Audio</button>
+          <button class="btn btn-secondary" id="rerun-audio-btn">Rerun Audio</button>
+        </div>
+      </div>
+
+      <!-- Image prompt + YouTube metadata approval panel -->
+      <div id="image-prompt-panel" class="approval-panel" style="display:none">
+        <h3>Image Prompt &amp; YouTube Metadata</h3>
+        <div class="form-group" style="margin-top:8px">
+          <label for="image-prompt-textarea">Image Generation Prompt</label>
+          <textarea id="image-prompt-textarea" rows="4" placeholder="Describe the background image…"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="yt-title-input">YouTube Title</label>
+          <input type="text" id="yt-title-input" placeholder="Video title">
+        </div>
+        <div class="form-group">
+          <label for="yt-description-textarea">YouTube Description</label>
+          <textarea id="yt-description-textarea" rows="5" placeholder="Video description…"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="yt-tags-input">Tags <span style="font-weight:400;text-transform:none">(comma-separated)</span></label>
+          <input type="text" id="yt-tags-input" placeholder="meditation, mindfulness, relaxation">
+        </div>
+        <div class="panel-actions">
+          <button class="btn btn-success" id="approve-image-prompt-btn">Generate Image</button>
+          <button class="btn btn-secondary" id="rerun-image-prompt-btn">Regenerate Metadata</button>
+        </div>
+      </div>
+
+      <!-- Image approval panel -->
+      <div id="image-panel" class="approval-panel" style="display:none">
+        <h3>Background Image Review</h3>
+        <div id="image-container">
+          <div class="loading-row"><span class="spinner"></span> Loading image…</div>
+        </div>
+        <div class="panel-actions">
+          <button class="btn btn-success" id="approve-image-btn">Approve Image</button>
+          <button class="btn btn-secondary" id="rerun-image-btn">Rerun Image</button>
+        </div>
+      </div>
+
+      <!-- Video complete panel -->
+      <div id="video-panel" class="approval-panel" style="display:none">
+        <h3>Video Complete</h3>
+        <div id="video-download-container">
+          <div class="loading-row"><span class="spinner"></span> Preparing download…</div>
+        </div>
+        <p id="video-file-path" style="font-size:12px;color:var(--color-text-muted);margin-top:12px;font-family:monospace"></p>
+        <div class="panel-actions">
+          <button class="btn btn-secondary" id="rerun-video-btn">Rerun Video</button>
+        </div>
+      </div>
+
+      <!-- Error panel -->
+      <div id="error-panel" class="approval-panel" style="display:none">
+        <h3>Pipeline Failed</h3>
+        <div id="error-message"></div>
+        <div class="panel-actions">
+          <button class="btn btn-danger" id="retry-btn">Retry</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast"></div>
+
+  <script src="/pipeline/static/app.js"></script>
+</body>
+</html>

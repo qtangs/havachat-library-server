@@ -19,33 +19,30 @@ def transcribe_audio_with_elevenlabs(
     https://elevenlabs.io/docs/developers/guides/cookbooks/speech-to-text/quickstart
     """
     try:
-        import elevenlabs
+        pass  # elevenlabs already imported at module level
     except ImportError:
         raise Exception("Install the `elevenlabs` package to use this.")
 
     logger.info({"msg": "Start ElevenLabs API call"})
     start = time.time()
-    elevenlabs = ElevenLabs(
+    el_client = ElevenLabs(
         api_key=os.getenv("ELEVENLABS_API_KEY"),
     )
 
-    # Read audio file
+    # Pass the open file handle directly; the SDK expects a binary file-like object
     with open(file_path, "rb") as audio_file:
-        audio_data = audio_file.read()
+        params = {
+            "file": audio_file,
+            "model_id": "scribe_v2",
+        }
 
-    # Prepare parameters
-    params = {
-        "file": audio_data,
-        "model_id": "scribe_v2",
-    }
-    
-    if prompt:
-        params["prompt"] = prompt
-    
-    if language:
-        params["language_code"] = language
-    
-    transcription = elevenlabs.speech_to_text.convert(**params)
+        if prompt:
+            params["prompt"] = prompt
+
+        if language:
+            params["language_code"] = language
+
+        transcription = el_client.speech_to_text.convert(**params)
 
     print("Transcription result:", transcription)
 

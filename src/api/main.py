@@ -7,38 +7,22 @@ capabilities via HTTP API with API key authentication.
 
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Security, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import APIKeyHeader
 
 from libs.logging_helper import logger
-
-# API key authentication
-API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
-
-
-def verify_api_key(api_key: str = Security(API_KEY_HEADER)) -> str:
-    """Verify API key from request header."""
-    expected_key = os.getenv("API_KEY")
-    if not expected_key:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="API_KEY not configured on server",
-        )
-    
-    if not api_key or api_key != expected_key:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing API key",
-        )
-    
-    return api_key
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events."""
+    import os
+    from pathlib import Path
+    from models.pipeline_run import pipeline_store
+    persist_base = Path(os.getenv("HAVACHAT_KNOWLEDGE_PATH", "/tmp"))
+    pipeline_store.configure_persistence(persist_base)
     logger.info({"msg": "Starting Havachat Library Server"})
     yield
     logger.info({"msg": "Shutting down Havachat Library Server"})
@@ -87,3 +71,14 @@ async def health():
 from api.routes import audio
 
 app.include_router(audio.router, prefix="/audio", tags=["audio"])
+
+from fastapi.staticfiles import StaticFiles
+from api.routes import pipeline, pipeline_ui
+
+app.include_router(pipeline.router, tags=["pipeline"])
+app.include_router(pipeline_ui.router)
+
+# Serve static files for the pipeline UI
+_pipeline_static = Path(__file__).parent.parent / "static" / "pipeline"
+if _pipeline_static.exists():
+    app.mount("/pipeline/static", StaticFiles(directory=str(_pipeline_static)), name="pipeline_static")
